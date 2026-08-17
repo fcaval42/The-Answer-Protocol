@@ -22,7 +22,7 @@ func main() {
 	fmt.Print("Entrez votre pseudonyme : ")
 	username, err := stdin.ReadString('\n')
 	_, err = fmt.Fprintf(conn, "%s", username)
-
+ 
 	if err != nil {
 		log.Println(err)
 		return
