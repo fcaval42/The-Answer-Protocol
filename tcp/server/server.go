@@ -124,6 +124,7 @@ func broadcast(message string, sender net.Conn, player string) {
 	}
 }
 
+
 // Gestion de la connexion pour un client
 func handleConnection(conn net.Conn) {
 	var player string
