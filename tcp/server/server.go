@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"sync"
 	"strings"
+	"sync"
+	"the_answer_protocol/tcp/common"
 )
 
 var (
@@ -15,12 +16,35 @@ var (
 )
 
 
-func broadcast(message string, sender net.Conn, username string) {
+func select_player(conn net.Conn) string{
+
+	common.PersoLock.Lock()
+	defer common.PersoLock.Unlock()
+	reader := bufio.NewReader(conn)
+
+	charactere := make([]string, len(common.PersoChoice))
+	for i, perso := range common.PersoChoice{
+		charactere[i] = fmt.Sprintf("%d. %s", i+1, perso)
+	}
+
+	fmt.Fprintf(conn, "Choisissez votre joueur parmi: %s\n", strings.Join(charactere, ", "))
+
+	player, err := reader.ReadString('\n')
+	if err != nil {
+		log.Println(err)
+		return ""
+	}
+
+	return player
+}
+
+
+func broadcast(message string, sender net.Conn, player string) {
 	clientsLock.Lock()
 	defer clientsLock.Unlock()
 
 	// Préparer le message à envoyer (avec l'adresse du client expéditeur)
-	fullMessage := fmt.Sprintf("[%s] : %s\n", username, message)
+	fullMessage := fmt.Sprintf("[%s] : %s\n", player, message)
 
 	// Envoyer à tous les clients sauf l'expéditeur (optionnel)
 	for client := range clients {
@@ -37,7 +61,6 @@ func broadcast(message string, sender net.Conn, username string) {
 	}
 }
 
-
 func handleConnection(conn net.Conn) {
 	defer func() {
 		// Supprimer le client de la liste à la fin
@@ -49,25 +72,23 @@ func handleConnection(conn net.Conn) {
 	}()
 
 	reader := bufio.NewReader(conn)
-
-	username, err := reader.ReadString('\n')
-	username = strings.TrimSpace(username)
-	if err != nil {
-		log.Println(err)
+	player := select_player(conn)
+	player = strings.Trim(player, "\n")
+	if player == "" {
+		log.Println("Error: Player doesn't exist")
 		return
 	}
-
+	
 	for {
-			message, err := reader.ReadString('\n')
-			if err != nil {
-				log.Println(err)
-				return
-			}
-			fmt.Printf("Recu de %s : %s", username, message)
-			broadcast(message, conn, username)
+		message, err := reader.ReadString('\n')
+		if err != nil {
+			log.Println(err)
+			return
 		}
+		fmt.Printf("Recu de %s : %s", player, message)
+		broadcast(message, conn, player)
+	}
 }
-
 
 func main() {
 	ln, err := net.Listen("tcp", "localhost:8080")
@@ -82,7 +103,7 @@ func main() {
 		if err != nil {
 			log.Println(err)
 		}
-	
+
 		clientsLock.Lock()
 		clients[conn] = true
 		clientsLock.Unlock()

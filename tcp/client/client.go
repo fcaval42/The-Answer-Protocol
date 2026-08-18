@@ -6,7 +6,7 @@ import (
 	"log"
 	"net"
 	"os"
-	"time"
+	"strings"
 )
 
 func main() {
@@ -15,41 +15,35 @@ func main() {
 		log.Fatalln(err)
 	}
 	defer conn.Close()
-
 	stdin := bufio.NewReader(os.Stdin)
 	connReader := bufio.NewReader(conn)
 
-	fmt.Print("Entrez votre pseudonyme : ")
-	username, err := stdin.ReadString('\n')
-	_, err = fmt.Fprintf(conn, "%s", username)
- 
+	select_player, err := connReader.ReadString('\n')
 	if err != nil {
 		log.Println(err)
 		return
 	}
+	fmt.Print(select_player)
+	fmt.Print("> ")
+	player, err := stdin.ReadString('\n')
+	_, err = fmt.Fprintf(conn, "%s", player)
+	player = strings.Trim(player, "\n")
 
 	go func() {
+		connRoutine := bufio.NewReader(conn)
 		for {
-			// Définir un timeout pour éviter les blocages infinis
-			err := conn.SetReadDeadline(time.Now().Add(5 * time.Second))
+
+			response, err := connRoutine.ReadString('\n')
 			if err != nil {
-				log.Println("Erreur SetReadDeadline :", err)
+				if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
+					continue
+				}
+
+				log.Println("Erreur de lecture :", err)
 				return
 			}
 
-			// Lire la réponse du serveur
-			response, err := connReader.ReadString('\n')
-			if err != nil {
-				// Vérifier si c'est un timeout
-				if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
-					continue // Ignorer les timeouts (pas de message reçu)
-				} else {
-					log.Println("Erreur de lecture :", err)
-					return
-				}
-			}
-			// Afficher la réponse
-			if response != "\n"{
+			if response != "\n" {
 				fmt.Print("\nServeur : " + response)
 				fmt.Print("> ")
 			}
@@ -57,9 +51,8 @@ func main() {
 	}()
 
 	for {
-		var line string
 		fmt.Print("> ")
-		line, err = stdin.ReadString('\n')
+		line, err := stdin.ReadString('\n')
 		if err != nil {
 			log.Println(err)
 			return
