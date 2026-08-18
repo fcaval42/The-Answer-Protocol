@@ -15,7 +15,7 @@ func main() {
 	// Ouvre (ou crée) un fichier pour les logs
 	file, err := os.OpenFile("protocol.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {
-		log.Fatalf("Erreur lors de l'ouverture du fichier de log : %v", err)
+		log.Fatalf("[ERROR] Erreur lors de l'ouverture du fichier de log : %v", err)
 	}
 	defer file.Close()
 
@@ -34,7 +34,7 @@ func main() {
 	// On recupere le message envoyé par le serveur pour la selection de personnages
 	select_player, err := connReader.ReadString('\n')
 	if err != nil {
-		log.Println(conn.RemoteAddr().String() + "| " + err.Error())
+		log.Println(conn.RemoteAddr().String() + "| [ERROR] " + err.Error())
 		return
 	}
 
@@ -62,7 +62,7 @@ func main() {
 				if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
 					continue
 				}
-				log.Println("Erreur de lecture :", err)
+				log.Println("[ERROR] Erreur de lecture :", err)
 				return
 			}
 			// On affiche le message s'il n'est pas vide
@@ -79,13 +79,13 @@ func main() {
 		// Récupèration de l'input
 		line, err := stdin.ReadString('\n')
 		if err != nil {
-			log.Println(conn.RemoteAddr().String() + "| " + err.Error())
+			log.Println(conn.RemoteAddr().String() + "| [ERROR] " + err.Error())
 			return
 		}
 
 		// Si l'input est "exit", gestion de la fermeture de la connexion
 		if line == "exit\n" {
-			fmt.Println("Fermeture de la connexion...")
+			fmt.Fprint(conn, "[INFO] Fermeture de la connexion...\n")
 			return
 		}
 

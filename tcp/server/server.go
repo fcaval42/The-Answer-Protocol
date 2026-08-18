@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"os"
@@ -60,17 +61,17 @@ func selectPlayer(conn net.Conn) string {
 	for i, perso := range common.PersoChoice {
 		charactere[i] = fmt.Sprintf("%d. %s", i+1, perso)
 	}
-	msg := fmt.Sprintf("[SERVER] Choisissez votre joueur parmi en entrant le numéro correspondant: %s\n", strings.Join(charactere, ", "))
+	msg := fmt.Sprintf("[WARN] Choisissez votre joueur parmi en entrant le numéro correspondant: %s\n", strings.Join(charactere, ", "))
 	common.LogAndFprintf(conn, msg)
 
 	// Boucle infinie tant que le joueur n'a pas effectué un bon choix
 	for {
 		// Recois le choix du joueur par le client
 		player, err := reader.ReadString('\n')
-		common.LogAndPrintf(conn, conn.RemoteAddr().String()+"| "+player)
+		common.LogAndPrintf(conn, conn.RemoteAddr().String()+"| " + player)
 		if player != "\n" {
 			if err != nil {
-				log.Println(conn.RemoteAddr().String() + "| " + err.Error())
+				log.Println(conn.RemoteAddr().String() + "| [ERROR] " + err.Error())
 				return ""
 			}
 
@@ -112,7 +113,7 @@ func broadcast(message string, sender net.Conn, player string) {
 		// Envoie du message a un client
 		_, err := client.Write([]byte(fullMessage))
 		if err != nil {
-			log.Printf("Erreur lors de l'envoi à %s : %v\n", client.RemoteAddr(), err)
+			log.Printf("[ERROR]: lors de l'envoi à %s : %v\n", client.RemoteAddr(), err)
 			// Supprimer le client en erreur
 			delete(clients, client)
 			client.Close()
@@ -138,8 +139,8 @@ func handleConnection(conn net.Conn) {
 		}
 		// Fermeture de la connexion
 		conn.Close()
-		common.LogAndPrintf(conn, "%s : \"Pour ceux qui viendront après\"\n", player)
-		common.LogAndPrintf(conn, "Client déconnecté : %s\n", conn.RemoteAddr())
+		common.LogAndPrintf(conn, "[INFO] [%s]: \"Pour ceux qui viendront après\"\n", player)
+		common.LogAndPrintf(conn, "[INFO] Client déconnecté : %s\n", conn.RemoteAddr())
 	}()
 
 	// Buffer en écoute sur le client
@@ -148,7 +149,7 @@ func handleConnection(conn net.Conn) {
 	player = selectPlayer(conn)
 	player = strings.Trim(player, "\n")
 	if player == "" {
-		log.Println("Error: Player doesn't exist")
+		log.Println("[ERROR]: Player doesn't exist")
 		return
 	}
 
@@ -156,6 +157,9 @@ func handleConnection(conn net.Conn) {
 	for {
 		message, err := reader.ReadString('\n')
 		if err != nil {
+			if err == io.EOF {
+				return
+			}
 			log.Println(conn.RemoteAddr().String() + "| " + err.Error())
 			return
 		}
@@ -190,7 +194,7 @@ func main() {
 		clients[conn] = true
 		clientsLock.Unlock()
 
-		common.LogAndPrintf(conn, "Nouveau client connecté : %s\n", conn.RemoteAddr())
+		common.LogAndPrintf(conn, "[INFO] Nouveau client connecté : %s\n", conn.RemoteAddr())
 
 		// Gestion individuelle (Thread) du client
 		go handleConnection(conn)

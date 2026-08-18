@@ -1,9 +1,11 @@
-2026/08/18 19:05:38 Nouveau client connecté : 127.0.0.1:36578
-2026/08/18 19:05:38 [SERVER] Choisissez votre joueur parmi en entrant le numéro correspondant: 1. Gustave, 2. Maelle, 3. Sciel, 4. Lune, 5. Verso
-2026/08/18 19:05:39 127.0.0.1:36578| dasdsadas
-2026/08/18 19:05:39 [SERVER] Choisissez votre joueur parmi en entrant le numéro correspondant: 1. Gustave, 2. Maelle, 3. Sciel, 4. Lune, 5. Verso
-2026/08/18 19:05:41 127.0.0.1:36578| asdasdasdsa
-2026/08/18 19:05:41 [SERVER] Choisissez votre joueur parmi en entrant le numéro correspondant: 1. Gustave, 2. Maelle, 3. Sciel, 4. Lune, 5. Verso
-2026/08/18 19:05:42 127.0.0.1:36578| 1
-2026/08/18 19:05:43 127.0.0.1:36578| [Gustave]: dsadsadas
-2026/08/18 19:05:56 Erreur de lecture : EOF
+2026/08/18 19:26:33 [INFO] Nouveau client connecté : 127.0.0.1:36086
+2026/08/18 19:26:33 [WARN] Choisissez votre joueur parmi en entrant le numéro correspondant: 1. Gustave, 2. Maelle, 3. Sciel, 4. Lune, 5. Verso
+2026/08/18 19:26:34 127.0.0.1:36086| dsadsa
+2026/08/18 19:26:34 [WARN] Choisissez votre joueur parmi en entrant le numéro correspondant: 1. Gustave, 2. Maelle, 3. Sciel, 4. Lune, 5. Verso
+2026/08/18 19:26:35 127.0.0.1:36086| dsadsa
+2026/08/18 19:26:35 [WARN] Choisissez votre joueur parmi en entrant le numéro correspondant: 1. Gustave, 2. Maelle, 3. Sciel, 4. Lune, 5. Verso
+2026/08/18 19:26:36 127.0.0.1:36086| 1
+2026/08/18 19:26:37 127.0.0.1:36086| [Gustave]: dasda
+2026/08/18 19:26:41 127.0.0.1:36086| [Gustave]: [INFO] Fermeture de la connexion...
+2026/08/18 19:26:41 [INFO] [Gustave]: "Pour ceux qui viendront après"
+2026/08/18 19:26:41 [INFO] Client déconnecté : 127.0.0.1:36086
