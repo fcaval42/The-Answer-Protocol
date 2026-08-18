@@ -235,3 +235,6 @@ Pour ton **GUI Client TAP**, tu peux maintenant :
 2. **Ajouter des `widget`** (Label pour la room, List pour l'inventaire, Entry pour le chat).
 3. **Organiser tout ça avec des `container`** (VBox, HBox, Border).
 4. **Connecter les événements** (boutons, saisie) aux commandes TCP.
+
+
+voir doc widget = go doc fyne.io/fyne/v2/widget

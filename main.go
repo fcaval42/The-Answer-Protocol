@@ -59,6 +59,8 @@ func buildRoomPanel(r Room) fyne.CanvasObject{
 	// ------------------ SORTIE -----------------
 	exitsRow := container.NewHBox() // conteneur horizontal qui contiendra les
 	// boutons des sorties
+	// NewHBox = crée nv conteneur + objets seront placés de gauche à droite et
+	// tjrs affichés à leur taille min horizontale.
 	for _, e := range r.exits {
 		exit := e // on crée une nvlle variable locale à chaque tour.
 		exitsRow.Add(widget.NewButton(exit, func() { // acxtion du bouton
@@ -113,6 +115,32 @@ func buildRoomPanel(r Room) fyne.CanvasObject{
 	)
 }
 
+// --- Panneau personnage : PV + inventaire (droite, haute) -----
+
+func buildCharacterPanel(p Player) fyne.CanvasObject {
+	name := widget.NewLabelWithStyle(p.name, fyne.TextAlignLeading,
+		fyne.TextStyle{Bold: true})
+
+	// widget progress Bar = widget déjà dispo de base youpi
+	hpBar := widget.NewProgressBar()
+	hpBar.Min = 0
+	hpBar.Max = 100
+	hpBar.Value = p.hp
+	hpLabel := widget.NewLabel(fmt.Sprintf("PV %0f/100", p.hp))
+
+	invLabel := widget.NewLabelWithStyle("Inventaire", fyne.TextAlignLeading,
+		fyne.TextStyle{Bold : true})
+	invRow := container.NewHBox()
+	for _, i := range p.inventory {
+		item := i
+		invRow.Add(widget.NewButton(item, func() {
+			fmt.Println("LÂCHER: ", item)
+		}))
+	}
+
+	return container.NewVBox(name, hpLabel, hpBar, invLabel, invRow)
+}
+
 
 // ---------------- Bouton carte (centre) ------------
 
@@ -132,8 +160,11 @@ func main() {
 
 	roomPanel := buildRoomPanel(fakeRoom)
 	mapButton := buildMapButton()
+	rightPanel := container.NewVBox(
+		buildCharacterPanel(fakePlayer),
+	)
 
-	w.SetContent(container.NewGridWithColumns(2, roomPanel, mapButton))
+	w.SetContent(container.NewGridWithColumns(3, roomPanel, mapButton, rightPanel))
 	w.Resize(fyne.NewSize(700, 500))
 	w.ShowAndRun()
 }
