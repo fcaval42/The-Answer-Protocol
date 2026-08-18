@@ -6,7 +6,6 @@ import (
 	"log"
 	"net"
 	"os"
-	"strings"
 )
 
 func main() {
@@ -37,13 +36,19 @@ func main() {
 
 	// On récupère le choix de l'utilisateur
 	player, err := stdin.ReadString('\n')
+
+	// On envoi le choix au serveur
 	_, err = fmt.Fprintf(conn, "%s", player)
-	player = strings.Trim(player, "\n")
 
+	// Goroutine qui va chercher en continue ce qu'envoie le serveur
 	go func() {
+		// Buffer en ecoute du serveur, unique a la goroutine pour eviter
+		// que plusieurs thread utilisent le meme buffer
 		connRoutine := bufio.NewReader(conn)
-		for {
 
+		// Boucle infinie
+		for {
+			// Recupère les messages envoyés par le serveur
 			response, err := connRoutine.ReadString('\n')
 			if err != nil {
 				if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
@@ -52,7 +57,7 @@ func main() {
 				log.Println("Erreur de lecture :", err)
 				return
 			}
-
+			// On affiche le message s'il n'est pas vide
 			if response != "\n" {
 				fmt.Print("\nServeur : " + response)
 				fmt.Print("> ")
@@ -60,19 +65,23 @@ func main() {
 		}
 	}()
 
+	// Boucle infinie pour les inputs
 	for {
 		fmt.Print("> ")
+		// Récupèration de l'input
 		line, err := stdin.ReadString('\n')
 		if err != nil {
 			log.Println(err)
 			return
 		}
 
+		// Si l'input est "exit", gestion de la fermeture de la connexion
 		if line == "exit\n" {
 			fmt.Println("Fermeture de la connexion...")
 			return
 		}
 
+		// On envoie l'input au serveur
 		_, err = fmt.Fprintf(conn, "%s", line)
 		if err != nil {
 			log.Println(err)
