@@ -42,8 +42,8 @@ var fakePlayer = Player{
 
 // ----------------- Panneau de salle (gauche) ------------------
 
-// r Room = structure Room qui contient données de la salle
 func buildRoomPanel(r Room) fyne.CanvasObject{
+	// r Room = structure Room qui contient données de la salle
 	// sortie fyne.CanvasObject = élément graphique (conteneur, widget...)
 
 	// ------------------ TITRE ------------------
@@ -76,15 +76,52 @@ func buildRoomPanel(r Room) fyne.CanvasObject{
 	}
 
 	// ------------------- PNJ --------------------
-	ncpsRow := container.NewHBox()
+	npcsRow := container.NewHBox()
 	for _, n := range r.npcs {
-		ncp := n
-		ncpsRow.Add(widget.NewButton((npc + "TALK", func() {
-			fmt.Println("TALK: ")
-		})))
+		npc := n
+		npcsRow.Add(widget.NewButton(npc + "TALK", func() {
+			fmt.Println("TALK: ", npc) // A REMPLACER
+		}))
+		npcsRow.Add(widget.NewButton(npc + "ATTACK", func() {
+			fmt.Println("ATTACK:", npc) // A REMPLACER
+		}))
 	}
 
+	// ----------------- ACTIONS --------------------
+	actionsGrid := container.NewGridWithColumns(2, 
+		widget.NewButton("Status", func() { fmt.Println("STATUS") }), // A REMPLACER
+		widget.NewButton("Quest", func() { fmt.Println("QUEST") }), // A REMPLACER
+		widget.NewButton("Status", func() { fmt.Println("STATUS") }), // A REMPLACER
+		widget.NewButton("Quit", func() { fmt.Println("QUIT") }), // A REMPLACER
+		)
 
+	// conteneur vertical. Respecte ordre d'affichage
+	return container.NewVBox(
+		title,
+		desc,
+		widget.NewSeparator(),      // ligne de séparation
+		widget.NewLabel("Sortie"),
+		exitsRow,
+		widget.NewLabel("Objets"),
+		itemsRow,
+		widget.NewLabel("PNJ"),
+		npcsRow,
+		widget.NewSeparator(),
+		widget.NewLabelWithStyle("Actions", fyne.TextAlignLeading,
+	fyne.TextStyle{Bold: true}),
+		actionsGrid,
+	)
+}
+
+
+// ---------------- Bouton carte (centre) ------------
+
+func buildMapButton() fyne.CanvasObject {
+	btn := widget.NewButton("Voir Map", func() {
+		fmt.Println("Ouvrir carte")  // FAIRE une vue carte du monde
+	})
+
+	return container.NewCenter(btn)
 }
 
 
@@ -94,6 +131,9 @@ func main() {
 	w := a.NewWindow("The Answer Protocol")
 
 	roomPanel := buildRoomPanel(fakeRoom)
+	mapButton := buildMapButton()
 
+	w.SetContent(container.NewGridWithColumns(2, roomPanel, mapButton))
+	w.Resize(fyne.NewSize(700, 500))
 	w.ShowAndRun()
 }
