@@ -38,7 +38,7 @@ func main() {
 	player, err := stdin.ReadString('\n')
 
 	// On envoi le choix au serveur
-	_, err = fmt.Fprintf(conn, "%s", player)
+	conn.Write([]byte(player))
 
 	// Goroutine qui va chercher en continue ce qu'envoie le serveur
 	go func() {
@@ -82,10 +82,6 @@ func main() {
 		}
 
 		// On envoie l'input au serveur
-		_, err = fmt.Fprintf(conn, "%s", line)
-		if err != nil {
-			log.Println(err)
-			return
-		}
+		conn.Write([]byte(line))
 	}
 }

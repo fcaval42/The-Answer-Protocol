@@ -64,7 +64,8 @@ func selectPlayer(conn net.Conn) string{
 	for i, perso := range common.PersoChoice{
 		charactere[i] = fmt.Sprintf("%d. %s", i+1, perso)
 	}
-	fmt.Fprintf(conn, "Choisissez votre joueur parmi en entrant le numéro correspondant: %s\n", strings.Join(charactere, ", "))
+	msg := fmt.Sprintf("Choisissez votre joueur parmi en entrant le numéro correspondant: %s\n", strings.Join(charactere, ", "))
+	conn.Write([]byte(msg))
 
 	// Boucle infinie tant que le joueur n'a pas effectué un bon choix
 	for{
@@ -93,7 +94,7 @@ func selectPlayer(conn net.Conn) string{
 				}
 			}
 		}
-		fmt.Fprintf(conn, "Choisissez votre joueur parmi en entrant le numéro correspondant: %s\n", strings.Join(charactere, ", "))
+		conn.Write([]byte(msg))
 	}
 }
 
