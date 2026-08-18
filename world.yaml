@@ -1,0 +1,175 @@
+# fichier de configuration. Définit structure statique du monde
+# - serveur charge le monde au démarrage (lit ce fichier pour créer carte)
+# - clients reçoivent les données via TCP (va afficher objets dans une room)
+
+world:
+  locations:
+
+    lumière:
+      name: "Lumière"
+      description: "Une clarté douce et constante baigne les lieux, comme si la
+        lumière elle-même y était née."
+      exits:
+        east: "vallées_fleuries"
+        south: "vieille_lumière"
+      npcs: ["Sophie"]
+
+    vallées_fleuries:
+      name: "Vallées fleuries"
+      description: "Des champs de fleurs aux couleurs trop vives pour être
+        naturelles"
+      exits:
+        west: "lumière"
+        east: "plage"
+        south: "océan_suspendu"
+
+    plage:
+      name: "Plage"
+      description: "Le sable blanc rencontre une eau parfaitement immobile,
+        son reflet trop net pour être honnête."
+      exits:
+        west: "vallées_fleuries"
+      items: ["lumina"]
+
+    océan_suspendu:
+      name: "Océan suspendu"
+      description: "Une étendue d'eau qui semble flotter au-dessus du vide,
+        reliant le clair à l'obscur."
+      exits:
+        north: "vallées_fleuries"
+        west: "nid_esquie"
+        east: "village_gestral"
+
+    nid_esquie:
+      name: "Nid d'Esquie"
+      description: "Un repaire suspendu, tissé à flanc de falaise."
+      exits:
+        east: "océan_suspendu"
+      npcs: ["Esquie"]
+
+    village_gestral:
+      name: "Village Gestral"
+      description: "Une odeur de combat flotte entre les huttes"
+      exits:
+        west: "océan_suspendu"
+        east: "cimetière_gestral"
+        south: "falaise_rochevague"
+
+    cimetière_gestral:
+      name: "Cimetière Gestral"
+      description: "Aucun nom n'y est plus lisible. De minuscules tombes,
+        dont certaines sont vides"
+      exits:
+        west: "village_gestral"
+      npcs: ["Renoir"]
+
+    falaise_rochevague:
+      name: "Falaise de Rochevague"
+      description: "Un promontoire rocheux battu par des vagues qui
+        n'atteignent jamais le sol, comme si la falaise elle-même
+        refusait de tomber."
+      exits:
+        north: "village_gestral"
+        west: "terres_oubliées"
+      items: ["chroma"]
+
+    terres_oubliées:
+      name: "Terres oubliées"
+      description: "Le sang qui gît ici y est plus rouge que le
+        coucher du soleil."
+      exits:
+        west: "falaise_rochevague"
+        south: "vieille_lumière"
+      items: ["brise_barrière"]
+
+    vieille_lumière:
+      name: "Vieille Lumière"
+      description: "L'écho affaibli. La boucle se referme,
+        avant de reprendre."
+      exits:
+        west: "terres_oubliées"
+        north: "lumière"
+      items: ["pictos"]
+
+
+items:
+  lumina:
+    name: "Lumina"
+    description: "Un fragment de lumière condensée."
+    obtainable: true
+
+  chroma:
+    name: "Chroma"
+    description: "Permet d'acheter des accessoires qui ne seront jamais
+      utilisés..."
+    obtainable: true
+
+  pictos:
+    name: "Pictos"
+    description: "Un symbole gravé, semblant contenir un souvenir figé."
+    obtainable: true
+
+  brise_barrière:
+    name: "Brise-barrière"
+    description: "Une arme ancienne, dont le tranchant garde une teinte étrange,
+      presque translucide. Elle semble faite pour trancher autre chose que de la chair."
+    obtainable: true
+
+npcs:
+  Sophie:
+    name: "Sophie"
+    role: "quest_giver"
+    description: "Elle attend près du port, le regard fixé sur l'horizon comme
+      si elle guettait quelqu'un qui ne viendra jamais tout à fait."
+    dialogue:
+      - "Dans un « autre monde », n'est-ce pas ?"
+      - "Les personnes obstinées changent le monde. Et Gustave, tu es la personne
+        la plus têtue que je connaisse. Merci."
+
+  Esquie:
+    name: "Esquie"
+    role: "dialogue"
+    description: "La légende raconte qu'Esquie est l'être le plus puissant du
+      monde, capable de fendre les cieux et de plonger dans les profondeurs
+      marines. La légende raconte aussi… qu'il est paresseux."
+    dialogue:
+      - "Voyez-vous, Florrie m'aide à nager. Mais Florrie a été volée par mon
+        ennemi juré ! Celui dont chaque pas fait trembler les fondations du monde !
+        Celui qu'on appelle… François."
+      - "Tout au nord ! Visez le grand « 33 ». Je vous rejoins dehors."
+
+  Renoir:
+    name: "Renoir"
+    role: "enemy"
+    description: "Une silhouette hostile, sa peau presque effacée par endroits."
+    stats:
+      hp: 60
+    dialogue:
+      - "Alors voilà. Tu nous as entraînés sur cette voie, mais es-tu prêt
+        à en assumer les conséquences ?"
+      - "Ça ne te semblera pas logique maintenant, mais on veut tous
+        les deux le meilleur pour nos familles."
+
+quests:
+  nevron_blanc:
+    name: "Lumen rursus accendens"
+    giver: "Sophie"
+    description: "Chercher la lumière pour rallumer sa lampe."
+    objective:
+      type: "fetch"
+      item: "lumina"
+      deliver_to: "vallées_fleuries"
+    reward:
+      type: "skill"
+      value: "competence_gradient"
+
+  Florrie:
+    name: "Florrie"
+    giver: "Esquie"
+    description: "Aller combattre Renoir pour libérer Florrie"
+    objective:
+      type: "defeat"
+      npc: "renoir"
+    reward:
+      type: "item"
+      value: "pierre"
