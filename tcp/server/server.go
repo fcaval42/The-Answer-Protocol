@@ -17,9 +17,20 @@ var (
 )
 
 
-func isInList(num int) bool {
+func IsDigit(s string) bool {
+	if s == "" {
+		return false
+	}
+	for _, c := range s {
+		if c < '0' || c > '9' {
+			return false
+		}
+	}
+	return true
+}
 
-    // 2. Vérifier que num est entre 1 et len(common.PersoChoice)
+
+func isInList(num int) bool {
     persoLen := len(common.PersoChoice)
     return num >= 1 && num <= persoLen
 }
@@ -51,14 +62,16 @@ func selectPlayer(conn net.Conn) string{
 				log.Println(err)
 				return ""
 			}
-			indextest, err := strconv.Atoi(strings.Trim(player, "\n"))
-			if err != nil {
-			return ""
-			}
-			if isInList(indextest){
-				player = common.PersoChoice[indextest - 1]
-				common.PersoChoice = removeUnordered(common.PersoChoice, indextest - 1)
-				return player
+			if IsDigit(strings.Trim(player, "\n")){
+				indextest, err := strconv.Atoi(strings.Trim(player, "\n"))
+				if err != nil {
+				return ""
+				}
+				if isInList(indextest){
+					player = common.PersoChoice[indextest - 1]
+					common.PersoChoice = removeUnordered(common.PersoChoice, indextest - 1)
+					return player
+				}
 			}
 		}
 		fmt.Fprintf(conn, "Choisissez votre joueur parmi en entrant le numéro correspondant: %s\n", strings.Join(charactere, ", "))
