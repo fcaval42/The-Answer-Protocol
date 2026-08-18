@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"strconv"
 	"strings"
 	"sync"
 	"the_answer_protocol/tcp/common"
@@ -16,8 +17,21 @@ var (
 )
 
 
-func select_player(conn net.Conn) string{
+func isInList(num int) bool {
 
+    // 2. Vérifier que num est entre 1 et len(common.PersoChoice)
+    persoLen := len(common.PersoChoice)
+    return num >= 1 && num <= persoLen
+}
+
+
+func removeUnordered(s []string, i int) []string {
+    s[i] = s[len(s)-1] // remplace l'élément i par le dernier
+    return s[:len(s)-1] // réduit la taille du slice
+}
+
+
+func selectPlayer(conn net.Conn) string{
 	common.PersoLock.Lock()
 	defer common.PersoLock.Unlock()
 	reader := bufio.NewReader(conn)
@@ -27,15 +41,29 @@ func select_player(conn net.Conn) string{
 		charactere[i] = fmt.Sprintf("%d. %s", i+1, perso)
 	}
 
-	fmt.Fprintf(conn, "Choisissez votre joueur parmi: %s\n", strings.Join(charactere, ", "))
+	fmt.Fprintf(conn, "Choisissez votre joueur parmi en entrant le numéro correspondant: %s\n", strings.Join(charactere, ", "))
 
-	player, err := reader.ReadString('\n')
-	if err != nil {
-		log.Println(err)
-		return ""
+
+	for{
+		player, err := reader.ReadString('\n')
+		if player != "\n"{
+			if err != nil {
+				log.Println(err)
+				return ""
+			}
+			indextest, err := strconv.Atoi(strings.Trim(player, "\n"))
+			if err != nil {
+			return ""
+			}
+			if isInList(indextest){
+				player = common.PersoChoice[indextest - 1]
+				common.PersoChoice = removeUnordered(common.PersoChoice, indextest - 1)
+				return player
+			}
+		}
+		fmt.Fprintf(conn, "Choisissez votre joueur parmi en entrant le numéro correspondant: %s\n", strings.Join(charactere, ", "))
+		
 	}
-
-	return player
 }
 
 
@@ -43,13 +71,13 @@ func broadcast(message string, sender net.Conn, player string) {
 	clientsLock.Lock()
 	defer clientsLock.Unlock()
 
-	// Préparer le message à envoyer (avec l'adresse du client expéditeur)
+	// Préparer le message à envoyer (avec le pseudo du client expéditeur)
 	fullMessage := fmt.Sprintf("[%s] : %s\n", player, message)
 
-	// Envoyer à tous les clients sauf l'expéditeur (optionnel)
+	// Envoyer à tous les clients sauf l'expéditeur
 	for client := range clients {
 		if client == sender {
-			continue // Sauter l'expéditeur (optionnel)
+			continue
 		}
 		_, err := client.Write([]byte(fullMessage))
 		if err != nil {
@@ -62,17 +90,23 @@ func broadcast(message string, sender net.Conn, player string) {
 }
 
 func handleConnection(conn net.Conn) {
+	var player string
 	defer func() {
 		// Supprimer le client de la liste à la fin
 		clientsLock.Lock()
 		delete(clients, conn)
 		clientsLock.Unlock()
+		if player != ""{
+			common.PersoLock.Lock()
+			common.PersoChoice = append(common.PersoChoice, player)
+			common.PersoLock.Unlock()
+		}
 		conn.Close()
 		fmt.Printf("Client déconnecté : %s\n", conn.RemoteAddr())
 	}()
 
 	reader := bufio.NewReader(conn)
-	player := select_player(conn)
+	player = selectPlayer(conn)
 	player = strings.Trim(player, "\n")
 	if player == "" {
 		log.Println("Error: Player doesn't exist")

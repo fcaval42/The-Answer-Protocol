@@ -38,7 +38,6 @@ func main() {
 				if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
 					continue
 				}
-
 				log.Println("Erreur de lecture :", err)
 				return
 			}
