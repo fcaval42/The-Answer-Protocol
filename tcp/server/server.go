@@ -142,6 +142,7 @@ func handleConnection(conn net.Conn) {
 		}
 		// Fermeture de la connexion
 		conn.Close()
+		fmt.Printf("Pour ceux qui viendront après : %s\n", player)
 		fmt.Printf("Client déconnecté : %s\n", conn.RemoteAddr())
 	}()
 
