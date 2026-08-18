@@ -6,14 +6,22 @@ import (
 	"log"
 	"net"
 	"os"
+	"the_answer_protocol/tcp/common"
 )
 
 func main() {
 	// Creation de la connexion en tcp au localhost
 	conn, err := net.Dial("tcp", "localhost:8080")
+	// Ouvre (ou crée) un fichier pour les logs
+	file, err := os.OpenFile("protocol.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatalf("Erreur lors de l'ouverture du fichier de log : %v", err)
 	}
+	defer file.Close()
+
+	// Configure le logger pour écrire UNIQUEMENT dans le fichier
+	log.SetOutput(file)
+
 	// Fermeture de la connexion a la fin du programme
 	defer conn.Close()
 
@@ -26,7 +34,7 @@ func main() {
 	// On recupere le message envoyé par le serveur pour la selection de personnages
 	select_player, err := connReader.ReadString('\n')
 	if err != nil {
-		log.Println(err)
+		log.Println(conn.RemoteAddr().String() + "| " + err.Error())
 		return
 	}
 
@@ -38,7 +46,7 @@ func main() {
 	player, err := stdin.ReadString('\n')
 
 	// On envoi le choix au serveur
-	conn.Write([]byte(player))
+	fmt.Fprint(conn, player)
 
 	// Goroutine qui va chercher en continue ce qu'envoie le serveur
 	go func() {
@@ -59,7 +67,7 @@ func main() {
 			}
 			// On affiche le message s'il n'est pas vide
 			if response != "\n" {
-				fmt.Print("\nServeur : " + response)
+				fmt.Print("\n" + response)
 				fmt.Print("> ")
 			}
 		}
@@ -71,7 +79,7 @@ func main() {
 		// Récupèration de l'input
 		line, err := stdin.ReadString('\n')
 		if err != nil {
-			log.Println(err)
+			log.Println(conn.RemoteAddr().String() + "| " + err.Error())
 			return
 		}
 
@@ -82,6 +90,6 @@ func main() {
 		}
 
 		// On envoie l'input au serveur
-		conn.Write([]byte(line))
+		common.LogAndFprintf(conn, line)
 	}
 }
