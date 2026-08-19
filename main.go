@@ -3,15 +3,14 @@ package main
 import (
 	"fmt"
 
-	"image/color"	// image = permet de toucher aux images en Go
+	"image/color" // image = permet de toucher aux images en Go
 	// color = fournit couleurs/modèles prêts à l'emploi.
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
+	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
-	"fyne.io/fyne/v2/canvas" // primitives graphiques de bas nv. Formes qu'on
-	// dessine directement, par opposition aux widget (boutons, )
 )
 
 // ---- Données factices, en attendant le vrai serveur ----
@@ -22,9 +21,8 @@ type Room struct {
 	exits       []string
 	items       []string
 	npcs        []string
+	background  string // chemin vers le gif de fond propre à cette salle
 }
-
-// ENVOI QUE ROOM ET NON PLAYER
 
 type Player struct {
 	name      string
@@ -38,6 +36,16 @@ var fakeRoom = Room{
 	exits:       []string{"Océan suspendu", "Cimetière gestral"},
 	items:       []string{"Chroma"},
 	npcs:        []string{"Renoir"},
+	background:  "village_gestral.png",
+}
+
+// deuxième salle factice, juste pour tester visuellement le changement de
+// fond avant que le vrai MOVE réseau soit branché au serveur
+var fakeRoom2 = Room{
+	name:        "Cimetière Gestral",
+	description: "De minuscules tombes, dont certaines sont vides.",
+	exits:       []string{"Village Gestral"},
+	background:  "assets/cimetiere_gestral.png",
 }
 
 var fakePlayer = Player{
@@ -45,6 +53,7 @@ var fakePlayer = Player{
 	hp:        100,
 	inventory: []string{"Lumina", "Pictos"},
 }
+
 
 // je met un rectangle en fond pour les deux colonnes gauche et droite
 func withMinWidth(obj fyne.CanvasObject, w float32) fyne.CanvasObject {
@@ -209,14 +218,37 @@ func buildChatPanel() fyne.CanvasObject {
 }
 
 
-
 func main() {
 	a := app.New()
 	w := a.NewWindow("The Answer Protocol")
+	w.Resize(fyne.NewSize(1300, 800))
+	w.SetFixedSize(true) // empêche utilisateur de redimensionner fenêtre
 
-	// 420 -> modifier largeur deux colonnes
+	// petit annuaire de démo : nom de sortie -> salle cible.
+	// Plus tard, ça n'existera plus : le serveur renverra directement
+	// la nouvelle Room en réponse à MOVE, via le protocole réseau.
+	demoRooms := map[string]Room{
+		"Village Gestral":   fakeRoom,
+		"Cimetière gestral": fakeRoom2,
+		"Cimetière Gestral": fakeRoom2,
+	}
 
-	roomPanel := withMinWidth(buildRoomPanel(fakeRoom), 420)
+	background, bgImage := BuildBackground(fakeRoom.background)
+
+	// garde une référence stable qu'on peut vider/remplir pour ne pas
+	// reconstruire toute la fenêtre à chaque changement de salle.
+	roomContainer := container.NewStack()
+
+	changeRoom := func(newRoom Room) {
+		setRoomBackground(bgImage, newRoom)
+		roomContainer.Objects = []fyne.CanvasObject{buildRoomPanel(newRoom)} // VOIR
+		roomContainer.Refresh()
+	}
+	changeRoom(fakeRoom) // affichage initial
+	_ = demoRooms // gardé pour un futur test manuel : changeRoom(demoRooms["cimetière gestral"])
+
+
+	//roomPanel := withMinWidth(buildRoomPanel(fakeRoom), 420)
 	mapButton := buildMapButton()
 	rightPanel := withMinWidth(container.NewVBox(
 		buildCharacterPanel(fakePlayer),
@@ -224,15 +256,14 @@ func main() {
 		buildChatPanel(),
 	), 420)
 
-	body := container.NewBorder(nil, nil, roomPanel, rightPanel, mapButton)
+	body := container.NewBorder(nil, nil, withMinWidth(roomContainer, 420), rightPanel, mapButton)
 
 	// NewBorder = créer un conteneur avec des bordures personnalisées pour
 	// organiser les éléments d'une interface (top, bottom, left, right, content)
-
 	content := container.NewBorder(buildHeader(), nil, nil, nil, body)
 
-	w.SetContent(container.NewPadded(content))
-	w.Resize(fyne.NewSize(1300, 800))
-	w.SetFixedSize(true) // empêche utilisateur de redimensionner fenêtre
+	full := container.NewStack(background, container.NewPadded(content))
+
+	w.SetContent(full)
 	w.ShowAndRun()
 }
