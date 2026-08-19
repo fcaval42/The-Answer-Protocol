@@ -48,15 +48,15 @@ func handleConnection(conn net.Conn) {
 		clientsLock.Unlock()
 		// Si un personnage avait été utilisé ont le remer
 		// dans la liste des personnages jouables
-		if player != "" {
+		if player != "" && player != "900" {
 			PersoLock.Lock()
 			PersoChoice = append(PersoChoice, player)
 			PersoLock.Unlock()
+			LogAndPrintf(conn, "[INFO] [%s]: \"Pour ceux qui viendront après\"\n", player)
 		}
 		// Fermeture de la connexion
 		conn.Close()
-		LogAndPrintf(conn, "[INFO] [%s]: \"Pour ceux qui viendront après\"\n", player)
-		LogAndPrintf(conn, "[INFO] Client déconnecté : %s\n", conn.RemoteAddr())
+		LogAndPrintf(conn, "%s| [INFO] Client déconnecté\n", conn.RemoteAddr())
 	}()
 
 	// Buffer en écoute sur le client
@@ -64,8 +64,11 @@ func handleConnection(conn net.Conn) {
 	// Séléction du personnage jouable
 	player = selectPlayer(conn)
 	player = strings.Trim(player, "\n")
-	if player == "" {
+	switch player {
+	case "":
 		log.Println("[ERROR]: Player doesn't exist")
+		return
+	case "900":
 		return
 	}
 
@@ -87,7 +90,7 @@ func handleConnection(conn net.Conn) {
 }
 
 func main() {
-	logfile, _ := os.Create("protocol.log")
+	logfile, _ := os.Create("../protocol.log")
 	log.SetOutput(logfile)
 	// Ouverture de l'ecoute tcp sur le port 8080 du localhost
 	ln, err := net.Listen("tcp", "localhost:8080")
@@ -110,7 +113,7 @@ func main() {
 		clients[conn] = true
 		clientsLock.Unlock()
 
-		LogAndPrintf(conn, "[INFO] Nouveau client connecté : %s\n", conn.RemoteAddr())
+		LogAndPrintf(conn, "%s| [INFO] Nouveau client connecté\n", conn.RemoteAddr())
 
 		// Gestion individuelle (Thread) du client
 		go handleConnection(conn)
