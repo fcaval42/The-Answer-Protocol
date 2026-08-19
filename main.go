@@ -11,7 +11,7 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
 	"fyne.io/fyne/v2/canvas" // primitives graphiques de bas nv. Formes qu'on
-	// dessine directement, par opposition aux widget (boutons, listes...)
+	// dessine directement, par opposition aux widget (boutons, )
 )
 
 // ---- Données factices, en attendant le vrai serveur ----
@@ -23,6 +23,8 @@ type Room struct {
 	items       []string
 	npcs        []string
 }
+
+// ENVOI QUE ROOM ET NON PLAYER
 
 type Player struct {
 	name      string
@@ -44,7 +46,7 @@ var fakePlayer = Player{
 	inventory: []string{"Lumina", "Pictos"},
 }
 
-// je met un rectangle en fond
+// je met un rectangle en fond pour les deux colonnes gauche et droite
 func withMinWidth(obj fyne.CanvasObject, w float32) fyne.CanvasObject {
 	sizer := canvas.NewRectangle(color.Transparent)
 	sizer.SetMinSize(fyne.NewSize(w, 0))
@@ -181,6 +183,9 @@ func buildMapButton() fyne.CanvasObject {
 // ---- Chat (droite, bas) : onglets Global/Salle/Groupe séparés des logs ----
 
 func buildChatPanel() fyne.CanvasObject {
+	// fonction dans une fonction -> Makescope = fonction interne. Définie à
+	// l'intérieur de chat pour créer un conteneur réutilisable avec un sample
+	// différent pour chaque objet
 	makeScope := func(sample string) fyne.CanvasObject {
 		messages := widget.NewLabel(sample)
 		messages.Wrapping = fyne.TextWrapWord
@@ -199,7 +204,8 @@ func buildChatPanel() fyne.CanvasObject {
 		container.NewTabItem("Groupe", makeScope("")),
 	)
 
-	return container.NewBorder(widget.NewLabel("Chat"), nil, nil, nil, tabs)
+	return container.NewBorder(widget.NewLabelWithStyle("Chat",
+	fyne.TextAlignLeading, fyne.TextStyle{Bold: true}), nil, nil, nil, tabs)
 }
 
 
@@ -208,13 +214,15 @@ func main() {
 	a := app.New()
 	w := a.NewWindow("The Answer Protocol")
 
-	roomPanel := buildRoomPanel(fakeRoom)
+	// 420 -> modifier largeur deux colonnes
+
+	roomPanel := withMinWidth(buildRoomPanel(fakeRoom), 420)
 	mapButton := buildMapButton()
 	rightPanel := withMinWidth(container.NewVBox(
 		buildCharacterPanel(fakePlayer),
 		widget.NewSeparator(),
 		buildChatPanel(),
-	), 300)
+	), 420)
 
 	body := container.NewBorder(nil, nil, roomPanel, rightPanel, mapButton)
 
@@ -224,6 +232,7 @@ func main() {
 	content := container.NewBorder(buildHeader(), nil, nil, nil, body)
 
 	w.SetContent(container.NewPadded(content))
-	w.Resize(fyne.NewSize(900, 550))
+	w.Resize(fyne.NewSize(1300, 800))
+	w.SetFixedSize(true) // empêche utilisateur de redimensionner fenêtre
 	w.ShowAndRun()
 }
