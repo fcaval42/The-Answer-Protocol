@@ -3,10 +3,15 @@ package main
 import (
 	"fmt"
 
+	"image/color"	// image = permet de toucher aux images en Go
+	// color = fournit couleurs/modèles prêts à l'emploi.
+
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
+	"fyne.io/fyne/v2/canvas" // primitives graphiques de bas nv. Formes qu'on
+	// dessine directement, par opposition aux widget (boutons, listes...)
 )
 
 // ---- Données factices, en attendant le vrai serveur ----
@@ -37,6 +42,26 @@ var fakePlayer = Player{
 	name:      "Gustave",
 	hp:        100,
 	inventory: []string{"Lumina", "Pictos"},
+}
+
+// je met un rectangle en fond
+func withMinWidth(obj fyne.CanvasObject, w float32) fyne.CanvasObject {
+	sizer := canvas.NewRectangle(color.Transparent)
+	sizer.SetMinSize(fyne.NewSize(w, 0))
+	return container.NewStack(sizer, obj)
+}
+
+// ----------------- Header (titre + infos salles) ------------------
+
+func buildHeader() fyne.CanvasObject {
+	title := widget.NewLabelWithStyle(
+		"The Answer Protocol",
+		fyne.TextAlignLeading,
+		fyne.TextStyle{Bold: true},
+	)
+	counters := widget.NewLabel("2 dans la salle - 7 en ligne")
+
+	return container.NewBorder(nil, nil, title, counters, nil)
 }
 
 
@@ -126,7 +151,7 @@ func buildCharacterPanel(p Player) fyne.CanvasObject {
 	hpBar.Min = 0
 	hpBar.Max = 100
 	hpBar.Value = p.hp
-	hpLabel := widget.NewLabel(fmt.Sprintf("PV %0f/100", p.hp))
+	hpLabel := widget.NewLabel(fmt.Sprintf("PV %g/100", p.hp))
 
 	invLabel := widget.NewLabelWithStyle("Inventaire", fyne.TextAlignLeading,
 		fyne.TextStyle{Bold : true})
@@ -134,7 +159,7 @@ func buildCharacterPanel(p Player) fyne.CanvasObject {
 	for _, i := range p.inventory {
 		item := i
 		invRow.Add(widget.NewButton(item, func() {
-			fmt.Println("LÂCHER: ", item)
+			fmt.Println("DROP: ", item)
 		}))
 	}
 
@@ -146,10 +171,35 @@ func buildCharacterPanel(p Player) fyne.CanvasObject {
 
 func buildMapButton() fyne.CanvasObject {
 	btn := widget.NewButton("Voir Map", func() {
-		fmt.Println("Ouvrir carte")  // FAIRE une vue carte du monde
+		fmt.Println("MAP")  // FAIRE une vue carte du monde
 	})
 
 	return container.NewCenter(btn)
+}
+
+
+// ---- Chat (droite, bas) : onglets Global/Salle/Groupe séparés des logs ----
+
+func buildChatPanel() fyne.CanvasObject {
+	makeScope := func(sample string) fyne.CanvasObject {
+		messages := widget.NewLabel(sample)
+		messages.Wrapping = fyne.TextWrapWord
+		input := widget.NewEntry()
+		input.SetPlaceHolder("Écrire un message...")
+		send := widget.NewButton("Envoyer", func() {
+			println("CHAT:", input.Text)
+			input.SetText("")
+		})
+		return container.NewBorder(nil, container.NewBorder(nil, nil, nil, send, input), nil, nil, messages)
+	}
+
+	tabs := container.NewAppTabs(
+		container.NewTabItem("Global", makeScope("Alice: ...")),
+		container.NewTabItem("Salle", makeScope("Venus: Parle mieux on comprend rien")),
+		container.NewTabItem("Groupe", makeScope("")),
+	)
+
+	return container.NewBorder(widget.NewLabel("Chat"), nil, nil, nil, tabs)
 }
 
 
@@ -160,11 +210,20 @@ func main() {
 
 	roomPanel := buildRoomPanel(fakeRoom)
 	mapButton := buildMapButton()
-	rightPanel := container.NewVBox(
+	rightPanel := withMinWidth(container.NewVBox(
 		buildCharacterPanel(fakePlayer),
-	)
+		widget.NewSeparator(),
+		buildChatPanel(),
+	), 300)
 
-	w.SetContent(container.NewGridWithColumns(3, roomPanel, mapButton, rightPanel))
-	w.Resize(fyne.NewSize(700, 500))
+	body := container.NewBorder(nil, nil, roomPanel, rightPanel, mapButton)
+
+	// NewBorder = créer un conteneur avec des bordures personnalisées pour
+	// organiser les éléments d'une interface (top, bottom, left, right, content)
+
+	content := container.NewBorder(buildHeader(), nil, nil, nil, body)
+
+	w.SetContent(container.NewPadded(content))
+	w.Resize(fyne.NewSize(900, 550))
 	w.ShowAndRun()
 }
