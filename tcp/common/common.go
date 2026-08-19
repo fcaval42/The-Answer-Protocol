@@ -4,21 +4,21 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"sync"
-)
-
-// Variable globale commune avec un mutex
-var (
-	PersoChoice = []string{"Gustave", "Maelle", "Sciel", "Lune", "Verso"}
-	PersoLock   sync.Mutex
+	"os"
 )
 
 func LogAndPrintf(conn net.Conn, format string, args ...interface{}) {
-	fmt.Printf(format, args...)
+	logger := log.New(
+		os.Stdout,
+		"SERVER: ",
+		log.Ldate | log.Ltime,
+	)
+	// Utilisation du logger
+	logger.Printf(format, args...)
 	log.Printf(format, args...)
 }
 
 func LogAndFprintf(conn net.Conn, format string, args ...interface{}) {
-	fmt.Fprintf(conn, format, args...)
 	log.Printf(format, args...)
+	fmt.Fprintf(conn, format, args...)
 }
