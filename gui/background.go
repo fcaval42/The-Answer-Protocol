@@ -9,7 +9,7 @@ import (
 
 // je met un rectangle en fond pour les deux colonnes gauche et droite
 func WithMinWidth(obj fyne.CanvasObject, w float32) fyne.CanvasObject {
-	sizer := canvas.NewRectangle(color.Black)
+	sizer := canvas.NewRectangle(color.Transparent)
 	sizer.SetMinSize(fyne.NewSize(w, 0))
 
 	//panelBg := canvas.NewRectangle(color.NRGBA{R: 0, G:0, B: 0, A: 160})
