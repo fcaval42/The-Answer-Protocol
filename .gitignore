@@ -1,1 +1,6 @@
+<<<<<<< HEAD
 *.log
+=======
+doc/*
+/tap-gui
+>>>>>>> entities
