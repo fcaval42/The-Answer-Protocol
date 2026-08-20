@@ -12,7 +12,7 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
 
-	"tap-gui/gui"
+	"the_answer_protocol/gui"
 )
 
 // ---- Données factices, en attendant le vrai serveur ----
