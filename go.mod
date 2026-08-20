@@ -1,8 +1,5 @@
 module the_answer_protocol
 
-<<<<<<< HEAD
-go 1.22
-=======
 go 1.25.1
 
 require fyne.io/fyne/v2 v2.8.0
@@ -44,4 +41,3 @@ require (
 	golang.org/x/text v0.22.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
->>>>>>> entities
