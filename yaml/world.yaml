@@ -10,8 +10,8 @@ world:
       description: "Une clarté douce et constante baigne les lieux, comme si la
         lumière elle-même y était née."
       exits:
-        east: "vallées_fleuries"
-        south: "vieille_lumière"
+        east: "Vallées_fleuries"
+        south: "Vieille_lumière"
       npcs: ["Sophie"]
 
     Vallées_fleuries:
@@ -19,9 +19,9 @@ world:
       description: "Des champs de fleurs aux couleurs trop vives pour être
         naturelles"
       exits:
-        west: "lumière"
-        east: "plage"
-        south: "océan_suspendu"
+        west: "Lumière"
+        east: "Plage"
+        south: "Océan_suspendu"
       npcs: ["Névron"]
       items: ["Lumina"]
 
@@ -30,7 +30,7 @@ world:
       description: "Le sable blanc rencontre une eau parfaitement immobile,
         son reflet trop net pour être honnête."
       exits:
-        west: "vallées_fleuries"
+        west: "Vallées_fleuries"
       items: ["Abysseram"]
 
     Océan_suspendu:
@@ -38,24 +38,24 @@ world:
       description: "Une étendue d'eau qui semble flotter au-dessus du vide,
         reliant le clair à l'obscur."
       exits:
-        north: "vallées_fleuries"
-        west: "nid_esquie"
-        east: "village_gestral"
+        north: "Vallées_fleuries"
+        west: "Nid_esquie"
+        east: "Village_gestral"
 
     Nid_esquie:
       name: "Nid d'Esquie"
       description: "Un repaire suspendu, tissé à flanc de falaise."
       exits:
-        east: "océan_suspendu"
+        east: "Océan_suspendu"
       npcs: ["Esquie"]
 
     Village_gestral:
       name: "Village Gestral"
       description: "Une odeur de combat flotte entre les huttes"
       exits:
-        west: "océan_suspendu"
-        east: "cimetière_gestral"
-        south: "falaise_rochevague"
+        west: "Océan_suspendu"
+        east: "Cimetière_gestral"
+        south: "Falaise_rochevague"
       items: ["Pictos"]
 
     Cimetière_gestral:
@@ -63,7 +63,7 @@ world:
       description: "Aucun nom n'y est plus lisible. De minuscules tombes,
         dont certaines sont vides"
       exits:
-        west: "village_gestral"
+        west: "Village_gestral"
       npcs: ["Renoir"]
 
     Falaise_rochevague:
@@ -72,8 +72,8 @@ world:
         n'atteignent jamais le sol, comme si la falaise elle-même
         refusait de tomber."
       exits:
-        north: "village_gestral"
-        west: "terres_oubliées"
+        north: "Village_gestral"
+        west: "Terres_oubliées"
       items: ["Chroma"]
 
     Terres_oubliées:
@@ -81,16 +81,16 @@ world:
       description: "Le sang qui gît ici y est plus rouge que le
         coucher du soleil."
       exits:
-        west: "falaise_rochevague"
-        south: "vieille_lumière"
+        west: "Falaise_rochevague"
+        south: "Vieille_lumière"
 
     Vieille_lumière:
       name: "Vieille Lumière"
       description: "L'écho affaibli. La boucle se referme,
         avant de reprendre."
       exits:
-        west: "terres_oubliées"
-        north: "lumière"
+        west: "Terres_oubliées"
+        north: "Lumière"
       npcs: ["Peintress"]
 
 
@@ -121,7 +121,7 @@ items:
   Abysseram:
     name: "Abysseram"
     critical: 0.2
-    description: "Forgée dans le silence des Eaux Volantes, cette lame abyssale 
+    description: "Forgée dans le silence des Eaux Volantes, cette lame abyssale
       semble lourde des secrets de l'océan et pulse au rythme de la vie de Gustave."
     obtainable: true
 
@@ -176,8 +176,8 @@ npcs:
   Peintress:
     name: "Peintress"
     role: "enemy"
-    description: "Souffle tragique à l'origine du désastre, la Peintresse applique 
-      sur le monde ses touches de mort, condamnant chaque année toute une 
+    description: "Souffle tragique à l'origine du désastre, la Peintresse applique
+      sur le monde ses touches de mort, condamnant chaque année toute une
       génération à s'effacer dans le néant au gré de ses funestes coups de pinceau"
     dialogue:
       - "Fuis ce tableau maudit, cette toile d'une autre vie..."
@@ -190,8 +190,8 @@ quests:
     description: "Chercher la lumière pour rallumer sa lampe."
     objective:
       type: "fetch"
-      item: "lumina"
-      deliver_to: "vallées_fleuries"
+      item: "Lumina"
+      deliver_to: "Vallées_fleuries"
     reward:
       type: "item"
       value: "Lighterim"
@@ -202,11 +202,7 @@ quests:
     description: "Aller combattre Renoir pour libérer Florrie"
     objective:
       type: "defeat"
-      npc: "renoir"
+      npc: "Renoir"
     reward:
       type: "item"
-<<<<<<< HEAD:world.yaml
-      value: "pierre"
-=======
       value: "Brise_barrière"
->>>>>>> main:yaml/world.yaml

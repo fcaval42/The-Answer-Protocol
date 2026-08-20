@@ -7,6 +7,11 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+/**
+Sert à récupérer les infos world.yaml puis à vérifier la véracité des valeurs
+entre elles puis a les mettre dans des structures
+**/
+
 type Spawn struct {
 	NPCType string `yaml:"npc_type"`
 	Count   int    `yaml:"count"`
@@ -76,6 +81,7 @@ type WorldFile struct {
 
 func ParseWorld(worldYAML []byte) (WorldFile, error) {
 	var wf WorldFile
+	
 	if err := yaml.Unmarshal(worldYAML, &wf); err != nil {
 		return WorldFile{}, fmt.Errorf("parsing world: %w", err)
 	}
@@ -95,6 +101,11 @@ func ParseWorld(worldYAML []byte) (WorldFile, error) {
 	for id, quest := range wf.Quests {
 		quest.ID = id
 		wf.Quests[id] = quest
+	}
+
+	err := wf.Validate()
+	if (err != nil){
+		return wf, err
 	}
 
 	return wf, nil
@@ -154,6 +165,9 @@ func (wf WorldFile) Validate() error {
 				errs = append(errs, fmt.Errorf("quest %q: reward item %q is not a known item", id, q.Reward.Value))
 			}
 		}
+	}
+	if (errs != nil){
+		errs = append(errs, fmt.Errorf("\nNumber of errors: %d", len(errs)))
 	}
 
 	return errors.Join(errs...)

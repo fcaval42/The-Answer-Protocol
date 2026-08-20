@@ -6,6 +6,11 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+/**
+Sert à récupérer les infos entities.yaml puis à vérifier la véracité des valeurs
+entre elles puis a les mettre dans des structures
+**/
+
 type Respawn struct {
 	HP       int    `yaml:"hp"`
 	Location string `yaml:"location"`
