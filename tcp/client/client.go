@@ -7,7 +7,7 @@ import (
 	"net"
 	"os"
 	"strings"
-	// . "the_answer_protocol/tcp/common"
+	. "the_answer_protocol/tcp/common"
 	// "strings"
 )
 
@@ -84,6 +84,7 @@ func main() {
 			}
 			// On affiche le message s'il n'est pas vide
 			if response != "\n" {
+				ClearScreen()
 				fmt.Print("\n" + response)
 				fmt.Print(">>> ")
 			}
