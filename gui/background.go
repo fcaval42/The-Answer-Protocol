@@ -1,8 +1,10 @@
 package gui
 
 import (
+	"image/color"
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
+	"fyne.io/fyne/v2/container"
 )
 
 func BuildBackground(imagePath string) (fyne.CanvasObject, *canvas.Image) {
@@ -16,7 +18,14 @@ func BuildBackground(imagePath string) (fyne.CanvasObject, *canvas.Image) {
 	// est étirée pour remplir toute la zone dispo.
 	// Donc ici on force l'image à s'étirer pour remplir tout l'espace alloué
 	bg.FillMode = canvas.ImageFillStretch
-	return bg, bg
+	overlay := canvas.NewRectangle(color.RGBA {
+		R: 0,
+		G: 0,
+		B: 0,
+		A: 135, // 50% de transparent pour l'image background
+	})
+	bgStack := container.NewStack(bg, overlay)
+	return bgStack, bg
 }
 
 
