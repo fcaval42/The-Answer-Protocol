@@ -1,0 +1,26 @@
+# fichier de configuration. Définit les statistiques de combat des entités.
+# - complète world.yaml (qui gère la description/placement) avec les stats
+#   utilisées par le système de combat (ATTACK, STATUS, etc.)
+# - "players" doit rester aligné avec PersoChoice dans tcp/server/tools.go
+# - "enemies" doit rester aligné avec les npcs de role "enemy" dans world.yaml
+
+entities:
+  players:
+    Gustave:
+      name: "Gustave"
+      hp: 100
+      attack: 15
+      defense: 5
+      speed: 10
+      respawn:
+        hp: 50
+        location: "lumière"
+
+  enemies:
+    Renoir:
+      name: "Renoir"
+      hp: 60
+      attack: 12
+      defense: 4
+      speed: 8
+      difficulty: "medium"
