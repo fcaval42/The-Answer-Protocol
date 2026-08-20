@@ -11,6 +11,8 @@ import (
 	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
+
+	"tap-gui/gui"
 )
 
 // ---- Données factices, en attendant le vrai serveur ----
@@ -36,7 +38,7 @@ var fakeRoom = Room{
 	exits:       []string{"Océan suspendu", "Cimetière gestral"},
 	items:       []string{"Chroma"},
 	npcs:        []string{"Renoir"},
-	background:  "village_gestral.png",
+	background:  "assets/village_gestral.png",
 }
 
 // deuxième salle factice, juste pour tester visuellement le changement de
@@ -233,14 +235,14 @@ func main() {
 		"Cimetière Gestral": fakeRoom2,
 	}
 
-	background, bgImage := BuildBackground(fakeRoom.background)
+	background, bgImage := gui.BuildBackground(fakeRoom.background)
 
 	// garde une référence stable qu'on peut vider/remplir pour ne pas
 	// reconstruire toute la fenêtre à chaque changement de salle.
 	roomContainer := container.NewStack()
 
 	changeRoom := func(newRoom Room) {
-		setRoomBackground(bgImage, newRoom)
+		gui.SetRoomBackground(bgImage, newRoom.background)
 		roomContainer.Objects = []fyne.CanvasObject{buildRoomPanel(newRoom)} // VOIR
 		roomContainer.Refresh()
 	}

@@ -1,4 +1,4 @@
-package main
+package gui
 
 import (
 	"fyne.io/fyne/v2"
@@ -20,7 +20,7 @@ func BuildBackground(imagePath string) (fyne.CanvasObject, *canvas.Image) {
 }
 
 
-func setRoomBackground(bg *canvas.Image, room Room) {
-	bg.File = room.background
+func SetRoomBackground(bg *canvas.Image, backgroundPath string) {
+	bg.File = backgroundPath
 	bg.Refresh()
 }
