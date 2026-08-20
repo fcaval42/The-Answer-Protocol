@@ -36,7 +36,7 @@ func isInList(num int) bool {
 
 // Variable globale commune avec un mutex
 var (
-	PersoChoice = []string{"Gustave"}
+	PersoChoice = []string{"Gustave", "Maëlle", "Lune", "Sciel", "Verso"}
 	PersoLock   sync.Mutex
 )
 
