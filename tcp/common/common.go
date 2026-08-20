@@ -10,7 +10,7 @@ import (
 func LogAndPrintf(conn net.Conn, format string, args ...interface{}) {
 	logger := log.New(
 		os.Stdout,
-		"SERVER: ",
+		"[SERVER]",
 		log.Ldate | log.Ltime,
 	)
 	file, err := os.OpenFile("../protocol.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)

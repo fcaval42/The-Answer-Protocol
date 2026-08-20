@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"strings"
 	// . "the_answer_protocol/tcp/common"
 	// "strings"
 )
@@ -30,7 +31,10 @@ func main() {
 	}
 
 	// Fermeture de la connexion a la fin du programme
-	defer conn.Close()
+	defer func (){
+		fmt.Fprint(conn, "QUIT\n")
+		conn.Close()
+	}()
 
 
 	// Buffer de l'entrée clavier
@@ -74,6 +78,9 @@ func main() {
 				}
 				log.Println("[ERROR] Erreur de lecture :", err)
 				return
+			}
+			if strings.Contains(response, "\\"){
+				response = strings.ReplaceAll(response, "\\", "\n")
 			}
 			// On affiche le message s'il n'est pas vide
 			if response != "\n" {
