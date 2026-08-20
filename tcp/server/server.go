@@ -62,7 +62,9 @@ func handleConnection(conn net.Conn) {
 	reader := bufio.NewReader(conn)
 	// Séléction du personnage jouable
 	player = select_Player(conn)
-
+	if player == ""{
+		return
+	}
 	// Boucle infinie d'écoute des clients
 	for {
 		message, err := reader.ReadString('\n')

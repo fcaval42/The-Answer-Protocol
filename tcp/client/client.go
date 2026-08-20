@@ -100,6 +100,6 @@ func main() {
 		}
 
 		// On envoie l'input au serveur
-		LogAndFprintf(conn, line)
+		LogAndFprintf(conn, "%s", line)
 	}
 }
