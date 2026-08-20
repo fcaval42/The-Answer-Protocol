@@ -45,10 +45,10 @@ type EntitiesFile struct {
 	Entities Entities `yaml:"entities"`
 }
 
-func ParseEntities(entitiesYAML []byte) (EntitiesFile, error) {
+func ParseEntities(entitiesYAML []byte) (EntitiesFile, []error) {
 	var ef EntitiesFile
 	if err := yaml.Unmarshal(entitiesYAML, &ef); err != nil {
-		return EntitiesFile{}, fmt.Errorf("parsing entities: %w", err)
+		return EntitiesFile{}, []error{fmt.Errorf("parsing entities: %w", err)}
 	}
 
 	for id, p := range ef.Entities.Players {

@@ -1,7 +1,7 @@
 package parsing
 
 import (
-	"errors"
+	// "errors"
 	"fmt"
 
 	"gopkg.in/yaml.v3"
@@ -79,11 +79,11 @@ type WorldFile struct {
 	Quests map[string]Quest `yaml:"quests"`
 }
 
-func ParseWorld(worldYAML []byte) (WorldFile, error) {
+func ParseWorld(worldYAML []byte) (WorldFile, []error) {
 	var wf WorldFile
-	
+
 	if err := yaml.Unmarshal(worldYAML, &wf); err != nil {
-		return WorldFile{}, fmt.Errorf("parsing world: %w", err)
+		return WorldFile{}, []error{fmt.Errorf("parsing world: %w", err)}
 	}
 
 	for id, loc := range wf.World.Locations {
@@ -111,14 +111,15 @@ func ParseWorld(worldYAML []byte) (WorldFile, error) {
 	return wf, nil
 }
 
-func (wf WorldFile) Validate() error {
+func (wf WorldFile) Validate() []error {
 	var errs []error
 
-	for id, loc := range wf.World.Locations {
+	for id, loc := range wf.World.Locations { // regarder que le nom nest pas vide
 		for dir, dest := range loc.Exits {
 			if _, ok := wf.World.Locations[dest]; !ok {
 				errs = append(errs, fmt.Errorf("location %q: exit %q points to unknown location %q", id, dir, dest))
-			}
+			}  // ajouter regarder si exits nest pas vide
+			// regarder que le exit nest pas le meme que le name
 		}
 		for _, itemID := range loc.Items {
 			if _, ok := wf.Items[itemID]; !ok {
@@ -166,9 +167,6 @@ func (wf WorldFile) Validate() error {
 			}
 		}
 	}
-	if (errs != nil){
-		errs = append(errs, fmt.Errorf("\nNumber of errors: %d", len(errs)))
-	}
 
-	return errors.Join(errs...)
+	return errs
 }
