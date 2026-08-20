@@ -51,7 +51,7 @@ func handleConnection(conn net.Conn) {
 			PersoLock.Lock()
 			PersoChoice = append(PersoChoice, player)
 			PersoLock.Unlock()
-			LogAndPrintf(conn, "[INFO] [%s]: \"Pour ceux qui viendront après\"\n", player)
+			LogAndPrintf(conn, "%s| [INFO] [%s]: \"Pour ceux qui viendront après\"\n", conn.RemoteAddr().String(), player)
 		}
 		// Fermeture de la connexion
 		conn.Close()
@@ -61,11 +61,6 @@ func handleConnection(conn net.Conn) {
 	// Buffer en écoute sur le client
 	reader := bufio.NewReader(conn)
 	// Séléction du personnage jouable
-	player = select_Player(conn)
-	if player == ""{
-		return
-	}
-	// Boucle infinie d'écoute des clients
 	for {
 		message, err := reader.ReadString('\n')
 		if err != nil {
@@ -75,11 +70,22 @@ func handleConnection(conn net.Conn) {
 			log.Println(conn.RemoteAddr().String() + "| " + err.Error())
 			return
 		}
+		if message == "CONNECT\n"{
+			player = select_Player(conn)
+			if player == ""{
+				return
+			}
+		}
+		if message == "QUIT\n"{
+			
+		}
+		LogAndPrintf(conn, "%s| %s", conn.RemoteAddr().String(), message)
 		// Affichage du message
-		LogAndPrintf(conn, "%s| [%s]: %s", conn.RemoteAddr().String(), player, message)
+		// LogAndPrintf(conn, "%s| [%s]: %s", conn.RemoteAddr().String(), player, message)
 		// Redistribution aux autres clients
-		broadcast(message, conn, player)
+		// broadcast(message, conn, player)
 	}
+	// Boucle infinie d'écoute des clients
 }
 
 func main() {
