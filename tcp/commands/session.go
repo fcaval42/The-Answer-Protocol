@@ -63,6 +63,7 @@ func ConnectCom(conn net.Conn) string{
 					player = PersoChoice[indextest-1]
 					// On supprime le choix fait par le joueur des choix pour les prochains joueurs
 					PersoChoice = slices.Delete(PersoChoice, indextest-1, indextest)
+					LogAndFprintf(conn, "%s| Connection réussie ! Bienvenue %s !\n", conn.RemoteAddr().String(), player)
 					// On retourne le personnage choisi
 					return player
 				}

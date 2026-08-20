@@ -6,8 +6,8 @@ import (
 	"log"
 	"net"
 	"os"
-	. "the_answer_protocol/tcp/common"
-	"strings"
+	// . "the_answer_protocol/tcp/common"
+	// "strings"
 )
 
 func main() {
@@ -37,26 +37,26 @@ func main() {
 	stdin := bufio.NewReader(os.Stdin)
 
 	// Buffer des messages de la connexion
-	connReader := bufio.NewReader(conn)
+	// connReader := bufio.NewReader(conn)
 
 	// On recupere le message envoyé par le serveur pour la selection de personnages
-	select_player, err := connReader.ReadString('\n')
-	if err != nil {
-		log.Println(conn.RemoteAddr().String() + "| [ERROR] " + err.Error())
-		return
-	}
-	fmt.Print(select_player) 
-	if strings.Contains(select_player, "[ERROR]"){
-		return
-	}
+	// select_player, err := connReader.ReadString('\n')
+	// if err != nil {
+	// 	log.Println(conn.RemoteAddr().String() + "| [ERROR] " + err.Error())
+	// 	return
+	// }
+	// fmt.Print(select_player) 
+	// if strings.Contains(select_player, "[ERROR]"){
+	// 	return
+	// }
 	// Affichage du message
-	fmt.Print(">>> ")
+	// fmt.Print(">>> ")
 
-	// On récupère le choix de l'utilisateur
-	player, err := stdin.ReadString('\n')
+	// // On récupère le choix de l'utilisateur
+	// player, err := stdin.ReadString('\n')
 
-	// On envoi le choix au serveur
-	fmt.Fprint(conn, player)
+	// // On envoi le choix au serveur
+	// fmt.Fprint(conn, player)
 
 	// Goroutine qui va chercher en continue ce qu'envoie le serveur
 	go func() {
@@ -89,17 +89,19 @@ func main() {
 		// Récupèration de l'input
 		line, err := stdin.ReadString('\n')
 		if err != nil {
-			log.Println(conn.RemoteAddr().String() + "| [ERROR] " + err.Error())
+			log.Println(conn.LocalAddr().String() + "| [ERROR] " + err.Error())
 			return
 		}
 
 		// Si l'input est "exit", gestion de la fermeture de la connexion
-		if line == "exit\n" {
+		if line == "QUIT\n" {
+			fmt.Fprintf(conn, "%s", line)
 			fmt.Fprint(conn, "[INFO] Fermeture de la connexion...\n")
+			fmt.Print("Au revoir, Mon ami !\n")
 			return
 		}
 
 		// On envoie l'input au serveur
-		LogAndFprintf(conn, "%s", line)
+		fmt.Fprintf(conn, "%s", line)
 	}
 }
