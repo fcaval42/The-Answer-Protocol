@@ -169,7 +169,7 @@ quests:
     description: "Aller combattre Renoir pour libérer Florrie"
     objective:
       type: "defeat"
-      npc: "Renoir"
+      npc: "renoir"
     reward:
       type: "item"
       value: "pierre"
