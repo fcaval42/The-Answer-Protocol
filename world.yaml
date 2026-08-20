@@ -5,7 +5,7 @@
 world:
   locations:
 
-    lumière:
+    Lumière:
       name: "Lumière"
       description: "Une clarté douce et constante baigne les lieux, comme si la
         lumière elle-même y était née."
@@ -14,7 +14,7 @@ world:
         south: "vieille_lumière"
       npcs: ["Sophie"]
 
-    vallées_fleuries:
+    Vallées_fleuries:
       name: "Vallées fleuries"
       description: "Des champs de fleurs aux couleurs trop vives pour être
         naturelles"
@@ -22,16 +22,18 @@ world:
         west: "lumière"
         east: "plage"
         south: "océan_suspendu"
+      npcs: ["Névron"]
+      items: ["Lumina"]
 
-    plage:
+    Plage:
       name: "Plage"
       description: "Le sable blanc rencontre une eau parfaitement immobile,
         son reflet trop net pour être honnête."
       exits:
         west: "vallées_fleuries"
-      items: ["lumina"]
+      items: ["Abysseram"]
 
-    océan_suspendu:
+    Océan_suspendu:
       name: "Océan suspendu"
       description: "Une étendue d'eau qui semble flotter au-dessus du vide,
         reliant le clair à l'obscur."
@@ -40,22 +42,23 @@ world:
         west: "nid_esquie"
         east: "village_gestral"
 
-    nid_esquie:
+    Nid_esquie:
       name: "Nid d'Esquie"
       description: "Un repaire suspendu, tissé à flanc de falaise."
       exits:
         east: "océan_suspendu"
       npcs: ["Esquie"]
 
-    village_gestral:
+    Village_gestral:
       name: "Village Gestral"
       description: "Une odeur de combat flotte entre les huttes"
       exits:
         west: "océan_suspendu"
         east: "cimetière_gestral"
         south: "falaise_rochevague"
+      items: ["Pictos"]
 
-    cimetière_gestral:
+    Cimetière_gestral:
       name: "Cimetière Gestral"
       description: "Aucun nom n'y est plus lisible. De minuscules tombes,
         dont certaines sont vides"
@@ -63,7 +66,7 @@ world:
         west: "village_gestral"
       npcs: ["Renoir"]
 
-    falaise_rochevague:
+    Falaise_rochevague:
       name: "Falaise de Rochevague"
       description: "Un promontoire rocheux battu par des vagues qui
         n'atteignent jamais le sol, comme si la falaise elle-même
@@ -71,51 +74,64 @@ world:
       exits:
         north: "village_gestral"
         west: "terres_oubliées"
-      items: ["chroma"]
+      items: ["Chroma"]
 
-    terres_oubliées:
+    Terres_oubliées:
       name: "Terres oubliées"
       description: "Le sang qui gît ici y est plus rouge que le
         coucher du soleil."
       exits:
         west: "falaise_rochevague"
         south: "vieille_lumière"
-      items: ["brise_barrière"]
 
-    vieille_lumière:
+    Vieille_lumière:
       name: "Vieille Lumière"
       description: "L'écho affaibli. La boucle se referme,
         avant de reprendre."
       exits:
         west: "terres_oubliées"
         north: "lumière"
-      items: ["pictos"]
+      npcs: ["Peintress"]
 
 
 items:
-  lumina:
+  Lumina:
     name: "Lumina"
     description: "Un fragment de lumière condensée."
     obtainable: true
 
-  chroma:
+  Chroma:
     name: "Chroma"
     description: "Permet d'acheter des accessoires qui ne seront jamais
       utilisés..."
     obtainable: true
 
-  pictos:
+  Pictos:
     name: "Pictos"
     description: "Un symbole gravé, semblant contenir un souvenir figé."
     obtainable: true
 
-  brise_barrière:
+  Brise_barrière:
     name: "Brise-barrière"
+    critical: 0.5
     description: "Une arme ancienne, dont le tranchant garde une teinte étrange,
       presque translucide. Elle semble faite pour trancher autre chose que de la chair."
     obtainable: true
 
-    /////////////////////////////////////////////////// armes
+  Abysseram:
+    name: "Abysseram"
+    critical: 0.2
+    description: "Forgée dans le silence des Eaux Volantes, cette lame abyssale 
+      semble lourde des secrets de l'océan et pulse au rythme de la vie de Gustave."
+    obtainable: true
+
+  Lighterim:
+    name: "Lighterim"
+    critical: 0.3
+    description: "Forgeant sa lueur dans le feu secret des Prairies Printanières,
+      ce joyau ardent de Lune consume le coût de ses vœux de flamme."
+    obtainable: true
+
 
 npcs:
   Sophie:
@@ -140,6 +156,13 @@ npcs:
         Celui qu'on appelle… François."
       - "Tout au nord ! Visez le grand « 33 ». Je vous rejoins dehors."
 
+  Névron:
+    name: "Névron"
+    role: "enemy"
+    description: "Créatures de pigments nées des pinceaux tourmentés de la Peintresse"
+    dialogue:
+      - "..."
+
   Renoir:
     name: "Renoir"
     role: "enemy"
@@ -150,10 +173,18 @@ npcs:
       - "Ça ne te semblera pas logique maintenant, mais on veut tous
         les deux le meilleur pour nos familles."
 
-    ////// rajouter ennemi
+  Peintress:
+    name: "Peintress"
+    role: "enemy"
+    description: "Souffle tragique à l'origine du désastre, la Peintresse applique 
+      sur le monde ses touches de mort, condamnant chaque année toute une 
+      génération à s'effacer dans le néant au gré de ses funestes coups de pinceau"
+    dialogue:
+      - "Fuis ce tableau maudit, cette toile d'une autre vie..."
+
 
 quests:
-  nevron_blanc:
+  Nevron_blanc:
     name: "Lumen rursus accendens"
     giver: "Sophie"
     description: "Chercher la lumière pour rallumer sa lampe."
@@ -162,8 +193,8 @@ quests:
       item: "lumina"
       deliver_to: "vallées_fleuries"
     reward:
-      type: "skill"
-      value: "competence_gradient"
+      type: "item"
+      value: "Lighterim"
 
   Florrie:
     name: "Florrie"
@@ -174,4 +205,4 @@ quests:
       npc: "renoir"
     reward:
       type: "item"
-      value: "pierre" ///// changer pour une arme
+      value: "Brise_barrière"

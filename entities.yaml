@@ -6,60 +6,60 @@
 
 entities:
   players:
-    gustave:
+    Gustave:
       name: "Gustave"
       hp: 80
       weapon:
         name: "Lanceram"
-        critical: 0.3
+        critical: 0.1
       attack: 30
       defense: 15
       respawn:
         hp: 50
         location: "lumière"
 
-    lune:
+    Lune:
       name: "Lune"
       hp: 100
       weapon:
         name: "Lumerim"
-        critical: 0.3
+        critical: 0.1
       attack: 38
       defense: 12
       respawn:
         hp: 50
         location: "lumière"
 
-    maelle:
+    Maelle:
       name: "Maëlle"
       hp: 130
       weapon:
         name: "Médalum"
-        critical: 0.3
+        critical: 0.1
       attack: 50
       defense: 25
       respawn:
         hp: 50
         location: "lumière"
 
-    sciel:
+    Sciel:
       name: "Sciel"
       hp: 90
       weapon:
         name: "Forestion"
-        critical: 0.3
+        critical: 0.1
       attack: 22
       defense: 35
       respawn:
         hp: 50
         location: "lumière"
 
-    verso:
+    Verso:
       name: "Verso"
       hp: 100
       weapon:
         name: "Blodam"
-        critical: 0.3
+        critical: 0.1
       attack: 45
       defense: 8
       respawn:
@@ -67,7 +67,7 @@ entities:
         location: "lumière"
 
   enemies:
-    renoir:
+    Renoir:
       name: "Renoir"
       hp: 110
       attack: 18
@@ -75,7 +75,7 @@ entities:
       counter: 8
       difficulty: "medium"
 
-    peintress:
+    Peintress:
       name: "Paintress"
       hp: 200
       attack: 30
@@ -83,7 +83,7 @@ entities:
       counter: 15
       difficulty: "extreme"
 
-    nevron:
+    Névron:
       name: "Névron"
       hp: 60
       attack: 10
