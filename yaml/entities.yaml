@@ -16,7 +16,7 @@ entities:
       defense: 15
       respawn:
         hp: 50
-        location: "lumière"
+        location: "Lumière"
 
     Lune:
       name: "Lune"
@@ -28,7 +28,7 @@ entities:
       defense: 12
       respawn:
         hp: 50
-        location: "lumière"
+        location: "Lumière"
 
     Maelle:
       name: "Maëlle"
@@ -40,7 +40,7 @@ entities:
       defense: 25
       respawn:
         hp: 50
-        location: "lumière"
+        location: "Lumière"
 
     Sciel:
       name: "Sciel"
@@ -52,7 +52,7 @@ entities:
       defense: 35
       respawn:
         hp: 50
-        location: "lumière"
+        location: "Lumière"
 
     Verso:
       name: "Verso"
@@ -64,7 +64,7 @@ entities:
       defense: 8
       respawn:
         hp: 50
-        location: "lumière"
+        location: "Lumière"
 
   enemies:
     Renoir:

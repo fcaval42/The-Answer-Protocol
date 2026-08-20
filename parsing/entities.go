@@ -45,6 +45,15 @@ type EntitiesFile struct {
 	Entities Entities `yaml:"entities"`
 }
 
+
+/**
+verifier doublon
+verifier int negatif
+pareil pour le float
+verifier str vide
+verifier location si existe
+**/
+
 func ParseEntities(entitiesYAML []byte) (EntitiesFile, []error) {
 	var ef EntitiesFile
 	if err := yaml.Unmarshal(entitiesYAML, &ef); err != nil {

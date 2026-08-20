@@ -7,7 +7,7 @@ import (
 )
 
 /**
-Ce fichier lancer les deux parsing du monde et des entites
+Ce fichier lancer les deux parsing celui du monde et des entites
 renvoie les deux monde plus les potentiels erreurs a utiliser pour charger le
 monde
 **/
@@ -19,8 +19,11 @@ func Rally(world_path string, entities_path string) (WorldFile, EntitiesFile, []
 	var world WorldFile
 	var entities EntitiesFile
 
-	entities_yaml, er := os.ReadFile(entities_path)
+	// *************************************************************************
+	//                           Entities Parsing
+	// *************************************************************************
 
+	entities_yaml, er := os.ReadFile(entities_path)
 	if (er != nil){
 		fmt.Println(err)
 		errs = append(errs, er)
@@ -32,6 +35,10 @@ func Rally(world_path string, entities_path string) (WorldFile, EntitiesFile, []
 			errs = append(errs, err...)
 		}
 	}
+
+	// *************************************************************************
+	//                            World Parsing
+	// *************************************************************************
 
 	world_yaml, er := os.ReadFile(world_path)
 	if (er != nil){
@@ -45,6 +52,7 @@ func Rally(world_path string, entities_path string) (WorldFile, EntitiesFile, []
 			errs = append(errs, err...)
 		}
 	}
+
 	if (len(errs) != 0){
 		fmt.Println("\nNumber of errors:", len(errs))
 	}
