@@ -1,9 +1,9 @@
-package main
+package commands
 
 import(
-	"net"
 	"bufio"
 	"fmt"
+	"net"
 	. "the_answer_protocol/tcp/common"
 	"log"
 	"strings"
@@ -12,8 +12,7 @@ import(
 )
 
 
-// Selection du personnage joueur
-func selectPlayer(conn net.Conn) string {
+func ConnectCom(conn net.Conn) string{
 	// Lock du mutex pour le rendre indisponible pour les autres
 	PersoLock.Lock()
 	// Le mutex sera unlock à la fin de la fonction selectPlayer
@@ -53,7 +52,7 @@ func selectPlayer(conn net.Conn) string {
 					return ""
 				}
 				// On verifie que le choix correspond à la liste de personnage
-				if isInList(indextest) {
+				if IsInList(indextest) {
 					player = PersoChoice[indextest-1]
 					// On supprime le choix fait par le joueur des choix pour les prochains joueurs
 					PersoChoice = slices.Delete(PersoChoice, indextest-1, indextest)

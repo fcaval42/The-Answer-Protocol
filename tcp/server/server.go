@@ -7,7 +7,6 @@ import (
 	"log"
 	"net"
 	"os"
-	"strings"
 	. "the_answer_protocol/tcp/common"
 )
 
@@ -15,14 +14,14 @@ import (
 // Permet de transmettre le message envoyé par un client aux autres
 func broadcast(message string, sender net.Conn, player string) {
 	// Gestion du mutex
-	clientsLock.Lock()
-	defer clientsLock.Unlock()
+	ClientsLock.Lock()
+	defer ClientsLock.Unlock()
 
 	// Préparer le message à envoyer (avec le nom du personnage du client expéditeur)
 	fullMessage := fmt.Sprintf("[%s] : %s\n", player, message)
 
 	// Envoyer à tous les clients sauf l'expéditeur
-	for client := range clients {
+	for client := range Clients {
 		if client == sender {
 			continue
 		}
@@ -31,7 +30,7 @@ func broadcast(message string, sender net.Conn, player string) {
 		if err != nil {
 			log.Printf("[ERROR]: lors de l'envoi à %s : %v\n", client.RemoteAddr(), err)
 			// Supprimer le client en erreur
-			delete(clients, client)
+			delete(Clients, client)
 			client.Close()
 		}
 	}
@@ -42,10 +41,10 @@ func handleConnection(conn net.Conn) {
 	var player string
 	// Gestion de la fin de connexion
 	defer func() {
-		clientsLock.Lock()
+		ClientsLock.Lock()
 		// Supprimer le client de la liste à la fermeture
-		delete(clients, conn)
-		clientsLock.Unlock()
+		delete(Clients, conn)
+		ClientsLock.Unlock()
 		// Si un personnage avait été utilisé ont le remer
 		// dans la liste des personnages jouables
 		if player != "" && player != "900" {
@@ -62,15 +61,7 @@ func handleConnection(conn net.Conn) {
 	// Buffer en écoute sur le client
 	reader := bufio.NewReader(conn)
 	// Séléction du personnage jouable
-	player = selectPlayer(conn)
-	player = strings.Trim(player, "\n")
-	switch player {
-	case "":
-		log.Println("[ERROR]: Player doesn't exist")
-		return
-	case "900":
-		return
-	}
+	player = select_Player(conn)
 
 	// Boucle infinie d'écoute des clients
 	for {
@@ -109,9 +100,9 @@ func main() {
 		}
 
 		// Ajout du client a la liste des clients
-		clientsLock.Lock()
-		clients[conn] = true
-		clientsLock.Unlock()
+		ClientsLock.Lock()
+		Clients[conn] = true
+		ClientsLock.Unlock()
 
 		LogAndPrintf(conn, "%s| [INFO] Nouveau client connecté\n", conn.RemoteAddr())
 
