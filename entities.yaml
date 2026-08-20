@@ -1,0 +1,92 @@
+# fichier de configuration. Définit les statistiques de combat des entités.
+# - complète world.yaml (qui gère la description/placement) avec les stats
+#   utilisées par le système de combat (ATTACK, STATUS, etc.)
+# - "players" doit rester aligné avec PersoChoice dans tcp/server/tools.go
+# - "enemies" doit rester aligné avec les npcs de role "enemy" dans world.yaml
+
+entities:
+  players:
+    gustave:
+      name: "Gustave"
+      hp: 80
+      weapon:
+        name: "Lanceram"
+        critical: 0.3
+      attack: 30
+      defense: 15
+      respawn:
+        hp: 50
+        location: "lumière"
+
+    lune:
+      name: "Lune"
+      hp: 100
+      weapon:
+        name: "Lumerim"
+        critical: 0.3
+      attack: 38
+      defense: 12
+      respawn:
+        hp: 50
+        location: "lumière"
+
+    maelle:
+      name: "Maëlle"
+      hp: 130
+      weapon:
+        name: "Médalum"
+        critical: 0.3
+      attack: 50
+      defense: 25
+      respawn:
+        hp: 50
+        location: "lumière"
+
+    sciel:
+      name: "Sciel"
+      hp: 90
+      weapon:
+        name: "Forestion"
+        critical: 0.3
+      attack: 22
+      defense: 35
+      respawn:
+        hp: 50
+        location: "lumière"
+
+    verso:
+      name: "Verso"
+      hp: 100
+      weapon:
+        name: "Blodam"
+        critical: 0.3
+      attack: 45
+      defense: 8
+      respawn:
+        hp: 50
+        location: "lumière"
+
+  enemies:
+    renoir:
+      name: "Renoir"
+      hp: 110
+      attack: 18
+      defense: 10
+      counter: 8
+      difficulty: "medium"
+
+    peintress:
+      name: "Paintress"
+      hp: 200
+      attack: 30
+      defense: 18
+      counter: 15
+      difficulty: "extreme"
+
+    nevron:
+      name: "Névron"
+      hp: 60
+      attack: 10
+      defense: 5
+      counter: 4
+      difficulty: "easy"

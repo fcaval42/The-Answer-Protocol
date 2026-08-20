@@ -115,6 +115,8 @@ items:
       presque translucide. Elle semble faite pour trancher autre chose que de la chair."
     obtainable: true
 
+    /////////////////////////////////////////////////// armes
+
 npcs:
   Sophie:
     name: "Sophie"
@@ -142,13 +144,13 @@ npcs:
     name: "Renoir"
     role: "enemy"
     description: "Une silhouette hostile, sa peau presque effacée par endroits."
-    stats:
-      hp: 60
     dialogue:
       - "Alors voilà. Tu nous as entraînés sur cette voie, mais es-tu prêt
         à en assumer les conséquences ?"
       - "Ça ne te semblera pas logique maintenant, mais on veut tous
         les deux le meilleur pour nos familles."
+
+    ////// rajouter ennemi
 
 quests:
   nevron_blanc:
@@ -172,4 +174,4 @@ quests:
       npc: "renoir"
     reward:
       type: "item"
-      value: "pierre"
+      value: "pierre" ///// changer pour une arme
