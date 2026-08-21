@@ -153,6 +153,12 @@ func handleConnection(conn net.Conn) {
 				case "GLOBAL\n":
 					globalChat(conn, player)
 					break chatLoop
+				// case "ROOM":
+				// 	roomChat()
+				// 	break chatLoop
+				// case "GROUP":
+				// 	groupeChat()
+				// 	break chatLoop
 				}
 			}
 			inGlobalLock.Lock()
