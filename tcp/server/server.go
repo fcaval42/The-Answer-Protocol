@@ -17,6 +17,8 @@ import (
 var globaleMessage []string
 var (inGlobal[]net.Conn
 	inGlobalLock sync.Mutex)
+var (group[][]net.Conn
+	groupLock sync.Mutex)
 
 func recept(conn net.Conn) string{
 	reader := bufio.NewReader(conn)
@@ -31,6 +33,15 @@ func recept(conn net.Conn) string{
 	return message
 }
 
+
+func roomChat(conn net.Conn, room string){
+
+}
+
+
+func groupChat(conn net.Conn){
+
+}
 
 func globalChat(conn net.Conn, player string){
 	inGlobalLock.Lock()
@@ -169,6 +180,14 @@ func handleConnection(conn net.Conn) {
 				}
 			}
 			inGlobalLock.Unlock()
+		}
+		if message == "GROUP CREATE"{
+			newgroup := []net.Conn{conn}
+			group = append(group, newgroup)
+		}
+		if message == "GROUP INVITE"{
+			LogAndFprintf(conn, "Quel membre d'expedition souhaitez vous inviter dans votre groupe?")
+			
 		}
 
 		// Affichage du message
