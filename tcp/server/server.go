@@ -7,13 +7,16 @@ import (
 	"log"
 	"net"
 	"os"
+	"slices"
 	"strings"
+	"sync"
 	. "the_answer_protocol/tcp/common"
 )
 
 
 var globaleMessage []string
-
+var (inGlobal[]net.Conn
+	inGlobalLock sync.Mutex)
 
 func recept(conn net.Conn) string{
 	reader := bufio.NewReader(conn)
@@ -29,28 +32,48 @@ func recept(conn net.Conn) string{
 }
 
 
-// Permet de transmettre le message envoyé par un client aux autres
-func broadcast(message string, sender net.Conn, player string) {
-	// Gestion du mutex
-	ClientsLock.Lock()
-	defer ClientsLock.Unlock()
+func globalChat(conn net.Conn, player string){
+	inGlobalLock.Lock()
+	inGlobal = append(inGlobal, conn)
+	inGlobalLock.Unlock()
+	for{
+		printChat(conn)
+		broadcast(conn)
+		send := recept(conn)
+		if send == "EXIT\n" || send == "" || send == "QUIT\n"{
+			return
+			} else{send = fmt.Sprintf("[%s]: %s", player, send)}
+		LogAndPrintf(conn, "%s| %s", conn.RemoteAddr().String(), send)
+		globaleMessage = append(globaleMessage, send)
+		if len(globaleMessage) > 10 {
+			globaleMessage = globaleMessage[len(globaleMessage)-10:]
+		}
+	}
+}
 
-	// Préparer le message à envoyer (avec le nom du personnage du client expéditeur)
-	fullMessage := fmt.Sprintf("[%s] : %s\n", player, message)
+
+func printChat(conn net.Conn){
+	chat := ""
+	for _, m := range globaleMessage{
+		chat += m
+	}
+	chat = strings.ReplaceAll(chat, "\n", "\\")
+	fmt.Fprintf(conn, "%s\n", chat)
+}
+
+// Permet de transmettre le message envoyé par un client aux autres
+func broadcast(sender net.Conn) {
+	// Gestion du mutex
+	inGlobalLock.Lock()
+	defer inGlobalLock.Unlock()
+
 
 	// Envoyer à tous les clients sauf l'expéditeur
-	for client := range Clients {
+	for _, client := range inGlobal {
 		if client == sender {
 			continue
 		}
-		// Envoie du message a un client
-		_, err := client.Write([]byte(fullMessage))
-		if err != nil {
-			log.Printf("[ERROR]: lors de l'envoi à %s : %v\n", client.RemoteAddr(), err)
-			// Supprimer le client en erreur
-			delete(Clients, client)
-			client.Close()
-		}
+		printChat(client)
 	}
 }
 
@@ -90,7 +113,9 @@ func handleConnection(conn net.Conn) {
 			// 	}
 	for{
 		message = recept(conn)
-		LogAndPrintf(conn, "%s| %s", conn.RemoteAddr().String(), message)
+		if message != ""{
+			LogAndPrintf(conn, "%s| %s", conn.RemoteAddr().String(), message)
+		}
 		if message == "CONNECT\n"{
 			player = select_Player(conn)
 			if player == ""{
@@ -104,6 +129,9 @@ func handleConnection(conn net.Conn) {
 	}
 	for {
 		message = recept(conn)
+		if message == ""{
+			break
+		}
 		LogAndPrintf(conn, "%s| %s", conn.RemoteAddr().String(), message)
 		if message == "WHO\n"{
 			nb_player := 5 - len(PersoChoice)
@@ -117,33 +145,24 @@ func handleConnection(conn net.Conn) {
 			for{
 				LogAndFprintf(conn, "[SERVER] À qui souhaitez vous envoyer un message (GLOBAL, ROOM, GROUP)?\n")
 				message = recept(conn)
+				if message == ""{
+					break
+				}
 				LogAndPrintf(conn, "%s| %s", conn.RemoteAddr().String(), message)
 				switch message{
 				case "GLOBAL\n":
-					for{
-						chat := ""
-						for _, m := range globaleMessage{
-							chat += m
-						}
-						chat = strings.ReplaceAll(chat, "\n", "\\")
-						fmt.Fprintf(conn, "%s\n", chat)
-						send := recept(conn)
-						if send == "EXIT\n" || send == "" || send == "QUIT\n"{
-							break chatLoop
-							} else{send = fmt.Sprintf("[%s]: %s", player, send)}
-						LogAndPrintf(conn, "%s| %s", conn.RemoteAddr().String(), send)
-						// Ajouter le nouveau message
-						globaleMessage = append(globaleMessage, send)
-
-						// Garder uniquement les 10 derniers éléments
-						if len(globaleMessage) > 10 {
-							globaleMessage = globaleMessage[len(globaleMessage)-10:]
-						}
-							// -> iL FAUT PUSH VERS LE HAUT
-					}
+					globalChat(conn, player)
+					break chatLoop
 				}
-
 			}
+			inGlobalLock.Lock()
+			for i, con := range inGlobal{
+				if conn == con{
+					inGlobal = slices.Delete(inGlobal, i, i+1)
+					break
+				}
+			}
+			inGlobalLock.Unlock()
 		}
 
 		// Affichage du message
