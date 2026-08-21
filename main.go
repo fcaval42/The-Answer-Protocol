@@ -8,9 +8,9 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
-	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
-	"fyne.io/fyne/v2/theme"
+	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
 
 	"the_answer_protocol/gui"
@@ -48,7 +48,7 @@ var fakeRoom = Room{
 	exits:       []string{"Océan suspendu", "Cimetière gestral"},
 	items:       []string{"Chroma"},
 	npcs:        []string{"Renoir"},
-	background:  "assets/village_gestral.png",
+	background:  "assets/room/vallons_fleuries.png",
 }
 
 // deuxième salle factice, juste pour tester visuellement le changement de
@@ -57,7 +57,7 @@ var fakeRoom2 = Room{
 	name:        "Cimetière Gestral",
 	description: "De minuscules tombes, dont certaines sont vides.",
 	exits:       []string{"Village Gestral"},
-	background:  "assets/cimetiere_gestral.png",
+	background:  "assets/room/cimetiere_gestral.png",
 }
 
 var fakePlayer = Player{
@@ -74,10 +74,10 @@ var fakePlayer = Player{
 // ----------------- Header (titre + infos salles) ------------------
 
 func buildHeader() fyne.CanvasObject {
-	title := gui.NewTitleText("The Answer Protocol", 55)
+	title := gui.NewTitleText("The Answer Protocol", 60)
 	//counters := gui.NewBodyText("2 dans la salle - 7 en ligne", 14)
 
-	return container.NewBorder(nil, nil, title, nil, nil)
+	return container.NewBorder(nil, gui.Fix(0, 40), title, nil, nil)
 }
 
 
@@ -134,15 +134,15 @@ func buildRoomPanel(r Room) fyne.CanvasObject{
 
 	// conteneur vertical. Respecte ordre d'affichage
 	return container.NewVBox(
-		gui.Fix(0, 25),
+		gui.Fix(0, 8),
 		title,
 		gui.Fix(0, 8),
 		desc,
-		gui.Fix(0, 15),
+		gui.Fix(0, 10),
 		gui.NewTitleText("Sortie", 25),
 		gui.Fix(0, 8),
 		exitsRow,
-		gui.Fix(0, 15),
+		gui.Fix(0, 10),
 		gui.NewTitleText("Objets", 25),
 		gui.Fix(0, 8),
 		itemsRow,
@@ -168,18 +168,21 @@ func statCell(label string, value string) fyne.CanvasObject {
 
 
 func buildCharacterPanel(p Player) fyne.CanvasObject {
-	name := canvas.NewText(p.name, theme.Color(theme.ColorNameForeground))
-	name.TextSize = 24
+	name := gui.NewTitleText(p.name, 70)
+	name.TextSize = 48
 	name.TextStyle = fyne.TextStyle{Bold: true}
 
+	avatar := gui.NewAvatar("assets/players/Gustave.png", 100)
+	nameRow := container.NewHBox(avatar, name)
+
 	// widget progress Bar = widget déjà dispo de base youpi
-	hpBar := widget.NewProgressBar()
+	hpBar, hpBarThemed := gui.NewColoredProgressBar(gui.HPColor)
 	hpBar.Min = 0
 	hpBar.Max = p.maxHP
 	hpBar.Value = p.hp
 	hpBar.TextFormatter = func() string { return "" }
 	hpText := gui.NewTitleText(fmt.Sprintf("%.0f / %.0f", p.hp, p.maxHP), 20)
-	hpStack := container.NewStack(hpBar, container.NewCenter(hpText))
+	hpStack := container.NewStack(hpBarThemed, container.NewCenter(hpText))
 
 	statsTitle := gui.NewTitleText("Statistiques de combat", 25)
 	statsGrid := container.NewGridWithColumns(2,
@@ -199,7 +202,7 @@ func buildCharacterPanel(p Player) fyne.CanvasObject {
 
 	return container.NewVBox(
 		gui.Fix(0, 8),
-		name,
+		nameRow,
 		gui.Fix(0, 15),
 		hpStack,
 		gui.Fix(0, 15),
@@ -214,18 +217,8 @@ func buildCharacterPanel(p Player) fyne.CanvasObject {
 }
 
 
-// ---------------- Bouton carte (centre) ------------
-
-func buildMapButton() fyne.CanvasObject {
-	btn := gui.NewButton("Voir Map", func() {
-		fmt.Println("MAP")  // FAIRE une vue carte du monde
-	})
-
-	return container.NewCenter(btn)
-}
-
-
 // ---- Chat (droite, bas) : onglets Global/Salle/Groupe séparés des logs ----
+// Affiché dans une popup ouverte depuis l'icône "Chat" (voir buildChatMapNav).
 
 func buildChatPanel() fyne.CanvasObject {
 	// fonction dans une fonction -> Makescope = fonction interne. Définie à
@@ -243,20 +236,50 @@ func buildChatPanel() fyne.CanvasObject {
 		return container.NewBorder(nil, container.NewBorder(nil, nil, nil, send, input), nil, nil, messages)
 	}
 
-	tabs := container.NewAppTabs(
+	return container.NewAppTabs(
 		container.NewTabItem("Global", makeScope("Alice: ...")),
 		container.NewTabItem("Salle", makeScope("Venus: Parle mieux on comprend rien")),
 		container.NewTabItem("Groupe", makeScope("")),
 	)
+}
 
-	return container.NewBorder(gui.NewTitleText("Chat", 25), nil, nil, nil, tabs)
+// ---- Nav Chat / Carte (droite, bas) : titres + grandes icônes cliquables --
+// qui ouvrent chacune une popup (chat rempli, carte vide pour l'instant).
+
+const chatMapIconSize = 100
+
+var (
+	chatIconPath = "assets/icons/icon_chats.png"
+	mapIconPath  = "assets/icons/icon_map.png"
+)
+
+func buildChatMapNav(w fyne.Window) fyne.CanvasObject {
+	titlesRow := container.NewGridWithColumns(2,
+		container.NewCenter(gui.NewTitleText("Chat", 25)),
+		container.NewCenter(gui.NewTitleText("Carte", 25)),
+	)
+
+	chatIcon := gui.NewBigIconButton(chatIconPath, chatMapIconSize, func() {
+		dialog.NewCustom("Chat", "Fermer", buildChatPanel(), w).Show()
+	})
+	mapIcon := gui.NewBigIconButton(mapIconPath, chatMapIconSize, func() {
+		// vide pour l'instant : TODO afficher une vraie vue carte du monde
+		dialog.NewCustom("Carte", "Fermer", widget.NewLabel(""), w).Show()
+	})
+
+	iconsRow := container.NewGridWithColumns(2,
+		container.NewCenter(chatIcon),
+		container.NewCenter(mapIcon),
+	)
+
+	return container.NewVBox(titlesRow, gui.Fix(0, 0), iconsRow)
 }
 
 
 func main() {
 	a := app.New()
 	w := a.NewWindow("The Answer Protocol")
-	w.Resize(fyne.NewSize(1300, 800))
+	w.Resize(fyne.NewSize(1400, 850))
 	w.SetFixedSize(true) // empêche utilisateur de redimensionner fenêtre
 
 	// petit annuaire de démo : nom de sortie -> salle cible.
@@ -283,20 +306,19 @@ func main() {
 	_ = demoRooms // gardé pour un futur test manuel : changeRoom(demoRooms["cimetière gestral"])
 
 
-	mapButton := buildMapButton()
 	rightPanel := gui.WithMinWidth(container.NewVBox(
 		buildCharacterPanel(fakePlayer),
 		gui.Fix(0, 15),
-		buildChatPanel(),
+		buildChatMapNav(w),
 	), 420)
 
-	body := container.NewBorder(nil, nil, gui.WithMinWidth(roomContainer, 420), rightPanel, mapButton)
+	body := container.NewBorder(nil, nil, gui.WithMinWidth(roomContainer, 420), rightPanel, nil)
 
 	// NewBorder = créer un conteneur avec des bordures personnalisées pour
 	// organiser les éléments d'une interface (top, bottom, left, right, content)
 	content := container.NewBorder(buildHeader(), nil, nil, nil, body)
 
-	full := container.NewStack(background, container.NewPadded(content))
+	full := container.NewStack(background, container.New(layout.NewCustomPaddedLayout(12, 4, 47, 47), content))
 
 	w.SetContent(full)
 	w.ShowAndRun()

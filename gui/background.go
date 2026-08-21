@@ -7,14 +7,33 @@ import (
 	"fyne.io/fyne/v2/container"
 )
 
+// withMinWidth force un conteneur à respecter une largeur minimale, et lui
+// ajoute un fond semi-transparent (pour rester lisible par-dessus l'image
+// de fond de la salle) avec un peu de marge interne autour du contenu.
+const panelWidth = 420
+const panelHeight = 650
+
+// bgOverflow = de combien de pixels l'image de fond déborde de chaque côté
+// par rapport à la zone réelle du panneau (qui, elle, ne change pas).
+const bgOverflow = 38
+
 // je met un rectangle en fond pour les deux colonnes gauche et droite
 func WithMinWidth(obj fyne.CanvasObject, w float32) fyne.CanvasObject {
 	sizer := canvas.NewRectangle(color.Transparent)
-	sizer.SetMinSize(fyne.NewSize(w, 0))
+	sizer.SetMinSize(fyne.NewSize(w, panelHeight))
 
-	//panelBg := canvas.NewRectangle(color.NRGBA{R: 0, G:0, B: 0, A: 160})
+	bg := canvas.NewImageFromFile("assets/gauche.png")
+	bg.FillMode = canvas.ImageFillStretch
+	bg.Translucency = 0.04 // 0 = opaque, 1 = invisible
+	// taille et position fixées à la main, plus grandes que le panneau : le
+	// fond déborde visuellement sans agrandir la zone occupée par le contenu.
+	bg.Resize(fyne.NewSize(w+bgOverflow*2, panelHeight+bgOverflow*2))
+	bg.Move(fyne.NewPos(-bgOverflow, -bgOverflow))
+	// conteneur sans layout : il ignore les Resize que lui envoie le Stack
+	// parent, donc la taille/position manuelles de bg ci-dessus sont conservées.
+	bgHolder := container.NewWithoutLayout(bg)
 
-	return container.NewStack(sizer, container.NewPadded(obj))
+	return container.NewStack(sizer, bgHolder, container.NewPadded(obj))
 }
 
 
@@ -33,7 +52,7 @@ func BuildBackground(imagePath string) (fyne.CanvasObject, *canvas.Image) {
 		R: 0,
 		G: 0,
 		B: 0,
-		A: 125, // 50% de transparent pour l'image background
+		A: 60, // 50% de transparent pour l'image background
 	})
 	bgStack := container.NewStack(bg, overlay)
 	return bgStack, bg

@@ -28,9 +28,12 @@ var TitleColor = color.NRGBA{R: 0xe8, G: 0xd8, B: 0xb0, A: 0xff}
 // blanc, utilisé pour le texte courant (corps de texte + boutons)
 var BodyColor = color.NRGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xff}
 
+// rouge, utilisé pour la barre de vie
+var HPColor = color.NRGBA{R: 125, G: 84, B: 7, A: 255}
+
 // taille du texte des boutons
 var ButtonTextSize float32 = 16
-var DescSize float32 = 18
+var DescSize float32 = 19
 
 // loadFont charge une police depuis assets/, ou nil si le fichier est
 // introuvable (le texte retombe alors sur la police par défaut du thème).
@@ -94,6 +97,62 @@ func (t *fontTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) c
 	return t.Theme.Color(name, variant)
 }
 
+// -------------------------- BARRE DE HP -----------------------------
+
+// primaryColorTheme change uniquement la couleur "primary" du thème, celle
+// que widget.ProgressBar utilise pour dessiner sa barre remplie.
+type primaryColorTheme struct {
+	fyne.Theme
+	color color.Color
+}
+
+func (t *primaryColorTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) color.Color {
+	if name == theme.ColorNamePrimary {
+		return t.color
+	}
+	return t.Theme.Color(name, variant)
+}
+
+// NewColoredProgressBar crée une widget.ProgressBar dont la barre remplie
+// utilise la couleur donnée (au lieu du bleu par défaut du thème). Renvoie
+// la barre elle-même (pour régler Min/Max/Value) et l'objet thémé à
+// afficher (à placer dans le conteneur final).
+func NewColoredProgressBar(col color.Color) (*widget.ProgressBar, fyne.CanvasObject) {
+	bar := widget.NewProgressBar()
+	themed := container.NewThemeOverride(bar, &primaryColorTheme{Theme: theme.DefaultTheme(), color: col})
+	return bar, themed
+}
+
+// ------------------- BOUTON CLIQUABLE ENORME(MAP + CHAT) ---------------------
+
+// iconSizeTheme force la taille des icônes de bouton (normalement fixée
+// par le thème) à une valeur donnée, pour faire des icônes plus grandes.
+type iconSizeTheme struct {
+	fyne.Theme
+	size float32
+}
+
+func (t *iconSizeTheme) Size(name fyne.ThemeSizeName) float32 {
+	if name == theme.SizeNameInlineIcon {
+		return t.size
+	}
+	return t.Theme.Size(name)
+}
+
+// NewBigIconButton crée un bouton composé uniquement d'une icône (chargée
+// depuis un fichier), affichée à la taille donnée, cliquable via tapped.
+func NewBigIconButton(path string, size float32, tapped func()) fyne.CanvasObject {
+	res, err := fyne.LoadResourceFromPath(path)
+	if err != nil {
+		res = theme.BrokenImageIcon()
+	}
+	btn := widget.NewButtonWithIcon("", res, tapped)
+	btn.Importance = widget.LowImportance // pas de fond, juste l'icône
+	return container.NewThemeOverride(btn, &iconSizeTheme{Theme: theme.DefaultTheme(), size: size})
+}
+
+// ------------------------ BOUTON AVEC THÈME BASE-----------------------------
+
 func (t *fontTheme) Size(name fyne.ThemeSizeName) float32 {
 	if name == theme.SizeNameText && t.size > 0 {
 		return t.size
@@ -107,11 +166,14 @@ func NewButton(label string, tapped func()) fyne.CanvasObject {
 	return container.NewThemeOverride(btn, newFontTheme(bodyFont, BodyColor, ButtonTextSize))
 }
 
+// ------------------------- THEME DU TEXTE DE BASE ----------------------------
+
 // NewWrappingBodyText crée un texte qui retourne à la ligne automatiquement
 // (contrairement à NewBodyText, basé sur un widget.Label), avec la police
 // régulière et la couleur du texte courant.
 func NewWrappingBodyText(text string) fyne.CanvasObject {
 	l := widget.NewLabel(text)
 	l.Wrapping = fyne.TextWrapWord
-	return container.NewThemeOverride(l, newFontTheme(bodyFont, BodyColor, 0))
+	l.Alignment = fyne.TextAlignCenter
+	return container.NewThemeOverride(l, newFontTheme(bodyFont, BodyColor, DescSize))
 }
