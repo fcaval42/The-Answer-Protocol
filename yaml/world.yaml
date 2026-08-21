@@ -22,7 +22,7 @@ world:
         west: "Lumière"
         east: "Plage"
         south: "Océan_suspendu"
-      npcs: ["Névron"]
+      enemies: ["Névron"]
       items: ["Lumina"]
 
     Plage:
@@ -47,7 +47,7 @@ world:
       description: "Un repaire suspendu, tissé à flanc de falaise."
       exits:
         east: "Océan_suspendu"
-      npcs: ["Esquie"]
+      enemies: ["Esquie"]
 
     Village_gestral:
       name: "Village Gestral"
@@ -64,7 +64,7 @@ world:
         dont certaines sont vides"
       exits:
         west: "Village_gestral"
-      npcs: ["Renoir"]
+      enemies: ["Renoir"]
 
     Falaise_rochevague:
       name: "Falaise de Rochevague"
@@ -91,7 +91,7 @@ world:
       exits:
         west: "Terres_oubliées"
         north: "Lumière"
-      npcs: ["Peintress"]
+      enemies: ["Peintress"]
 
 
 items:

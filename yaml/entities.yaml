@@ -90,3 +90,7 @@ entities:
       defense: 5
       counter: 4
       difficulty: "easy"
+
+  npcs:
+    Sophie:
+      name: "Sophie"
