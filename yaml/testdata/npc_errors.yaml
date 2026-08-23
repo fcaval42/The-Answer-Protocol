@@ -1,0 +1,29 @@
+# Fixture : erreurs au niveau des npcs (voir npc.go). Pas de section world.
+
+npcs:
+  "":
+    name: ""
+    role: ""
+    description: ""
+    dialogue: []
+
+  duplicate_a:
+    name: "Same NPC"
+    role: "dialogue"
+    description: "A first npc with a shared name."
+    dialogue:
+      - "Hello."
+
+  duplicate_b:
+    name: "Same NPC"
+    role: "dialogue"
+    description: "A second npc with the same shared name."
+    dialogue:
+      - "Hello again."
+
+  blank_line:
+    name: "Blank Line"
+    role: "dialogue"
+    description: "An npc whose only dialogue line is blank."
+    dialogue:
+      - "   "

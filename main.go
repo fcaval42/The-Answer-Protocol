@@ -12,7 +12,7 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
 
-	"tap-gui/gui"
+	"the_answer_protocol/gui"
 )
 
 // ---- Données factices, en attendant le vrai serveur ----
@@ -128,7 +128,7 @@ func buildRoomPanel(r Room) fyne.CanvasObject{
 	}
 
 	// ----------------- ACTIONS --------------------
-	actionsGrid := container.NewGridWithColumns(2, 
+	actionsGrid := container.NewGridWithColumns(2,
 		widget.NewButton("Status", func() { fmt.Println("STATUS") }), // A REMPLACER
 		widget.NewButton("Quest", func() { fmt.Println("QUEST") }), // A REMPLACER
 		widget.NewButton("Status", func() { fmt.Println("STATUS") }), // A REMPLACER

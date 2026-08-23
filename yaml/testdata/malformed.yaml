@@ -1,0 +1,8 @@
+# Fixture : YAML syntaxiquement invalide (guillemet non fermé), pour vérifier
+# que ParseWorld renvoie une erreur propre au lieu de paniquer.
+
+world:
+  locations:
+    a:
+      name: "unterminated
+      description: "d"

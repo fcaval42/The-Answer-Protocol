@@ -1,0 +1,45 @@
+# Fixture : erreurs au niveau des enemies (voir enemy.go). Pas de section world.
+
+enemies:
+  "":
+    name: ""
+    description: ""
+    dialogue: []
+    difficulty: ""
+    hp: -1
+    attack: -2
+    defense: -3
+    counter: -4
+
+  duplicate_a:
+    name: "Same Enemy"
+    description: "A first enemy with a shared name."
+    dialogue:
+      - "..."
+    difficulty: "easy"
+    hp: 10
+    attack: 1
+    defense: 1
+    counter: 1
+
+  duplicate_b:
+    name: "Same Enemy"
+    description: "A second enemy with the same shared name."
+    dialogue:
+      - "..."
+    difficulty: "easy"
+    hp: 10
+    attack: 1
+    defense: 1
+    counter: 1
+
+  blank_line:
+    name: "Blank Line"
+    description: "An enemy whose only dialogue line is blank."
+    dialogue:
+      - ""
+    difficulty: "easy"
+    hp: 1
+    attack: 1
+    defense: 1
+    counter: 1
