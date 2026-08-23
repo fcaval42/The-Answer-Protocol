@@ -1,0 +1,29 @@
+# Fixture : erreurs au niveau des items (voir item.go). Pas de section world,
+# rien ici ne référence de location.
+
+items:
+  "":
+    name: ""
+    description: ""
+
+  duplicate_a:
+    name: "Same Name"
+    description: "A first item with a shared name."
+    obtainable: true
+
+  duplicate_b:
+    name: "Same Name"
+    description: "A second item with the same shared name."
+    obtainable: true
+
+  bad_critical_low:
+    name: "Too Fragile"
+    description: "A weapon with an impossible negative crit chance."
+    critical: -0.5
+    obtainable: true
+
+  bad_critical_high:
+    name: "Too Sharp"
+    description: "A weapon with a crit chance above 100%."
+    critical: 1.5
+    obtainable: true

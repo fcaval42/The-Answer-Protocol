@@ -1,6 +1,8 @@
 # fichier de configuration. Définit structure statique du monde
 # - serveur charge le monde au démarrage (lit ce fichier pour créer carte)
 # - clients reçoivent les données via TCP (va afficher objets dans une room)
+# - npcs et enemies sont deux catégories distinctes : un npc (dialogue,
+#   quest_giver) n'a pas de statistiques de combat, un enemy en a.
 
 world:
   locations:
@@ -47,7 +49,7 @@ world:
       description: "Un repaire suspendu, tissé à flanc de falaise."
       exits:
         east: "Océan_suspendu"
-      enemies: ["Esquie"]
+      npcs: ["Esquie"]
 
     Village_gestral:
       name: "Village Gestral"
@@ -133,6 +135,7 @@ items:
     obtainable: true
 
 
+# PNJ non-combattants : dialogue et/ou quêtes, jamais de statistiques de combat.
 npcs:
   Sophie:
     name: "Sophie"
@@ -156,31 +159,110 @@ npcs:
         Celui qu'on appelle… François."
       - "Tout au nord ! Visez le grand « 33 ». Je vous rejoins dehors."
 
+
+# Ennemis : combattables via ATTACK, avec les statistiques utilisées par le
+# système de combat (ex-entities.yaml, désormais fusionné ici).
+enemies:
   Névron:
     name: "Névron"
-    role: "enemy"
     description: "Créatures de pigments nées des pinceaux tourmentés de la Peintresse"
     dialogue:
       - "..."
+    hp: 60
+    attack: 10
+    defense: 5
+    counter: 4
+    difficulty: "easy"
 
   Renoir:
     name: "Renoir"
-    role: "enemy"
     description: "Une silhouette hostile, sa peau presque effacée par endroits."
     dialogue:
       - "Alors voilà. Tu nous as entraînés sur cette voie, mais es-tu prêt
         à en assumer les conséquences ?"
       - "Ça ne te semblera pas logique maintenant, mais on veut tous
         les deux le meilleur pour nos familles."
+    hp: 110
+    attack: 18
+    defense: 10
+    counter: 8
+    difficulty: "medium"
 
   Peintress:
     name: "Peintress"
-    role: "enemy"
     description: "Souffle tragique à l'origine du désastre, la Peintresse applique
       sur le monde ses touches de mort, condamnant chaque année toute une
       génération à s'effacer dans le néant au gré de ses funestes coups de pinceau"
     dialogue:
       - "Fuis ce tableau maudit, cette toile d'une autre vie..."
+    hp: 200
+    attack: 30
+    defense: 18
+    counter: 15
+    difficulty: "extreme"
+
+
+# Personnages jouables (doit rester aligné avec PersoChoice dans tcp/server/tools.go).
+players:
+  Gustave:
+    name: "Gustave"
+    hp: 80
+    weapon:
+      name: "Lanceram"
+      critical: 0.1
+    attack: 30
+    defense: 15
+    respawn:
+      hp: 50
+      location: "Lumière"
+
+  Lune:
+    name: "Lune"
+    hp: 100
+    weapon:
+      name: "Lumerim"
+      critical: 0.1
+    attack: 38
+    defense: 12
+    respawn:
+      hp: 50
+      location: "Lumière"
+
+  Maelle:
+    name: "Maëlle"
+    hp: 130
+    weapon:
+      name: "Médalum"
+      critical: 0.1
+    attack: 50
+    defense: 25
+    respawn:
+      hp: 50
+      location: "Lumière"
+
+  Sciel:
+    name: "Sciel"
+    hp: 90
+    weapon:
+      name: "Forestion"
+      critical: 0.1
+    attack: 22
+    defense: 35
+    respawn:
+      hp: 50
+      location: "Lumière"
+
+  Verso:
+    name: "Verso"
+    hp: 100
+    weapon:
+      name: "Blodam"
+      critical: 0.1
+    attack: 45
+    defense: 8
+    respawn:
+      hp: 50
+      location: "Lumière"
 
 
 quests:
@@ -202,7 +284,7 @@ quests:
     description: "Aller combattre Renoir pour libérer Florrie"
     objective:
       type: "defeat"
-      npc: "Renoir"
+      enemy: "Renoir"
     reward:
       type: "item"
       value: "Brise_barrière"

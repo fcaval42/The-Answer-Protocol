@@ -1,0 +1,150 @@
+# Fixture : erreurs au niveau des locations (voir location.go). Chaque room
+# isole un ou plusieurs cas précis. loop_a/loop_b forment une boucle valide
+# pour que "the world has no loop" (testé séparément dans no_loop.yaml) ne se
+# déclenche pas dans cette fixture.
+
+world:
+  locations:
+
+    "":
+      name: ""
+      description: ""
+      exits: {}
+
+    loop_a:
+      name: "Loop A"
+      description: "One half of a valid two-room loop."
+      exits:
+        east: "loop_b"
+
+    loop_b:
+      name: "Loop B"
+      description: "The other half of the valid loop."
+      exits:
+        west: "loop_a"
+
+    self_loop:
+      name: "Self Loop"
+      description: "A room whose only exit points back to itself."
+      exits:
+        east: "self_loop"
+
+    unknown_exit:
+      name: "Unknown Exit"
+      description: "A room whose exit leads nowhere known."
+      exits:
+        east: "does_not_exist"
+
+    blank_exit:
+      name: "Blank Exit"
+      description: "A room with an empty exit direction and an empty destination."
+      exits:
+        "": "loop_a"
+        north: ""
+
+    dup_refs:
+      name: "Dup Refs"
+      description: "A room that lists items, npcs and enemies more than once."
+      exits:
+        east: "loop_a"
+      items: ["potion", "potion"]
+      npcs: ["bob", "bob", "shared", "traveler"]
+      enemies: ["wolf", "wolf", "shared", "goblin"]
+
+    unknown_refs:
+      name: "Unknown Refs"
+      description: "A room referencing an item, npc and enemy that don't exist."
+      exits:
+        east: "loop_a"
+      items: ["ghost_item"]
+      npcs: ["ghost_npc"]
+      enemies: ["ghost_enemy"]
+
+    bad_spawn:
+      name: "Bad Spawn"
+      description: "A room with three broken spawn entries."
+      exits:
+        east: "loop_a"
+      spawns:
+        - npc_type: ""
+          count: 1
+        - npc_type: "ghost_npc_type"
+          count: 1
+        - npc_type: "bob"
+          count: 0
+
+    same_name_as_loop_a:
+      name: "Loop A"
+      description: "A room that accidentally reuses Loop A's display name."
+      exits:
+        east: "loop_a"
+
+    placed_elsewhere:
+      name: "Placed Elsewhere"
+      description: "Re-places traveler and goblin, already placed in dup_refs."
+      exits:
+        east: "loop_a"
+      npcs: ["traveler"]
+      enemies: ["goblin"]
+
+items:
+  potion:
+    name: "Potion"
+    description: "A common healing item."
+    obtainable: true
+
+npcs:
+  bob:
+    name: "Bob"
+    role: "dialogue"
+    description: "A background character used to test duplicate references."
+    dialogue:
+      - "Hi."
+
+  shared:
+    name: "Shared"
+    role: "dialogue"
+    description: "Also defined as an enemy, to test the npcs/enemies overlap check."
+    dialogue:
+      - "Hi."
+
+  traveler:
+    name: "Traveler"
+    role: "dialogue"
+    description: "Used to test cross-location duplicate placement."
+    dialogue:
+      - "Hi."
+
+enemies:
+  wolf:
+    name: "Wolf"
+    description: "A background enemy used to test duplicate references."
+    dialogue:
+      - "Grr."
+    difficulty: "easy"
+    hp: 10
+    attack: 1
+    defense: 1
+    counter: 1
+
+  shared:
+    name: "Shared"
+    description: "Also defined as an npc, to test the npcs/enemies overlap check."
+    dialogue:
+      - "Grr."
+    difficulty: "easy"
+    hp: 10
+    attack: 1
+    defense: 1
+    counter: 1
+
+  goblin:
+    name: "Goblin"
+    description: "Used to test cross-location duplicate placement."
+    dialogue:
+      - "Grr."
+    difficulty: "easy"
+    hp: 10
+    attack: 1
+    defense: 1
+    counter: 1

@@ -1,82 +1,35 @@
 package parsing
 
 import (
-	// "errors"
+	"errors"
 	"fmt"
+	"os"
 
 	"gopkg.in/yaml.v3"
 )
 
 /**
 Sert à récupérer les infos world.yaml puis à vérifier la véracité des valeurs
-entre elles puis a les mettre dans des structures
+entre elles puis a les mettre dans des structures.
+
+Le parsing est organisé par domaine : chaque catégorie du YAML (locations,
+items, npcs, enemies, players, quests) a son propre fichier avec son type et
+sa fonction de validation (location.go, item.go, npc.go, enemy.go, player.go,
+quest.go). Ce fichier ne garde que le type racine WorldFile, le point d'entrée
+ParseWorld, et l'orchestration de la validation.
 **/
-
-type Spawn struct {
-	NPCType string `yaml:"npc_type"`
-	Count   int    `yaml:"count"`
-}
-
-type Location struct {
-	ID          string            `yaml:"-"`
-	Name        string            `yaml:"name"`
-	Description string            `yaml:"description"`
-	Exits       map[string]string `yaml:"exits"`
-	Items       []string          `yaml:"items"`
-	NPCs        []string          `yaml:"npcs"`
-	Spawns      []Spawn           `yaml:"spawns"`
-}
-
-type Item struct {
-	ID          string `yaml:"-"`
-	Name        string `yaml:"name"`
-	Description string `yaml:"description"`
-	Obtainable  bool   `yaml:"obtainable"`
-}
-
-type NPCStats struct {
-	HP int `yaml:"hp"`
-}
-
-type NPC struct {
-	ID          string   `yaml:"-"`
-	Name        string   `yaml:"name"`
-	Role        string   `yaml:"role"`
-	Description string   `yaml:"description"`
-	Dialogue    []string `yaml:"dialogue"`
-	Stats       NPCStats `yaml:"stats"`
-}
-
-type QuestObjective struct {
-	Type      string `yaml:"type"`
-	Item      string `yaml:"item,omitempty"`
-	NPC       string `yaml:"npc,omitempty"`
-	DeliverTo string `yaml:"deliver_to,omitempty"`
-}
-
-type QuestReward struct {
-	Type  string `yaml:"type"`
-	Value string `yaml:"value"`
-}
-
-type Quest struct {
-	ID          string         `yaml:"-"`
-	Name        string         `yaml:"name"`
-	Giver       string         `yaml:"giver"`
-	Description string         `yaml:"description"`
-	Objective   QuestObjective `yaml:"objective"`
-	Reward      QuestReward    `yaml:"reward"`
-}
 
 type World struct {
 	Locations map[string]Location `yaml:"locations"`
 }
 
 type WorldFile struct {
-	World  World            `yaml:"world"`
-	Items  map[string]Item  `yaml:"items"`
-	NPCs   map[string]NPC   `yaml:"npcs"`
-	Quests map[string]Quest `yaml:"quests"`
+	World   World             `yaml:"world"`
+	Items   map[string]Item   `yaml:"items"`
+	NPCs    map[string]NPC    `yaml:"npcs"`
+	Enemies map[string]Enemy  `yaml:"enemies"`
+	Players map[string]Player `yaml:"players"`
+	Quests  map[string]Quest  `yaml:"quests"`
 }
 
 func ParseWorld(worldYAML []byte) (WorldFile, []error) {
@@ -98,75 +51,64 @@ func ParseWorld(worldYAML []byte) (WorldFile, []error) {
 		npc.ID = id
 		wf.NPCs[id] = npc
 	}
+	for id, enemy := range wf.Enemies {
+		enemy.ID = id
+		wf.Enemies[id] = enemy
+	}
+	for id, player := range wf.Players {
+		player.ID = id
+		wf.Players[id] = player
+	}
 	for id, quest := range wf.Quests {
 		quest.ID = id
 		wf.Quests[id] = quest
 	}
 
 	err := wf.Validate()
-	if (err != nil){
+	if err != nil {
 		return wf, err
 	}
 
 	return wf, nil
 }
 
+// Validate runs every domain-specific check and collects all the errors found,
+// instead of stopping at the first one, so a single run reports the full list.
 func (wf WorldFile) Validate() []error {
 	var errs []error
 
-	for id, loc := range wf.World.Locations { // regarder que le nom nest pas vide
-		for dir, dest := range loc.Exits {
-			if _, ok := wf.World.Locations[dest]; !ok {
-				errs = append(errs, fmt.Errorf("location %q: exit %q points to unknown location %q", id, dir, dest))
-			}  // ajouter regarder si exits nest pas vide
-			// regarder que le exit nest pas le meme que le name
-		}
-		for _, itemID := range loc.Items {
-			if _, ok := wf.Items[itemID]; !ok {
-				errs = append(errs, fmt.Errorf("location %q: unknown item %q", id, itemID))
-			}
-		}
-		for _, npcID := range loc.NPCs {
-			if _, ok := wf.NPCs[npcID]; !ok {
-				errs = append(errs, fmt.Errorf("location %q: unknown npc %q", id, npcID))
-			}
-		}
-		for _, spawn := range loc.Spawns {
-			if _, ok := wf.NPCs[spawn.NPCType]; !ok {
-				errs = append(errs, fmt.Errorf("location %q: spawn references unknown npc_type %q", id, spawn.NPCType))
-			}
-		}
-	}
-
-	for id, q := range wf.Quests {
-		if _, ok := wf.NPCs[q.Giver]; !ok {
-			errs = append(errs, fmt.Errorf("quest %q: giver %q is not a known npc", id, q.Giver))
-		}
-
-		switch q.Objective.Type {
-		case "fetch":
-			if _, ok := wf.Items[q.Objective.Item]; !ok {
-				errs = append(errs, fmt.Errorf("quest %q: objective item %q is not a known item", id, q.Objective.Item))
-			}
-			if q.Objective.DeliverTo != "" {
-				if _, ok := wf.World.Locations[q.Objective.DeliverTo]; !ok {
-					errs = append(errs, fmt.Errorf("quest %q: objective deliver_to %q is not a known location", id, q.Objective.DeliverTo))
-				}
-			}
-		case "defeat":
-			if _, ok := wf.NPCs[q.Objective.NPC]; !ok {
-				errs = append(errs, fmt.Errorf("quest %q: objective npc %q is not a known npc", id, q.Objective.NPC))
-			}
-		default:
-			errs = append(errs, fmt.Errorf("quest %q: unknown objective type %q", id, q.Objective.Type))
-		}
-
-		if q.Reward.Type == "item" {
-			if _, ok := wf.Items[q.Reward.Value]; !ok {
-				errs = append(errs, fmt.Errorf("quest %q: reward item %q is not a known item", id, q.Reward.Value))
-			}
-		}
-	}
+	errs = append(errs, validateLocations(wf)...)
+	errs = append(errs, validateItems(wf)...)
+	errs = append(errs, validateNPCs(wf)...)
+	errs = append(errs, validateEnemies(wf)...)
+	errs = append(errs, validatePlayers(wf)...)
+	errs = append(errs, validateQuests(wf)...)
 
 	return errs
+}
+
+// Rally reads world_path from disk and parses it, printing a summary of any
+// error found so the caller can decide whether to load the world or bail out.
+func Rally(world_path string) (WorldFile, []error) {
+	var world WorldFile
+	var errs []error
+
+	world_yaml, er := os.ReadFile(world_path)
+	if er != nil {
+		errs = append(errs, er)
+	} else {
+		var err []error
+		world, err = ParseWorld(world_yaml)
+		if err != nil {
+			fmt.Println("\n---Errors of world.yaml---")
+			fmt.Println(errors.Join(err...))
+			errs = append(errs, err...)
+		}
+	}
+
+	if len(errs) != 0 {
+		fmt.Println("\nNumber of errors:", len(errs))
+	}
+
+	return world, errs
 }
