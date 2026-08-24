@@ -87,7 +87,6 @@ func main() {
 			fmt.Print("Au revoir, Mon ami !\n")
 			return
 		}
-
 		// On envoie l'input au serveur
 		fmt.Fprintf(conn, "%s\n", line)
 	}
