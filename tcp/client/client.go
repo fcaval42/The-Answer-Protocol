@@ -7,19 +7,25 @@ import (
 	"net"
 	"os"
 	"strings"
+	"github.com/chzyer/readline"
 	. "the_answer_protocol/tcp/common"
 	// "strings"
 )
 
 func main() {
-	// Ouvre (ou crée) un fichier pour les logs
+	// Ouvre un fichier pour les logs
 	file, err := os.OpenFile("../protocol.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {
 		log.Fatalf("[ERROR] Erreur lors de l'ouverture du fichier de log : %v", err)
 	}
 	defer file.Close()
-
-	// Configure le logger pour écrire UNIQUEMENT dans le fichier
+	// reader := bufio.NewReader(os.Stdin)
+	rl, err := readline.New(">>> ")
+	if err != nil {
+		log.Fatalf("[ERROR] Erreur readline : %v", err)
+	}
+	defer rl.Close()
+	// Configure le logger pour ecrire dans le fichier
 	log.SetOutput(file)
 
 	// Creation de la connexion en tcp au localhost
@@ -44,7 +50,7 @@ func main() {
 
 		// Boucle infinie
 		for {
-			// Recupère les messages envoyés par le serveur
+			// Recupere les messages envoyes par le serveur
 			response, err := connRoutine.ReadString('\n')
 			if err != nil {
 				if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
@@ -58,27 +64,21 @@ func main() {
 			}
 			// On affiche le message s'il n'est pas vide
 			if response != "\n" {
-				// ClearScreen()
-				fmt.Print("\n" + response)
+				ClearScreen()
+				fmt.Fprint(rl.Stdout(), "\n"+response)
 			}
 		}
 	}()
 
-	reader := bufio.NewReader(os.Stdin)
 	// Boucle infinie pour les inputs
 	for {
-		// Récupèration de l'input
-		line, err := reader.ReadString('\n')
-		fmt.Println("Debug: line =", line)
+		// Recuperation de l'input
+		line, err := rl.Readline()
 		if err != nil {
 			log.Println("[ERROR] Erreur de lecture :", err)
 			return
 		}
-		fmt.Fprint(conn,line)
-		if err != nil {
-			log.Println(conn.LocalAddr().String() + "| [ERROR] " + err.Error())
-			return
-		}
+		line = strings.TrimSpace(line)
 
 		// Si l'input est "exit", gestion de la fermeture de la connexion
 		if line == "QUIT" {
@@ -89,6 +89,6 @@ func main() {
 		}
 
 		// On envoie l'input au serveur
-		fmt.Fprintf(conn, "%s", line)
+		fmt.Fprintf(conn, "%s\n", line)
 	}
 }

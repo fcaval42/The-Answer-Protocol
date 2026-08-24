@@ -15,18 +15,27 @@ import (
 
 type Group struct {
 	ID      string
-	Members map[net.Conn]string // map[connexion]nom_du_joueur
+	Members map[string]net.Conn
+	messages []string
 	Mu      sync.RWMutex
 }
 
 var (
-	groups     = make(map[string]*Group) // Map d'ID de groupe vers la struct Group
-	groupsLock sync.RWMutex
+	groups     = make(map[string]*Group)
+	groupsLock sync.Mutex
+)
+
+var (
+	ConnectedClients     = make(map[string]net.Conn)
+	ConnectedLock sync.Mutex
 )
 
 var (
 	globaleMessage     []string
 	globaleMessageLock sync.Mutex
+)
+var (inGroupChat	 []net.Conn
+	inGroupChatLock sync.Mutex
 )
 var (
 	inGlobal     []net.Conn
@@ -37,21 +46,21 @@ var (
 	groupLock sync.Mutex
 )
 
+
 func GroupCreate(conn net.Conn, player string) {
 	LogAndFprintf(conn, "[SERVER] Création d'un nouveau groupe...\n")
-	// Générer un ID unique pour le groupe (vous pouvez utiliser un UUID ou un compteur)
-	groupID := fmt.Sprintf("group-%d", len(groups)+1)
+	groupID := fmt.Sprintf("%d", len(groups)+1)
 
-	// Créer une nouvelle instance de Group
+	// Creer une nouvelle instance de Group
 	newGroup := &Group{
 		ID:      groupID,
-		Members: make(map[net.Conn]string),
+		Members: make(map[string]net.Conn),
 	}
 
-	// Ajouter le créateur du groupe à la liste des membres
-	newGroup.Members[conn] = player
+	// Ajouter le createur du groupe à la liste des membres
+	newGroup.Members[player] = conn
 
-	// Ajouter le groupe à la map globale
+	// Ajouter le groupe a la liste de groupes globale
 	groupsLock.Lock()
 	groups[groupID] = newGroup
 	groupsLock.Unlock()
@@ -60,19 +69,35 @@ func GroupCreate(conn net.Conn, player string) {
 }
 
 func GroupInvite(conn net.Conn, player string) {
-	LogAndFprintf(conn, "[SERVER] Quel membre d'expédition souhaitez-vous inviter dans votre groupe ?\n")
-	// Récupérer la liste des joueurs disponibles pour l'invitation
-	availablePlayers := getAvailablePlayers()
+	// Trouver le groupe du joueur actuel
+	var currentGroup *Group
+	groupsLock.Lock()
+	for _, g := range groups {
+		if _, exists := g.Members[player]; exists {
+			currentGroup = g
+			break
+		}
+	}
+	groupsLock.Unlock()
+
+	if currentGroup == nil {
+		LogAndFprintf(conn, "[SERVER] Vous n'êtes pas dans un groupe. Créez-en un d'abord.\n")
+		return
+	}
+
+	// Recupere la liste des joueurs disponibles pour l'invitation
+	availablePlayers := getAvailablePlayers(player)
 
 	if len(availablePlayers) == 0 {
 		LogAndFprintf(conn, "[SERVER] Aucun joueur disponible pour l'invitation.\n")
 		return
-	}
-
-	// Afficher la liste des joueurs disponibles
+	}	
+	LogAndFprintf(conn, "[SERVER] Quel membre d'expédition souhaitez-vous inviter dans votre groupe ?\n")
+	
+	// Affiche la liste des joueurs disponibles
 	LogAndFprintf(conn, "[SERVER] Joueurs disponibles : %s\n", strings.Join(availablePlayers, ", "))
 
-	// Attendre la réponse du joueur pour choisir qui inviter
+	// Reponse du joueur pour choisir qui inviter
 	invitee := recept(conn)
 	invitee = strings.TrimSpace(invitee)
 
@@ -80,37 +105,50 @@ func GroupInvite(conn net.Conn, player string) {
 		LogAndFprintf(conn, "[SERVER] Joueur invalide ou indisponible pour l'invitation.\n")
 		return
 	}
-
-	// Ajouter le joueur invité au groupe (vous pouvez choisir le groupe approprié ici)
-	groupsLock.Lock()
-	defer groupsLock.Unlock()
-
-	// Trouver le groupe du joueur actuel
-	var currentGroup *Group
-	for _, g := range groups {
-		if _, exists := g.Members[conn]; exists {
-			currentGroup = g
-			break
-		}
-	}
-
-	if currentGroup == nil {
-		LogAndFprintf(conn, "[SERVER] Vous n'êtes pas dans un groupe. Créez-en un d'abord.\n")
+	inviteeConn, exists := ConnectedClients[invitee]
+	if !exists {
+		LogAndFprintf(conn, "[SERVER] Joueur non connecté.\n")
 		return
 	}
-
-	// Ajouter le joueur invité au groupe
-	currentGroup.Members[conn] = invitee
-	LogAndFprintf(conn, "[SERVER] Joueur %s invité avec succès dans le groupe %s !\n", invitee, currentGroup.ID)
+	LogAndFprintf(inviteeConn, "[INFO] %s vous a invité à rejoindre un groupe. ACCEPT/DECLINE\n", player)
+	// for{
+	// 	response := recept(inviteeConn)
+	// 	LogAndFprintf(inviteeConn, "[DEBUG] Réponse de %s : %s\n", invitee, response)
+	// 	if response == "DECLINE\n" {
+	// 		LogAndFprintf(conn, "[SERVER] %s a refusé l'invitation.\n", invitee)
+	// 		return
+	// 	}
+	// 	if response == "ACCEPT\n" {
+	// 		break
+	// 	}
+	// 	LogAndFprintf(inviteeConn, "[INFO] Réponse invalide. Veuillez répondre par ACCEPT ou DECLINE.\n")
+	// }
+	response := recept(inviteeConn)
+	if response == "DECLINE\n" {
+		LogAndFprintf(conn, "[SERVER] %s a refusé l'invitation.\n", invitee)
+		return
+	}
+	if response == "ACCEPT\n" {
+		LogAndFprintf(conn, "[SERVER] %s a accepté l'invitation.\n", invitee)
+	} else {
+		LogAndFprintf(inviteeConn, "[INFO] Réponse invalide. Veuillez répondre par ACCEPT ou DECLINE.\n")
+		return
+	}
+	groupsLock.Lock()
+	defer groupsLock.Unlock()
+	// Ajoute le joueur invite au groupe
+	currentGroup.Members[invitee] = inviteeConn
+	LogAndFprintf(conn, "[SERVER] %s a rejoint le groupe %s !\n", invitee, currentGroup.ID)
 }
 
-func getAvailablePlayers() []string {
-	PersoLock.Lock()
-	defer PersoLock.Unlock()
-
+func getAvailablePlayers(self string) []string {
+	ClientsLock.Lock()
+	defer ClientsLock.Unlock()
 	var availablePlayers []string
-	for _, player := range PersoChoice {
-		availablePlayers = append(availablePlayers, player)
+	for player := range ConnectedClients {
+		if player != self {
+			availablePlayers = append(availablePlayers, player)
+		}
 	}
 	return availablePlayers
 }
@@ -141,9 +179,59 @@ func roomChat(conn net.Conn, room string) {
 
 }
 
-func groupChat(conn net.Conn) {
-
+func groupChat(conn net.Conn, player string) {
+	inGroupChatLock.Lock()
+	inGroupChat = append(inGroupChat, conn)
+	inGroupChatLock.Unlock()
+	defer func() {
+		inGroupChatLock.Lock()
+		for i, con := range inGroupChat {
+			if conn == con {
+				inGroupChat = slices.Delete(inGroupChat, i, i+1)
+				break
+			}
+		}
+		inGroupChatLock.Unlock()
+	}()
+	for {
+		var currentGroup *Group
+		groupsLock.Lock()
+		for _, g := range groups {
+		if _, exists := g.Members[player]; exists {
+			currentGroup = g
+			break
+		}
+	}
+	groupsLock.Unlock()
+	if currentGroup == nil{
+		LogAndFprintf(conn, "[SERVER] Vous n'êtes pas dans un groupe. Créez-en un d'abord.\n")
+		return
+	}
+	receivers := make([]net.Conn, 0, len(currentGroup.Members))
+	for{
+		for _, memberConn := range currentGroup.Members {
+			if slices.Contains(inGroupChat, memberConn) {
+				receivers = append(receivers, memberConn)
+			}
+		}
+		broadcast(receivers, currentGroup.messages)
+		send := recept(conn)
+		if send == "EXIT\n" || send == "" || send == "QUIT\n" {
+			return
+		} else {
+			send = fmt.Sprintf("[%s]: %s", player, send)
+		}
+		LogAndPrintf(conn, "%s| %s", conn.RemoteAddr().String(), send)
+		currentGroup.Mu.Lock()
+		defer currentGroup.Mu.Unlock()
+		currentGroup.messages = append(currentGroup.messages, send)
+		if len(currentGroup.messages) > 10 {
+			currentGroup.messages = currentGroup.messages[len(currentGroup.messages)-10:]
+		}
+		}
+	}
 }
+
 
 func globalChat(conn net.Conn, player string) {
 	inGlobalLock.Lock()
@@ -160,8 +248,7 @@ func globalChat(conn net.Conn, player string) {
 		inGlobalLock.Unlock()
 	}()
 	for {
-		printChat(conn)
-		broadcast(conn)
+		broadcast(inGlobal, globaleMessage)
 		send := recept(conn)
 		if send == "EXIT\n" || send == "" || send == "QUIT\n" {
 			return
@@ -178,27 +265,19 @@ func globalChat(conn net.Conn, player string) {
 	}
 }
 
-func printChat(conn net.Conn) {
+func printChat(conn net.Conn, messages []string) {
 	chat := ""
-	for _, m := range globaleMessage {
+	for _, m := range messages {
 		chat += m
 	}
 	chat = strings.ReplaceAll(chat, "\n", "\\")
 	fmt.Fprintf(conn, "%s\n", chat)
 }
 
-// Permet de transmettre le message envoyé par un client aux autres
-func broadcast(sender net.Conn) {
-	// Gestion du mutex
-	inGlobalLock.Lock()
-	defer inGlobalLock.Unlock()
-
-	// Envoyer à tous les clients sauf l'expéditeur
-	for _, client := range inGlobal {
-		if client == sender {
-			continue
-		}
-		printChat(client)
+// Permet de transmettre le message envoye par un client aux autres
+func broadcast(receiver []net.Conn, messages []string) {
+	for _, client := range receiver {
+		printChat(client, messages)
 	}
 }
 
@@ -206,20 +285,25 @@ func broadcast(sender net.Conn) {
 func handleConnection(conn net.Conn) {
 	var player string
 	var message string
+
 	// Gestion de la fin de connexion
 	defer func() {
 		ClientsLock.Lock()
-		// Supprimer le client de la liste à la fermeture
+		// Supprime le client de la liste a la fermeture
 		delete(Clients, conn)
 		ClientsLock.Unlock()
-		// Si un personnage avait été utilisé ont le remer
+		// Si un personnage avait ete utilise ont le remet
 		// dans la liste des personnages jouables
 		if player != "" && player != "900" {
 			PersoLock.Lock()
 			PersoChoice = append(PersoChoice, player)
 			PersoLock.Unlock()
-			LogAndPrintf(conn, "%s| [INFO] [%s]: \"Pour ceux qui viendront après\"\n", conn.RemoteAddr().String(), player)
+			ConnectedLock.Lock()
+			delete(ConnectedClients, player)
+			ConnectedLock.Unlock()
 		}
+			LogAndPrintf(conn, "%s| [INFO] [%s]: \"Pour ceux qui viendront après\"\n", conn.RemoteAddr().String(), player)
+		
 		// Fermeture de la connexion
 		conn.Close()
 		LogAndPrintf(conn, "%s| [INFO] Client déconnecté\n", conn.RemoteAddr())
@@ -246,6 +330,9 @@ func handleConnection(conn net.Conn) {
 			if player == "" {
 				return
 			}
+			ConnectedLock.Lock()
+			ConnectedClients[player] = conn
+			ConnectedLock.Unlock()
 			break
 		}
 		if message == "QUIT\n" || message == "" {
@@ -281,9 +368,9 @@ func handleConnection(conn net.Conn) {
 					// case "ROOM":
 					// 	roomChat()
 					// 	break chatLoop
-					// case "GROUP":
-					// 	groupeChat()
-					// 	break chatLoop
+					case "GROUP\n":
+						groupChat(conn, player)
+						break chatLoop
 				}
 			}
 		}
