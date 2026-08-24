@@ -1,120 +1,141 @@
 # fichier de configuration. Définit structure statique du monde
 # - serveur charge le monde au démarrage (lit ce fichier pour créer carte)
 # - clients reçoivent les données via TCP (va afficher objets dans une room)
+# - npcs et enemies sont deux catégories distinctes : un npc (dialogue,
+#   quest_giver) n'a pas de statistiques de combat, un enemy en a.
 
 world:
   locations:
 
-    lumière:
+    Lumière:
       name: "Lumière"
       description: "Une clarté douce et constante baigne les lieux, comme si la
         lumière elle-même y était née."
       exits:
-        east: "vallées_fleuries"
-        south: "vieille_lumière"
+        east: "Vallées_fleuries"
+        south: "Vieille_lumière"
       npcs: ["Sophie"]
 
-    vallées_fleuries:
+    Vallées_fleuries:
       name: "Vallées fleuries"
       description: "Des champs de fleurs aux couleurs trop vives pour être
         naturelles"
       exits:
-        west: "lumière"
-        east: "plage"
-        south: "océan_suspendu"
+        west: "Lumière"
+        east: "Plage"
+        south: "Océan_suspendu"
+      enemies: ["Névron"]
+      items: ["Lumina"]
 
-    plage:
+    Plage:
       name: "Plage"
       description: "Le sable blanc rencontre une eau parfaitement immobile,
         son reflet trop net pour être honnête."
       exits:
-        west: "vallées_fleuries"
-      items: ["lumina"]
+        west: "Vallées_fleuries"
+      items: ["Abysseram"]
 
-    océan_suspendu:
+    Océan_suspendu:
       name: "Océan suspendu"
       description: "Une étendue d'eau qui semble flotter au-dessus du vide,
         reliant le clair à l'obscur."
       exits:
-        north: "vallées_fleuries"
-        west: "nid_esquie"
-        east: "village_gestral"
+        north: "Vallées_fleuries"
+        west: "Nid_esquie"
+        east: "Village_gestral"
 
-    nid_esquie:
+    Nid_esquie:
       name: "Nid d'Esquie"
       description: "Un repaire suspendu, tissé à flanc de falaise."
       exits:
-        east: "océan_suspendu"
+        east: "Océan_suspendu"
       npcs: ["Esquie"]
 
-    village_gestral:
+    Village_gestral:
       name: "Village Gestral"
       description: "Une odeur de combat flotte entre les huttes"
       exits:
-        west: "océan_suspendu"
-        east: "cimetière_gestral"
-        south: "falaise_rochevague"
+        west: "Océan_suspendu"
+        east: "Cimetière_gestral"
+        south: "Falaise_rochevague"
+      items: ["Pictos"]
 
-    cimetière_gestral:
+    Cimetière_gestral:
       name: "Cimetière Gestral"
       description: "Aucun nom n'y est plus lisible. De minuscules tombes,
         dont certaines sont vides"
       exits:
-        west: "village_gestral"
-      npcs: ["Renoir"]
+        west: "Village_gestral"
+      enemies: ["Renoir"]
 
-    falaise_rochevague:
+    Falaise_rochevague:
       name: "Falaise de Rochevague"
       description: "Un promontoire rocheux battu par des vagues qui
         n'atteignent jamais le sol, comme si la falaise elle-même
         refusait de tomber."
       exits:
-        north: "village_gestral"
-        west: "terres_oubliées"
-      items: ["chroma"]
+        north: "Village_gestral"
+        west: "Terres_oubliées"
+      items: ["Chroma"]
 
-    terres_oubliées:
+    Terres_oubliées:
       name: "Terres oubliées"
       description: "Le sang qui gît ici y est plus rouge que le
         coucher du soleil."
       exits:
-        west: "falaise_rochevague"
-        south: "vieille_lumière"
-      items: ["brise_barrière"]
+        west: "Falaise_rochevague"
+        south: "Vieille_lumière"
 
-    vieille_lumière:
+    Vieille_lumière:
       name: "Vieille Lumière"
       description: "L'écho affaibli. La boucle se referme,
         avant de reprendre."
       exits:
-        west: "terres_oubliées"
-        north: "lumière"
-      items: ["pictos"]
+        west: "Terres_oubliées"
+        north: "Lumière"
+      enemies: ["Peintress"]
 
 
 items:
-  lumina:
+  Lumina:
     name: "Lumina"
     description: "Un fragment de lumière condensée."
     obtainable: true
 
-  chroma:
+  Chroma:
     name: "Chroma"
     description: "Permet d'acheter des accessoires qui ne seront jamais
       utilisés..."
     obtainable: true
 
-  pictos:
+  Pictos:
     name: "Pictos"
     description: "Un symbole gravé, semblant contenir un souvenir figé."
     obtainable: true
 
-  brise_barrière:
+  Brise_barrière:
     name: "Brise-barrière"
+    critical: 0.5
     description: "Une arme ancienne, dont le tranchant garde une teinte étrange,
       presque translucide. Elle semble faite pour trancher autre chose que de la chair."
     obtainable: true
 
+  Abysseram:
+    name: "Abysseram"
+    critical: 0.2
+    description: "Forgée dans le silence des Eaux Volantes, cette lame abyssale
+      semble lourde des secrets de l'océan et pulse au rythme de la vie de Gustave."
+    obtainable: true
+
+  Lighterim:
+    name: "Lighterim"
+    critical: 0.3
+    description: "Forgeant sa lueur dans le feu secret des Prairies Printanières,
+      ce joyau ardent de Lune consume le coût de ses vœux de flamme."
+    obtainable: true
+
+
+# PNJ non-combattants : dialogue et/ou quêtes, jamais de statistiques de combat.
 npcs:
   Sophie:
     name: "Sophie"
@@ -138,30 +159,124 @@ npcs:
         Celui qu'on appelle… François."
       - "Tout au nord ! Visez le grand « 33 ». Je vous rejoins dehors."
 
+
+# Ennemis : combattables via ATTACK, avec les statistiques utilisées par le
+# système de combat (ex-entities.yaml, désormais fusionné ici).
+enemies:
+  Névron:
+    name: "Névron"
+    description: "Créatures de pigments nées des pinceaux tourmentés de la Peintresse"
+    dialogue:
+      - "..."
+    hp: 60
+    attack: 10
+    defense: 5
+    counter: 4
+    difficulty: "easy"
+
   Renoir:
     name: "Renoir"
-    role: "enemy"
     description: "Une silhouette hostile, sa peau presque effacée par endroits."
-    stats:
-      hp: 60
     dialogue:
       - "Alors voilà. Tu nous as entraînés sur cette voie, mais es-tu prêt
         à en assumer les conséquences ?"
       - "Ça ne te semblera pas logique maintenant, mais on veut tous
         les deux le meilleur pour nos familles."
+    hp: 110
+    attack: 18
+    defense: 10
+    counter: 8
+    difficulty: "medium"
+
+  Peintress:
+    name: "Peintress"
+    description: "Souffle tragique à l'origine du désastre, la Peintresse applique
+      sur le monde ses touches de mort, condamnant chaque année toute une
+      génération à s'effacer dans le néant au gré de ses funestes coups de pinceau"
+    dialogue:
+      - "Fuis ce tableau maudit, cette toile d'une autre vie..."
+    hp: 200
+    attack: 30
+    defense: 18
+    counter: 15
+    difficulty: "extreme"
+
+
+# Personnages jouables (doit rester aligné avec PersoChoice dans tcp/server/tools.go).
+players:
+  Gustave:
+    name: "Gustave"
+    hp: 80
+    weapon:
+      name: "Lanceram"
+      critical: 0.1
+    attack: 30
+    defense: 15
+    respawn:
+      hp: 50
+      location: "Lumière"
+
+  Lune:
+    name: "Lune"
+    hp: 100
+    weapon:
+      name: "Lumerim"
+      critical: 0.1
+    attack: 38
+    defense: 12
+    respawn:
+      hp: 50
+      location: "Lumière"
+
+  Maelle:
+    name: "Maëlle"
+    hp: 130
+    weapon:
+      name: "Médalum"
+      critical: 0.1
+    attack: 50
+    defense: 25
+    respawn:
+      hp: 50
+      location: "Lumière"
+
+  Sciel:
+    name: "Sciel"
+    hp: 90
+    weapon:
+      name: "Forestion"
+      critical: 0.1
+    attack: 22
+    defense: 35
+    respawn:
+      hp: 50
+      location: "Lumière"
+
+  Verso:
+    name: "Verso"
+    hp: 100
+    weapon:
+      name: "Blodam"
+      critical: 0.1
+    attack: 45
+    defense: 8
+    respawn:
+      hp: 50
+      location: "Lumière"
+
 
 quests:
-  nevron_blanc:
+  Nevron_blanc:
     name: "Lumen rursus accendens"
     giver: "Sophie"
     description: "Chercher la lumière pour rallumer sa lampe."
     objective:
       type: "fetch"
-      item: "lumina"
-      deliver_to: "vallées_fleuries"
+      item: "Lumina"
+      deliver_to: "Vallées_fleuries"
     reward:
-      type: "skill"
-      value: "competence_gradient"
+      type: "item"
+      value: "Lighterim"
 
   Florrie:
     name: "Florrie"
@@ -169,7 +284,7 @@ quests:
     description: "Aller combattre Renoir pour libérer Florrie"
     objective:
       type: "defeat"
-      npc: "renoir"
+      enemy: "Renoir"
     reward:
       type: "item"
-      value: "pierre"
+      value: "Brise_barrière"
