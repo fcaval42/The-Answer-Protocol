@@ -8,6 +8,8 @@ import (
 	"os"
 	"strings"
 	. "the_answer_protocol/tcp/common"
+
+	"github.com/chzyer/readline"
 	// "strings"
 )
 
@@ -18,10 +20,10 @@ func main() {
 		log.Fatalf("[ERROR] Erreur lors de l'ouverture du fichier de log : %v", err)
 	}
 	defer file.Close()
-	
+
 	// Configure le logger pour écrire UNIQUEMENT dans le fichier
 	log.SetOutput(file)
-	
+
 	// Creation de la connexion en tcp au localhost
 	conn, err := net.Dial("tcp", "localhost:8080")
 	if conn == nil {
@@ -31,14 +33,17 @@ func main() {
 	}
 
 	// Fermeture de la connexion a la fin du programme
-	defer func (){
+	defer func() {
 		fmt.Fprint(conn, "QUIT\n")
 		conn.Close()
 	}()
 
-
 	// Buffer de l'entrée clavier
-	stdin := bufio.NewReader(os.Stdin)
+	rl, err := readline.New(">>> ")
+	if err != nil {
+		panic(err)
+	}
+	defer rl.Close()
 
 	// Buffer des messages de la connexion
 	// connReader := bufio.NewReader(conn)
@@ -49,7 +54,7 @@ func main() {
 	// 	log.Println(conn.RemoteAddr().String() + "| [ERROR] " + err.Error())
 	// 	return
 	// }
-	// fmt.Print(select_player) 
+	// fmt.Print(select_player)
 	// if strings.Contains(select_player, "[ERROR]"){
 	// 	return
 	// }
@@ -79,23 +84,21 @@ func main() {
 				log.Println("[ERROR] Erreur de lecture :", err)
 				return
 			}
-			if strings.Contains(response, "\\"){
+			if strings.Contains(response, "\\") {
 				response = strings.ReplaceAll(response, "\\", "\n")
 			}
 			// On affiche le message s'il n'est pas vide
 			if response != "\n" {
 				ClearScreen()
 				fmt.Print("\n" + response)
-				fmt.Print(">>> ")
 			}
 		}
 	}()
 
 	// Boucle infinie pour les inputs
 	for {
-		fmt.Print(">>> ")
 		// Récupèration de l'input
-		line, err := stdin.ReadString('\n')
+		line, err := rl.Readline()
 		if err != nil {
 			log.Println(conn.LocalAddr().String() + "| [ERROR] " + err.Error())
 			return

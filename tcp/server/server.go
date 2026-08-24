@@ -13,14 +13,20 @@ import (
 	. "the_answer_protocol/tcp/common"
 )
 
+var (
+	globaleMessage     []string
+	globaleMessageLock sync.Mutex
+)
+var (
+	inGlobal     []net.Conn
+	inGlobalLock sync.Mutex
+)
+var (
+	group     [][]net.Conn
+	groupLock sync.Mutex
+)
 
-var globaleMessage []string
-var (inGlobal[]net.Conn
-	inGlobalLock sync.Mutex)
-var (group[][]net.Conn
-	groupLock sync.Mutex)
-
-func recept(conn net.Conn) string{
+func recept(conn net.Conn) string {
 	reader := bufio.NewReader(conn)
 	message, err := reader.ReadString('\n')
 	if err != nil {
@@ -33,39 +39,50 @@ func recept(conn net.Conn) string{
 	return message
 }
 
-
-func roomChat(conn net.Conn, room string){
-
-}
-
-
-func groupChat(conn net.Conn){
+func roomChat(conn net.Conn, room string) {
 
 }
 
-func globalChat(conn net.Conn, player string){
+func groupChat(conn net.Conn) {
+
+}
+
+func globalChat(conn net.Conn, player string) {
 	inGlobalLock.Lock()
 	inGlobal = append(inGlobal, conn)
 	inGlobalLock.Unlock()
-	for{
+	defer func() {
+		inGlobalLock.Lock()
+		for i, con := range inGlobal {
+			if conn == con {
+				inGlobal = slices.Delete(inGlobal, i, i+1)
+				break
+			}
+		}
+		inGlobalLock.Unlock()
+	}()
+	for {
 		printChat(conn)
 		broadcast(conn)
 		send := recept(conn)
-		if send == "EXIT\n" || send == "" || send == "QUIT\n"{
+		if send == "EXIT\n" || send == "" || send == "QUIT\n" {
 			return
-			} else{send = fmt.Sprintf("[%s]: %s", player, send)}
+		} else {
+			send = fmt.Sprintf("[%s]: %s", player, send)
+		}
 		LogAndPrintf(conn, "%s| %s", conn.RemoteAddr().String(), send)
+		globaleMessageLock.Lock()
 		globaleMessage = append(globaleMessage, send)
 		if len(globaleMessage) > 10 {
 			globaleMessage = globaleMessage[len(globaleMessage)-10:]
 		}
+		globaleMessageLock.Unlock()
 	}
 }
 
-
-func printChat(conn net.Conn){
+func printChat(conn net.Conn) {
 	chat := ""
-	for _, m := range globaleMessage{
+	for _, m := range globaleMessage {
 		chat += m
 	}
 	chat = strings.ReplaceAll(chat, "\n", "\\")
@@ -77,7 +94,6 @@ func broadcast(sender net.Conn) {
 	// Gestion du mutex
 	inGlobalLock.Lock()
 	defer inGlobalLock.Unlock()
-
 
 	// Envoyer à tous les clients sauf l'expéditeur
 	for _, client := range inGlobal {
@@ -116,78 +132,70 @@ func handleConnection(conn net.Conn) {
 	// Séléction du personnage jouable
 	// 	message, err := reader.ReadString('\n')
 	// 	if err != nil {
-		// 		if err == io.EOF {
-			// 			return
-			// 		}
-			// 		log.Println(conn.RemoteAddr().String() + "| " + err.Error())
-			// 		return
-			// 	}
-	for{
+	// 		if err == io.EOF {
+	// 			return
+	// 		}
+	// 		log.Println(conn.RemoteAddr().String() + "| " + err.Error())
+	// 		return
+	// 	}
+	for {
 		message = recept(conn)
-		if message != ""{
+		if message != "" {
 			LogAndPrintf(conn, "%s| %s", conn.RemoteAddr().String(), message)
 		}
-		if message == "CONNECT\n"{
+		if message == "CONNECT\n" {
 			player = select_Player(conn)
-			if player == ""{
+			if player == "" {
 				return
 			}
-		break
+			break
 		}
-		if message == "QUIT\n" || message == ""{
+		if message == "QUIT\n" || message == "" {
 			return
 		}
 	}
 	for {
 		message = recept(conn)
-		if message == ""{
+		if message == "" {
 			break
 		}
 		LogAndPrintf(conn, "%s| %s", conn.RemoteAddr().String(), message)
-		if message == "WHO\n"{
+		if message == "WHO\n" {
 			nb_player := 5 - len(PersoChoice)
 			LogAndFprintf(conn, "[SERVER] Il y a actuellement %d membre.s d'expédition\n", nb_player)
 		}
-		if message == "QUIT\n" || message == ""{
+		if message == "QUIT\n" || message == "" {
 			break
 		}
-		if message == "CHAT\n"{
-			chatLoop:
-			for{
+		if message == "CHAT\n" {
+		chatLoop:
+			for {
 				LogAndFprintf(conn, "[SERVER] À qui souhaitez vous envoyer un message (GLOBAL, ROOM, GROUP)?\n")
 				message = recept(conn)
-				if message == ""{
+				if message == "" {
 					break
 				}
 				LogAndPrintf(conn, "%s| %s", conn.RemoteAddr().String(), message)
-				switch message{
+				switch message {
 				case "GLOBAL\n":
 					globalChat(conn, player)
 					break chatLoop
-				// case "ROOM":
-				// 	roomChat()
-				// 	break chatLoop
-				// case "GROUP":
-				// 	groupeChat()
-				// 	break chatLoop
+					// case "ROOM":
+					// 	roomChat()
+					// 	break chatLoop
+					// case "GROUP":
+					// 	groupeChat()
+					// 	break chatLoop
 				}
 			}
-			inGlobalLock.Lock()
-			for i, con := range inGlobal{
-				if conn == con{
-					inGlobal = slices.Delete(inGlobal, i, i+1)
-					break
-				}
-			}
-			inGlobalLock.Unlock()
 		}
-		if message == "GROUP CREATE"{
+		if message == "GROUP CREATE" {
 			newgroup := []net.Conn{conn}
 			group = append(group, newgroup)
 		}
-		if message == "GROUP INVITE"{
+		if message == "GROUP INVITE" {
 			LogAndFprintf(conn, "Quel membre d'expedition souhaitez vous inviter dans votre groupe?")
-			
+
 		}
 
 		// Affichage du message
