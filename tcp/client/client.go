@@ -69,7 +69,6 @@ func main() {
 			}
 		}
 	}()
-
 	// Boucle infinie pour les inputs
 	for {
 		// Recuperation de l'input
