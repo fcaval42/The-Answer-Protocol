@@ -13,6 +13,17 @@ import (
 	. "the_answer_protocol/tcp/common"
 )
 
+type Group struct {
+	ID      string
+	Members map[net.Conn]string // map[connexion]nom_du_joueur
+	Mu      sync.RWMutex
+}
+
+var (
+	groups     = make(map[string]*Group) // Map d'ID de groupe vers la struct Group
+	groupsLock sync.RWMutex
+)
+
 var (
 	globaleMessage     []string
 	globaleMessageLock sync.Mutex
@@ -25,6 +36,93 @@ var (
 	group     [][]net.Conn
 	groupLock sync.Mutex
 )
+
+func GroupCreate(conn net.Conn, player string) {
+	LogAndFprintf(conn, "[SERVER] Création d'un nouveau groupe...\n")
+	// Générer un ID unique pour le groupe (vous pouvez utiliser un UUID ou un compteur)
+	groupID := fmt.Sprintf("group-%d", len(groups)+1)
+
+	// Créer une nouvelle instance de Group
+	newGroup := &Group{
+		ID:      groupID,
+		Members: make(map[net.Conn]string),
+	}
+
+	// Ajouter le créateur du groupe à la liste des membres
+	newGroup.Members[conn] = player
+
+	// Ajouter le groupe à la map globale
+	groupsLock.Lock()
+	groups[groupID] = newGroup
+	groupsLock.Unlock()
+
+	LogAndFprintf(conn, "[SERVER] Groupe créé avec succès ! ID du groupe : %s\n", groupID)
+}
+
+func GroupInvite(conn net.Conn, player string) {
+	LogAndFprintf(conn, "[SERVER] Quel membre d'expédition souhaitez-vous inviter dans votre groupe ?\n")
+	// Récupérer la liste des joueurs disponibles pour l'invitation
+	availablePlayers := getAvailablePlayers()
+
+	if len(availablePlayers) == 0 {
+		LogAndFprintf(conn, "[SERVER] Aucun joueur disponible pour l'invitation.\n")
+		return
+	}
+
+	// Afficher la liste des joueurs disponibles
+	LogAndFprintf(conn, "[SERVER] Joueurs disponibles : %s\n", strings.Join(availablePlayers, ", "))
+
+	// Attendre la réponse du joueur pour choisir qui inviter
+	invitee := recept(conn)
+	invitee = strings.TrimSpace(invitee)
+
+	if !isPlayerAvailable(invitee, availablePlayers) {
+		LogAndFprintf(conn, "[SERVER] Joueur invalide ou indisponible pour l'invitation.\n")
+		return
+	}
+
+	// Ajouter le joueur invité au groupe (vous pouvez choisir le groupe approprié ici)
+	groupsLock.Lock()
+	defer groupsLock.Unlock()
+
+	// Trouver le groupe du joueur actuel
+	var currentGroup *Group
+	for _, g := range groups {
+		if _, exists := g.Members[conn]; exists {
+			currentGroup = g
+			break
+		}
+	}
+
+	if currentGroup == nil {
+		LogAndFprintf(conn, "[SERVER] Vous n'êtes pas dans un groupe. Créez-en un d'abord.\n")
+		return
+	}
+
+	// Ajouter le joueur invité au groupe
+	currentGroup.Members[conn] = invitee
+	LogAndFprintf(conn, "[SERVER] Joueur %s invité avec succès dans le groupe %s !\n", invitee, currentGroup.ID)
+}
+
+func getAvailablePlayers() []string {
+	PersoLock.Lock()
+	defer PersoLock.Unlock()
+
+	var availablePlayers []string
+	for _, player := range PersoChoice {
+		availablePlayers = append(availablePlayers, player)
+	}
+	return availablePlayers
+}
+
+func isPlayerAvailable(player string, availablePlayers []string) bool {
+	for _, availablePlayer := range availablePlayers {
+		if availablePlayer == player {
+			return true
+		}
+	}
+	return false
+}
 
 func recept(conn net.Conn) string {
 	reader := bufio.NewReader(conn)
@@ -189,12 +287,11 @@ func handleConnection(conn net.Conn) {
 				}
 			}
 		}
-		if message == "GROUP CREATE" {
-			newgroup := []net.Conn{conn}
-			group = append(group, newgroup)
+		if message == "GROUP CREATE\n" {
+			GroupCreate(conn, player)
 		}
-		if message == "GROUP INVITE" {
-			LogAndFprintf(conn, "Quel membre d'expedition souhaitez vous inviter dans votre groupe?")
+		if message == "GROUP INVITE\n" {
+			GroupInvite(conn, player)
 
 		}
 

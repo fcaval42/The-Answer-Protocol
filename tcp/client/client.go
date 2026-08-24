@@ -8,8 +8,6 @@ import (
 	"os"
 	"strings"
 	. "the_answer_protocol/tcp/common"
-
-	"github.com/chzyer/readline"
 	// "strings"
 )
 
@@ -38,35 +36,6 @@ func main() {
 		conn.Close()
 	}()
 
-	// Buffer de l'entrée clavier
-	rl, err := readline.New(">>> ")
-	if err != nil {
-		panic(err)
-	}
-	defer rl.Close()
-
-	// Buffer des messages de la connexion
-	// connReader := bufio.NewReader(conn)
-
-	// On recupere le message envoyé par le serveur pour la selection de personnages
-	// select_player, err := connReader.ReadString('\n')
-	// if err != nil {
-	// 	log.Println(conn.RemoteAddr().String() + "| [ERROR] " + err.Error())
-	// 	return
-	// }
-	// fmt.Print(select_player)
-	// if strings.Contains(select_player, "[ERROR]"){
-	// 	return
-	// }
-	// Affichage du message
-	// fmt.Print(">>> ")
-
-	// // On récupère le choix de l'utilisateur
-	// player, err := stdin.ReadString('\n')
-
-	// // On envoi le choix au serveur
-	// fmt.Fprint(conn, player)
-
 	// Goroutine qui va chercher en continue ce qu'envoie le serveur
 	go func() {
 		// Buffer en ecoute du serveur, unique a la goroutine pour eviter
@@ -89,23 +58,30 @@ func main() {
 			}
 			// On affiche le message s'il n'est pas vide
 			if response != "\n" {
-				ClearScreen()
+				// ClearScreen()
 				fmt.Print("\n" + response)
 			}
 		}
 	}()
 
+	reader := bufio.NewReader(os.Stdin)
 	// Boucle infinie pour les inputs
 	for {
 		// Récupèration de l'input
-		line, err := rl.Readline()
+		line, err := reader.ReadString('\n')
+		fmt.Println("Debug: line =", line)
+		if err != nil {
+			log.Println("[ERROR] Erreur de lecture :", err)
+			return
+		}
+		fmt.Fprint(conn,line)
 		if err != nil {
 			log.Println(conn.LocalAddr().String() + "| [ERROR] " + err.Error())
 			return
 		}
 
 		// Si l'input est "exit", gestion de la fermeture de la connexion
-		if line == "QUIT\n" {
+		if line == "QUIT" {
 			fmt.Fprintf(conn, "%s", line)
 			fmt.Fprint(conn, "[INFO] Fermeture de la connexion...\n")
 			fmt.Print("Au revoir, Mon ami !\n")
