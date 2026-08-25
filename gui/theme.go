@@ -28,7 +28,7 @@ var TitleColor = color.NRGBA{R: 0xe8, G: 0xd8, B: 0xb0, A: 0xff}
 // blanc, utilisé pour le texte courant (corps de texte + boutons)
 var BodyColor = color.NRGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xff}
 
-// rouge, utilisé pour la barre de vie
+// doré bizarre, utilisé pour la barre de vie
 var HPColor = color.NRGBA{R: 125, G: 84, B: 7, A: 255}
 
 // taille du texte des boutons

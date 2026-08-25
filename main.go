@@ -216,7 +216,6 @@ func buildCharacterPanel(p Player) fyne.CanvasObject {
 	)
 }
 
-
 // ---- Chat (droite, bas) : onglets Global/Salle/Groupe séparés des logs ----
 // Affiché dans une popup ouverte depuis l'icône "Chat" (voir buildChatMapNav).
 
@@ -265,10 +264,11 @@ func buildChatMapNav(w fyne.Window) fyne.CanvasObject {
 		d.Show()
 	})
 	mapIcon := gui.NewBigIconButton(mapIconPath, chatMapIconSize, func() {
-		d := dialog.NewCustom("Carte", "Fermer", widget.NewLabel(""), w)
-		d.Resize(fyne.NewSize(900, 650))
+		d := dialog.NewCustom("", "Fermer", gui.BuildMapPanel(1, 1), w)
+		d.Resize(fyne.NewSize(1000, 750))
 		d.Show()
 	})
+
 
 	iconsRow := container.NewGridWithColumns(2,
 		container.NewCenter(chatIcon),
