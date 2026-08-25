@@ -13,6 +13,11 @@ import (
 	. "the_answer_protocol/tcp/common"
 )
 
+var (
+    pendingInvites     = make(map[string]chan string)
+    pendingInvitesLock sync.Mutex
+)
+
 type Group struct {
 	ID      string
 	Members map[string]net.Conn
@@ -123,22 +128,39 @@ func GroupInvite(conn net.Conn, player string) {
 	// 	}
 	// 	LogAndFprintf(inviteeConn, "[INFO] Réponse invalide. Veuillez répondre par ACCEPT ou DECLINE.\n")
 	// }
-	response := recept(inviteeConn)
-	if response == "DECLINE\n" {
-		LogAndFprintf(conn, "[SERVER] %s a refusé l'invitation.\n", invitee)
-		return
-	}
-	if response == "ACCEPT\n" {
-		LogAndFprintf(conn, "[SERVER] %s a accepté l'invitation.\n", invitee)
-	} else {
-		LogAndFprintf(inviteeConn, "[INFO] Réponse invalide. Veuillez répondre par ACCEPT ou DECLINE.\n")
-		return
-	}
-	groupsLock.Lock()
-	defer groupsLock.Unlock()
-	// Ajoute le joueur invite au groupe
-	currentGroup.Members[invitee] = inviteeConn
-	LogAndFprintf(conn, "[SERVER] %s a rejoint le groupe %s !\n", invitee, currentGroup.ID)
+	replyChan := make(chan string)
+
+    pendingInvitesLock.Lock()
+    pendingInvites[invitee] = replyChan
+    pendingInvitesLock.Unlock()
+
+    // Nettoyage après l'invitation
+    defer func() {
+        pendingInvitesLock.Lock()
+        delete(pendingInvites, invitee)
+        pendingInvitesLock.Unlock()
+    }()
+
+    LogAndFprintf(inviteeConn, "[INFO] %s vous a invité à rejoindre un groupe. ACCEPT/DECLINE\n", player)
+
+    // 2. Attendre la réponse transmise par le channel
+    response := <-replyChan
+
+    if response == "DECLINE\n" {
+        LogAndFprintf(conn, "[SERVER] %s a refusé l'invitation.\n", invitee)
+        return
+    }
+    if response == "ACCEPT\n" {
+        LogAndFprintf(conn, "[SERVER] %s a accepté l'invitation.\n", invitee)
+    } else {
+        LogAndFprintf(inviteeConn, "[INFO] Réponse invalide.\n")
+        return
+    }
+
+    groupsLock.Lock()
+    defer groupsLock.Unlock()
+    currentGroup.Members[invitee] = inviteeConn
+    LogAndFprintf(conn, "[SERVER] %s a rejoint le groupe %s !\n", invitee, currentGroup.ID)
 }
 
 func getAvailablePlayers(self string) []string {
@@ -223,11 +245,11 @@ func groupChat(conn net.Conn, player string) {
 		}
 		LogAndPrintf(conn, "%s| %s", conn.RemoteAddr().String(), send)
 		currentGroup.Mu.Lock()
-		defer currentGroup.Mu.Unlock()
 		currentGroup.messages = append(currentGroup.messages, send)
 		if len(currentGroup.messages) > 10 {
 			currentGroup.messages = currentGroup.messages[len(currentGroup.messages)-10:]
 		}
+		currentGroup.Mu.Unlock()
 		}
 	}
 }
@@ -348,6 +370,15 @@ func handleConnection(conn net.Conn) {
 		if message == "WHO\n" {
 			nb_player := 5 - len(PersoChoice)
 			LogAndFprintf(conn, "[SERVER] Il y a actuellement %d membre.s d'expédition\n", nb_player)
+		}
+
+		pendingInvitesLock.Lock()
+		ch, hasPendingInvite := pendingInvites[player]
+		pendingInvitesLock.Unlock()
+
+		if hasPendingInvite && (message == "ACCEPT\n" || message == "DECLINE\n") {
+			ch <- message // On envoie le choix dans le channel vers GroupInvite
+			continue      // On passe au message suivant sans exécuter la suite de handleConnection
 		}
 		if message == "QUIT\n" || message == "" {
 			break
