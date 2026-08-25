@@ -4,7 +4,10 @@ require gopkg.in/yaml.v3 v3.0.1
 
 go 1.25.1
 
-require fyne.io/fyne/v2 v2.8.0
+require (
+	fyne.io/fyne/v2 v2.8.0
+	github.com/chzyer/readline v1.5.1
+)
 
 require (
 	fyne.io/systray v1.12.2 // indirect
