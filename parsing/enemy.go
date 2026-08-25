@@ -2,8 +2,6 @@ package parsing
 
 import "fmt"
 
-// Enemy is a combat-capable character, fought via ATTACK. Distinct from NPC:
-// an npc is never an enemy and an enemy is never an npc.
 type Enemy struct {
 	ID          string   `yaml:"-"`
 	Name        string   `yaml:"name"`
@@ -19,7 +17,7 @@ type Enemy struct {
 func validateEnemies(wf WorldFile) []error {
 	var errs []error
 
-	seenEnemyNames := make(map[string]string) // display name -> enemy id
+	seenEnemyNames := make(map[string]string)
 	for id, enemy := range wf.Enemies {
 		if isBlank(id) {
 			errs = append(errs, fmt.Errorf("an enemy has an empty id"))

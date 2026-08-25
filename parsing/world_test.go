@@ -8,9 +8,6 @@ import (
 	"the_answer_protocol/parsing"
 )
 
-// loadFixture parses a YAML file from parsing/testdata. A missing fixture is
-// a bug in the test itself, so it fails fast instead of returning an empty
-// error list that would look like a passing validation.
 func loadFixture(t *testing.T, name string) []error {
 	t.Helper()
 	data, err := os.ReadFile("testdata/" + name)
@@ -21,11 +18,6 @@ func loadFixture(t *testing.T, name string) []error {
 	return errs
 }
 
-// assertErrors checks, in both directions, that errs matches expected: every
-// expected fragment must show up in some error, and every error must match
-// some expected fragment. That way the test catches a missing check (an
-// expected fragment nobody reports) as well as a check firing when it
-// shouldn't (an error nobody expected).
 func assertErrors(t *testing.T, errs []error, expected []string) {
 	t.Helper()
 

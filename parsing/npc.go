@@ -2,8 +2,6 @@ package parsing
 
 import "fmt"
 
-// NPC is a non-combat character: dialogue and/or quest-giver. It never has
-// combat stats — those belong to Enemy instead.
 type NPC struct {
 	ID          string   `yaml:"-"`
 	Name        string   `yaml:"name"`
@@ -15,7 +13,7 @@ type NPC struct {
 func validateNPCs(wf WorldFile) []error {
 	var errs []error
 
-	seenNPCNames := make(map[string]string) // display name -> npc id
+	seenNPCNames := make(map[string]string)
 	for id, npc := range wf.NPCs {
 		if isBlank(id) {
 			errs = append(errs, fmt.Errorf("an npc has an empty id"))

@@ -72,8 +72,6 @@ func ParseWorld(worldYAML []byte) (WorldFile, []error) {
 	return wf, nil
 }
 
-// Validate runs every domain-specific check and collects all the errors found,
-// instead of stopping at the first one, so a single run reports the full list.
 func (wf WorldFile) Validate() []error {
 	var errs []error
 
@@ -87,8 +85,6 @@ func (wf WorldFile) Validate() []error {
 	return errs
 }
 
-// Rally reads world_path from disk and parses it, printing a summary of any
-// error found so the caller can decide whether to load the world or bail out.
 func Rally(world_path string) (WorldFile, []error) {
 	var world WorldFile
 	var errs []error

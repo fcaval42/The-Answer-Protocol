@@ -1,8 +1,3 @@
-# fichier de configuration. Définit structure statique du monde
-# - serveur charge le monde au démarrage (lit ce fichier pour créer carte)
-# - clients reçoivent les données via TCP (va afficher objets dans une room)
-# - npcs et enemies sont deux catégories distinctes : un npc (dialogue,
-#   quest_giver) n'a pas de statistiques de combat, un enemy en a.
 
 world:
   locations:
@@ -160,8 +155,6 @@ npcs:
       - "Tout au nord ! Visez le grand « 33 ». Je vous rejoins dehors."
 
 
-# Ennemis : combattables via ATTACK, avec les statistiques utilisées par le
-# système de combat (ex-entities.yaml, désormais fusionné ici).
 enemies:
   Névron:
     name: "Névron"
@@ -202,7 +195,6 @@ enemies:
     difficulty: "extreme"
 
 
-# Personnages jouables (doit rester aligné avec PersoChoice dans tcp/server/tools.go).
 players:
   Gustave:
     name: "Gustave"

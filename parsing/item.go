@@ -13,7 +13,7 @@ type Item struct {
 func validateItems(wf WorldFile) []error {
 	var errs []error
 
-	seenItemNames := make(map[string]string) // display name -> item id
+	seenItemNames := make(map[string]string)
 	for id, item := range wf.Items {
 		if isBlank(id) {
 			errs = append(errs, fmt.Errorf("an item has an empty id"))

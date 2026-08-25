@@ -26,7 +26,7 @@ type Quest struct {
 func validateQuests(wf WorldFile) []error {
 	var errs []error
 
-	seenQuestNames := make(map[string]string) // display name -> quest id
+	seenQuestNames := make(map[string]string)
 	for id, q := range wf.Quests {
 		if isBlank(id) {
 			errs = append(errs, fmt.Errorf("a quest has an empty id"))

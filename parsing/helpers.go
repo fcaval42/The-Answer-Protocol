@@ -2,14 +2,35 @@ package parsing
 
 import "strings"
 
-// isBlank reports whether s is empty once surrounding whitespace is stripped,
-// so a description made of only spaces is treated the same as "".
 func isBlank(s string) bool {
 	return strings.TrimSpace(s) == ""
 }
 
-// duplicatesIn returns each value of refs that appears more than once,
-// ignoring empty entries (those are reported separately as missing references).
+var locationNameConnectors = map[string]bool{
+	"de": true, "d": true, "du": true, "des": true,
+	"le": true, "la": true, "l": true,
+}
+
+func slugifyLocationName(name string) string {
+	fields := strings.FieldsFunc(name, func(r rune) bool {
+		return r == ' ' || r == '\'' || r == '’'
+	})
+
+	var parts []string
+	for _, f := range fields {
+		if locationNameConnectors[strings.ToLower(f)] {
+			continue
+		}
+		if len(parts) == 0 {
+			parts = append(parts, f)
+		} else {
+			parts = append(parts, strings.ToLower(f))
+		}
+	}
+
+	return strings.Join(parts, "_")
+}
+
 func duplicatesIn(refs []string) []string {
 	seen := make(map[string]bool, len(refs))
 	var dups []string
