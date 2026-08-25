@@ -16,6 +16,7 @@ type Location struct {
 	NPCs        []string          `yaml:"npcs"`
 	Enemies     []string          `yaml:"enemies"`
 	Spawns      []Spawn           `yaml:"spawns"`
+	Players     []Player
 }
 
 func validateLocations(wf WorldFile) []error {
