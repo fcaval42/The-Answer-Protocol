@@ -46,8 +46,8 @@ func loadFont(path string) fyne.Resource {
 }
 
 var (
-	titleFont = loadFont("assets/Cinzel-VariableFont_wght.ttf") // MERVEILLEUSE police des titres
-	bodyFont  = loadFont("assets/IMFellDoublePica-Regular.ttf") // police du texte courant
+	titleFont = loadFont("assets/fonts/Cinzel-VariableFont_wght.ttf") // MERVEILLEUSE police des titres
+	bodyFont  = loadFont("assets/fonts/IMFellDoublePica-Regular.ttf") // police du texte courant
 )
 
 // -------------------- TEXTES STATIQUES (canvas.Text) -----------------
