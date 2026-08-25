@@ -260,11 +260,14 @@ func buildChatMapNav(w fyne.Window) fyne.CanvasObject {
 	)
 
 	chatIcon := gui.NewBigIconButton(chatIconPath, chatMapIconSize, func() {
-		dialog.NewCustom("Chat", "Fermer", buildChatPanel(), w).Show()
+		d := dialog.NewCustom("Chat", "Fermer", buildChatPanel(), w)
+		d.Resize(fyne.NewSize(900, 650))
+		d.Show()
 	})
 	mapIcon := gui.NewBigIconButton(mapIconPath, chatMapIconSize, func() {
-		// vide pour l'instant : TODO afficher une vraie vue carte du monde
-		dialog.NewCustom("Carte", "Fermer", widget.NewLabel(""), w).Show()
+		d := dialog.NewCustom("Carte", "Fermer", widget.NewLabel(""), w)
+		d.Resize(fyne.NewSize(900, 650))
+		d.Show()
 	})
 
 	iconsRow := container.NewGridWithColumns(2,
