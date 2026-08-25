@@ -22,6 +22,7 @@ type Player struct {
 	Respawn Respawn `yaml:"respawn"`
 	Location Location
 	Inventory []Item
+	Quest []Quest
 }
 
 func validatePlayers(wf WorldFile) []error {
