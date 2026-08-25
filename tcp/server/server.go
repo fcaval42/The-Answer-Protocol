@@ -138,7 +138,6 @@ func GroupInvite(conn net.Conn, player string) {
 
     fmt.Fprintf(inviteeConn, "[INFO] %s vous a invité à rejoindre un groupe. ACCEPT/DECLINE\n", player)
 
-    // 2. Attendre la réponse transmise par le channel
     response := <-replyChan
 
     if response == "DECLINE\n" {
@@ -156,6 +155,17 @@ func GroupInvite(conn net.Conn, player string) {
     defer groupsLock.Unlock()
     currentGroup.Members[invitee] = inviteeConn
     LogAndFprintf(conn, "[SERVER] %s a rejoint le groupe %s !\n", invitee, currentGroup.ID)
+}
+
+func groupLeave(player string) bool{
+	if searchPlayerGroup(player) != nil {
+	currentGroup := searchPlayerGroup(player)
+	currentGroup.Mu.Lock()
+	delete(currentGroup.Members, player)
+	currentGroup.Mu.Unlock()
+	return true
+	}
+	return false
 }
 
 func getAvailablePlayers(self string) []string {
@@ -311,12 +321,7 @@ func handleConnection(conn net.Conn) {
 		ClientsLock.Unlock()
 		// Si un personnage avait ete utilise ont le remet
 		// dans la liste des personnages jouables
-		if searchPlayerGroup(player) != nil {
-			currentGroup := searchPlayerGroup(player)
-			currentGroup.Mu.Lock()
-			delete(currentGroup.Members, player)
-			currentGroup.Mu.Unlock()
-		}
+		groupLeave(player)
 		if player != "" && player != "900" {
 			PersoLock.Lock()
 			PersoChoice = append(PersoChoice, player)
@@ -362,30 +367,25 @@ func handleConnection(conn net.Conn) {
 			return
 		}
 	}
+	dispatch:
 	for {
 		message = recept(conn)
-		if message == "" {
-			break
-		}
-		LogAndPrintf(conn, "%s| %s", conn.RemoteAddr().String(), message)
-		if message == "WHO\n" {
-			nb_player := 5 - len(PersoChoice)
-			LogAndFprintf(conn, "[SERVER] Il y a actuellement %d membre.s d'expédition\n", nb_player)
-		}
-
 		pendingInvitesLock.Lock()
 		ch, hasPendingInvite := pendingInvites[player]
 		pendingInvitesLock.Unlock()
-
-		if hasPendingInvite && (message == "ACCEPT\n" || message == "DECLINE\n") {
-			ch <- message // On envoie le choix dans le channel vers GroupInvite
-			continue      // On passe au message suivant sans exécuter la suite de handleConnection
-		}
-		if message == "QUIT\n" || message == "" {
-			break
-		}
-		if message == "CHAT\n" {
-		chatLoop:
+		switch message{
+		case "":
+			break dispatch
+		case "WHO\n":
+			nb_player := 5 - len(PersoChoice)
+			LogAndFprintf(conn, "[SERVER] Il y a actuellement %d membre.s d'expédition\n", nb_player)
+		case "ACCEPT\n", "DECLINE\n":
+			if hasPendingInvite{
+				ch <- message
+				continue
+			}
+		case "CHAT\n":
+			chatLoop:
 			for {
 				LogAndFprintf(conn, "[SERVER] À qui souhaitez vous envoyer un message (GLOBAL, ROOM, GROUP)?\n")
 				message = recept(conn)
@@ -405,21 +405,14 @@ func handleConnection(conn net.Conn) {
 						break chatLoop
 				}
 			}
-		}
-		if message == "GROUP CREATE\n" {
+		case "GROUP CREATE\n":
 			GroupCreate(conn, player)
-		}
-		if message == "GROUP INVITE\n" {
+		case "GROUP INVITE\n":
 			GroupInvite(conn, player)
-
+		case "QUIT\n":
+			break dispatch
 		}
-
-		// Affichage du message
-		// LogAndPrintf(conn, "%s| [%s]: %s", conn.RemoteAddr().String(), player, message)
-		// Redistribution aux autres clients
-		// broadcast(message, conn, player)
-	}
-	// Boucle infinie d'écoute des clients
+		}
 }
 
 func main() {
