@@ -1,4 +1,4 @@
-package main
+package common
 
 import (
 	"sync"
@@ -9,8 +9,8 @@ import (
 // Création du'une map (dictionnaire) pour gérer tous les clients
 // Protégé par un mutex
 var (
-	clients     = make(map[net.Conn]bool) // Map des connexions actives
-	clientsLock sync.Mutex                // Mutex pour synchroniser l'accès à la map
+	Clients     = make(map[net.Conn]bool) // Map des connexions actives
+	ClientsLock sync.Mutex                // Mutex pour synchroniser l'accès à la map
 )
 
 // Fonction isdigit pour eviter de faire un atoi sur des caractères
@@ -28,7 +28,7 @@ func IsDigit(s string) bool {
 
 // Permet de vérifier que le choix de l'utilisateur est dans
 // la liste de personnage
-func isInList(num int) bool {
+func IsInList(num int) bool {
 	persoLen := len(PersoChoice)
 	return num >= 1 && num <= persoLen
 }

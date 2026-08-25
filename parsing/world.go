@@ -19,6 +19,13 @@ quest.go). Ce fichier ne garde que le type racine WorldFile, le point d'entrée
 ParseWorld, et l'orchestration de la validation.
 **/
 
+type Player_t struct {
+	Name         string
+	Hp           float64 // 0-100
+	Localisation string
+	Inventory    []string
+}
+
 type World struct {
 	Locations map[string]Location `yaml:"locations"`
 }
