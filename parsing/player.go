@@ -25,7 +25,7 @@ type Player struct {
 func validatePlayers(wf WorldFile) []error {
 	var errs []error
 
-	seenPlayerNames := make(map[string]string) // display name -> player id
+	seenPlayerNames := make(map[string]string)
 	for id, player := range wf.Players {
 		if isBlank(id) {
 			errs = append(errs, fmt.Errorf("a player has an empty id"))

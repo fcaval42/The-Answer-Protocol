@@ -21,19 +21,24 @@ type Location struct {
 func validateLocations(wf WorldFile) []error {
 	var errs []error
 
-	seenLocationNames := make(map[string]string) // display name -> location id
-	placedNPCs := make(map[string]string)        // npc id -> the one location it's placed in
-	placedEnemies := make(map[string]string)     // enemy id -> the one location it's placed in
+	seenLocationNames := make(map[string]string)
+	placedNPCs := make(map[string]string)
+	placedEnemies := make(map[string]string)
 	for id, loc := range wf.World.Locations {
 		if isBlank(id) {
 			errs = append(errs, fmt.Errorf("a location has an empty id"))
 		}
 		if isBlank(loc.Name) {
 			errs = append(errs, fmt.Errorf("location %q: name is empty", id))
-		} else if otherID, ok := seenLocationNames[loc.Name]; ok {
-			errs = append(errs, fmt.Errorf("locations %q and %q share the same name %q", otherID, id, loc.Name))
 		} else {
-			seenLocationNames[loc.Name] = id
+			if slug := slugifyLocationName(loc.Name); slug != id {
+				errs = append(errs, fmt.Errorf("location %q: name %q does not match its id (expected id %q)", id, loc.Name, slug))
+			}
+			if otherID, ok := seenLocationNames[loc.Name]; ok {
+				errs = append(errs, fmt.Errorf("locations %q and %q share the same name %q", otherID, id, loc.Name))
+			} else {
+				seenLocationNames[loc.Name] = id
+			}
 		}
 		if isBlank(loc.Description) {
 			errs = append(errs, fmt.Errorf("location %q: description is empty", id))
@@ -136,12 +141,6 @@ func validateLocations(wf WorldFile) []error {
 	return errs
 }
 
-// worldHasLoop reports whether the exit graph contains at least one cycle,
-// i.e. a location reachable from itself by following exits forward. Dead-end
-// branches are fine — only a total absence of any cycle is a problem, since
-// the world must offer a full circuit and not just a straight line or a tree.
-// Self-loops (an exit pointing back to its own location) are ignored here:
-// they are already reported separately and shouldn't count as a real circuit.
 func worldHasLoop(locations map[string]Location) bool {
 	const (
 		unvisited = iota
