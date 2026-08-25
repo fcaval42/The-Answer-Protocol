@@ -20,6 +20,8 @@ type Player struct {
 	Attack  int     `yaml:"attack"`
 	Defense int     `yaml:"defense"`
 	Respawn Respawn `yaml:"respawn"`
+	Location Location
+	Inventory []Item
 }
 
 func validatePlayers(wf WorldFile) []error {

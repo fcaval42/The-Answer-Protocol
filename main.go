@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
-	"os"
 	"image/color" // image = permet de toucher aux images en Go
+	"os"
 	// color = fournit couleurs/modèles prêts à l'emploi.
 
 	"fyne.io/fyne/v2"
@@ -12,8 +12,11 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
 
-	"the_answer_protocol/parsing"
 	"the_answer_protocol/gui"
+	"the_answer_protocol/parsing"
+	// "the_answer_protocol/tcp"
+
+	// "the_answer_protocol/tcp/commands"
 )
 
 // ---- Données factices, en attendant le vrai serveur ----
@@ -30,6 +33,7 @@ type Room struct {
 type Player struct {
 	name      string
 	hp        float64 // 0-100
+	localisation string
 	inventory []string
 }
 
@@ -223,15 +227,20 @@ func buildChatPanel() fyne.CanvasObject {
 
 func main() {
 
+	// p := parsing.Player_t{
+	// 	Name:         "Gustave",
+	// 	Hp:           100.0,
+	// 	Localisation: "Village_gestral",
+	// 	Inventory:    []string{},
+	// }
+
 	world_path := "yaml/world.yaml"
 	world, err := parsing.Rally(world_path)
 
 	if err != nil {
 		os.Exit(1)
 	}
-	fmt.Println(world.Enemies)
-
-
+	fmt.Println(world)
 	a := app.New()
 	w := a.NewWindow("The Answer Protocol")
 	w.Resize(fyne.NewSize(1300, 800))
