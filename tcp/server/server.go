@@ -85,6 +85,38 @@ func searchPlayerGroup(player string) *Group {
 	groupsLock.Unlock()
 	return currentGroup
 }
+func displayGroup() {
+	groupsLock.Lock()
+	defer groupsLock.Unlock()
+	for _, group := range groups {
+		group.Mu.Lock()
+		fmt.Printf("Groupe %s :\n", group.ID)
+		for player := range group.Members {
+			fmt.Printf("  - %s\n", player)
+		}
+		group.Mu.Unlock()
+	}
+}
+
+func groupJoin(conn net.Conn, player string, groupID string) {
+	groupsLock.Lock()
+	defer groupsLock.Unlock()
+
+	group, exists := groups[groupID]
+	if !exists {
+		LogAndFprintf(conn, "[SERVER] Groupe introuvable.\n")
+		return
+	}
+
+	group.Mu.Lock()
+	if _, memberExists := group.Members[player]; memberExists {
+		LogAndFprintf(conn, "[SERVER] Vous êtes déjà dans ce groupe.\n")
+		return
+	}
+	group.Members[player] = conn
+	group.Mu.Unlock()
+	LogAndFprintf(conn, "[SERVER] Vous avez rejoint le groupe %s !\n", groupID)
+}
 
 func GroupInvite(conn net.Conn, player string) {
 	// Trouver le groupe du joueur actuel
@@ -337,17 +369,6 @@ func handleConnection(conn net.Conn) {
 		LogAndPrintf(conn, "%s| [INFO] Client déconnecté\n", conn.RemoteAddr())
 	}()
 
-	// Buffer en écoute sur le client
-	// reader := bufio.NewReader(conn)
-	// Séléction du personnage jouable
-	// 	message, err := reader.ReadString('\n')
-	// 	if err != nil {
-	// 		if err == io.EOF {
-	// 			return
-	// 		}
-	// 		log.Println(conn.RemoteAddr().String() + "| " + err.Error())
-	// 		return
-	// 	}
 	for {
 		message = recept(conn)
 		if message != "" {
@@ -409,6 +430,18 @@ func handleConnection(conn net.Conn) {
 			GroupCreate(conn, player)
 		case "GROUP INVITE\n":
 			GroupInvite(conn, player)
+		case "GROUP JOIN\n":
+			LogAndFprintf(conn, "[SERVER] Entrez l'ID du groupe que vous souhaitez rejoindre :\n")
+			displayGroup()
+			groupID := recept(conn)
+			groupID = strings.TrimSpace(groupID)
+			groupJoin(conn, player, groupID)
+		case "GROUP LEAVE\n":
+			if groupLeave(player) {
+				LogAndFprintf(conn, "[SERVER] Vous avez quitté le groupe.\n")
+			} else {
+				LogAndFprintf(conn, "[SERVER] Vous n'êtes pas dans un groupe.\n")
+			}
 		case "QUIT\n":
 			break dispatch
 		}
