@@ -220,9 +220,7 @@ func buildCharacterPanel(p Player) fyne.CanvasObject {
 // Affiché dans une popup ouverte depuis l'icône "Chat" (voir buildChatMapNav).
 
 func buildChatPanel() fyne.CanvasObject {
-	// fonction dans une fonction -> Makescope = fonction interne. Définie à
-	// l'intérieur de chat pour créer un conteneur réutilisable avec un sample
-	// différent pour chaque objet
+
 	makeScope := func(sample string) fyne.CanvasObject {
 		messages := widget.NewLabel(sample)
 		messages.Wrapping = fyne.TextWrapWord
@@ -265,7 +263,7 @@ func buildChatMapNav(w fyne.Window) fyne.CanvasObject {
 	})
 	mapIcon := gui.NewBigIconButton(mapIconPath, chatMapIconSize, func() {
 		d := dialog.NewCustom("", "Fermer", gui.BuildMapPanel(1, 1), w)
-		d.Resize(fyne.NewSize(1000, 750))
+		d.Resize(fyne.NewSize(1100, 700))
 		d.Show()
 	})
 

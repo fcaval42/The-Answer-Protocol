@@ -81,15 +81,15 @@ world:
       description: "Le sang qui gît ici y est plus rouge que le
         coucher du soleil."
       exits:
-        west: "falaise_rochevague"
-        south: "vieille_lumière"
+        east: "falaise_rochevague"
+        north: "vieille_lumière"
 
     Vieille_lumière:
       name: "Vieille Lumière"
       description: "L'écho affaibli. La boucle se referme,
         avant de reprendre."
       exits:
-        west: "terres_oubliées"
+        south: "terres_oubliées"
         north: "lumière"
       npcs: ["Peintress"]
 
@@ -121,7 +121,7 @@ items:
   Abysseram:
     name: "Abysseram"
     critical: 0.2
-    description: "Forgée dans le silence des Eaux Volantes, cette lame abyssale 
+    description: "Forgée dans le silence des Eaux Volantes, cette lame abyssale
       semble lourde des secrets de l'océan et pulse au rythme de la vie de Gustave."
     obtainable: true
 
@@ -176,8 +176,8 @@ npcs:
   Peintress:
     name: "Peintress"
     role: "enemy"
-    description: "Souffle tragique à l'origine du désastre, la Peintresse applique 
-      sur le monde ses touches de mort, condamnant chaque année toute une 
+    description: "Souffle tragique à l'origine du désastre, la Peintresse applique
+      sur le monde ses touches de mort, condamnant chaque année toute une
       génération à s'effacer dans le néant au gré de ses funestes coups de pinceau"
     dialogue:
       - "Fuis ce tableau maudit, cette toile d'une autre vie..."

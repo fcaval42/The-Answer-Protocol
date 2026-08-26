@@ -17,8 +17,34 @@ const rows, cols = 3, 3
 var mapCellColor = color.NRGBA{R: 255, G: 255, B: 225, A: 20} // couleur blanche de base
 var mapCurrentCellColor = color.NRGBA{R: 232, G: 216, B: 176, A: 90} // beige comme le thème de base
 
+type mapNode struct {
+	row, col int
+}
 
-func mapCell(current bool) fyne.CanvasObject {
+var mapNames = map[mapNode]string{
+		{0, 0}: "Lumière",
+		{0, 1}: "",
+		{0, 2}: "Vallons fleuries",
+		{0, 3}: "Plage",
+		{1, 0}: "",
+		{1, 1}: "Nid d'Esquie",
+		{1, 2}: "Océan Suspendu",
+		{1, 3}: "Village Gestral",
+		{1, 4}: "Cimetière Gestral",
+		{2, 0}: "Vieille Lumière",
+		{2, 1}: "Terres oubliées",
+		{2, 2}: "Falaise de Rochevague",
+	}
+
+
+func mapCell(current bool, name string) fyne.CanvasObject {
+	if name == "" {
+		// case invisible
+		spacer := canvas.NewRectangle(color.Transparent)
+		spacer.SetMinSize(fyne.NewSize(mapCellSizeH, mapCellSizeV))
+		return spacer
+	}
+
 	fill := mapCellColor
 	if current {
 		fill = mapCurrentCellColor
@@ -34,7 +60,8 @@ func mapCell(current bool) fyne.CanvasObject {
 
 	frame.SetMinSize(fyne.NewSize(mapCellSizeH, mapCellSizeV))
 
-	label := NewBodyText("", 14)
+	label := NewBodyText(name, 14)
+
 
 	return container.NewVBox(
 		container.New(layout.NewGridWrapLayout(fyne.NewSize(mapCellSizeH, mapCellSizeV)), frame),
@@ -43,21 +70,22 @@ func mapCell(current bool) fyne.CanvasObject {
 }
 
 
-// on construit la carte du monde 
+// on construit la carte du monde
 func BuildMapPanel(currentRow, currentCol int) fyne.CanvasObject {
-	rowsCols := []int{3, 4, 2, 2}
+	rowsCols := []int{4, 5, 3}
 
 	rows := container.NewVBox()
 	for r, cols := range rowsCols{
 		row := container.NewHBox()
 		for c := 0; c < cols; c++ {
 			if c > 0 { // ajouter espace que si pas première case
-				row.Add(Fix(70, 0))
+				row.Add(Fix(40, 0))
 			}
-			row.Add(mapCell(r == currentRow && c == currentCol))
+			name := mapNames[mapNode{r, c}]
+			row.Add(mapCell(r == currentRow && c == currentCol, name))
 		}
 		if r > 0 {
-			rows.Add(Fix(0, 15))
+			rows.Add(Fix(0, 60))
 		}
 		rows.Add(row)
 	}
