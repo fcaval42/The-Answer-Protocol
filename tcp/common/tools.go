@@ -3,6 +3,7 @@ package common
 import (
 	"sync"
 	"net"
+	"the_answer_protocol/parsing"
 )
 
 
@@ -38,6 +39,15 @@ func IsInList(num int) bool {
 var (
 	PersoChoice = []string{"Gustave", "Maëlle", "Lune", "Sciel", "Verso"}
 	PersoLock   sync.Mutex
+)
+
+// Monde partagé, parsé une seule fois au lancement du serveur (voir
+// tcp/server/server.go). Plusieurs clients pouvant lire/modifier des joueurs
+// en même temps (connexion, déconnexion...), tout accès à World doit passer
+// par WorldLock.
+var (
+	World     parsing.WorldFile
+	WorldLock sync.Mutex
 )
 
 

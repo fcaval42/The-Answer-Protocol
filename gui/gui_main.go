@@ -1,9 +1,8 @@
-package main
+package gui
 
 import (
 	"fmt"
 	"image/color" // image = permet de toucher aux images en Go
-	"os"
 	// color = fournit couleurs/modèles prêts à l'emploi.
 
 	"fyne.io/fyne/v2"
@@ -12,7 +11,7 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
 
-	"the_answer_protocol/gui"
+	// "the_answer_protocol/gui"
 	"the_answer_protocol/parsing"
 	// "the_answer_protocol/tcp"
 
@@ -225,21 +224,13 @@ func buildChatPanel() fyne.CanvasObject {
 }
 
 
-func main() {
+// Run ouvre la fenêtre du GUI pour le joueur dont le personnage vient
+// d'être choisi côté client TCP.
+func Run(playerName string, world parsing.WorldFile) {
 
-	// p := parsing.Player_t{
-	// 	Name:         "Gustave",
-	// 	Hp:           100.0,
-	// 	Localisation: "Village_gestral",
-	// 	Inventory:    []string{},
-	// }
+	player := fakePlayer
+	player.name = playerName
 
-	world_path := "yaml/world.yaml"
-	world, err := parsing.Rally(world_path)
-
-	if err != nil {
-		os.Exit(1)
-	}
 	fmt.Println(world)
 	a := app.New()
 	w := a.NewWindow("The Answer Protocol")
@@ -255,14 +246,14 @@ func main() {
 		"Cimetière Gestral": fakeRoom2,
 	}
 
-	background, bgImage := gui.BuildBackground(fakeRoom.background)
+	background, bgImage := BuildBackground(fakeRoom.background)
 
 	// garde une référence stable qu'on peut vider/remplir pour ne pas
 	// reconstruire toute la fenêtre à chaque changement de salle.
 	roomContainer := container.NewStack()
 
 	changeRoom := func(newRoom Room) {
-		gui.SetRoomBackground(bgImage, newRoom.background)
+		SetRoomBackground(bgImage, newRoom.background)
 		roomContainer.Objects = []fyne.CanvasObject{buildRoomPanel(newRoom)} // VOIR
 		roomContainer.Refresh()
 	}
@@ -273,7 +264,7 @@ func main() {
 	//roomPanel := withMinWidth(buildRoomPanel(fakeRoom), 420)
 	mapButton := buildMapButton()
 	rightPanel := withMinWidth(container.NewVBox(
-		buildCharacterPanel(fakePlayer),
+		buildCharacterPanel(player),
 		widget.NewSeparator(),
 		buildChatPanel(),
 	), 420)

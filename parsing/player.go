@@ -23,6 +23,7 @@ type Player struct {
 	Location Location
 	Inventory []Item
 	Quest []Quest
+	Connected bool
 }
 
 func validatePlayers(wf WorldFile) []error {

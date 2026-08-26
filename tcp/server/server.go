@@ -2,6 +2,8 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -10,6 +12,8 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"the_answer_protocol/parsing"
+	. "the_answer_protocol/tcp/commands"
 	. "the_answer_protocol/tcp/common"
 )
 
@@ -91,9 +95,9 @@ func GroupInvite(conn net.Conn, player string) {
 	if len(availablePlayers) == 0 {
 		LogAndFprintf(conn, "[SERVER] Aucun joueur disponible pour l'invitation.\n")
 		return
-	}	
+	}
 	LogAndFprintf(conn, "[SERVER] Quel membre d'expédition souhaitez-vous inviter dans votre groupe ?\n")
-	
+
 	// Affiche la liste des joueurs disponibles
 	LogAndFprintf(conn, "[SERVER] Joueurs disponibles : %s\n", strings.Join(availablePlayers, ", "))
 
@@ -301,9 +305,19 @@ func handleConnection(conn net.Conn) {
 			ConnectedLock.Lock()
 			delete(ConnectedClients, player)
 			ConnectedLock.Unlock()
+
+			WorldLock.Lock()
+			for id, p := range World.Players {
+				if p.Name == player {
+					p.Connected = false
+					World.Players[id] = p
+					break
+				}
+			}
+			WorldLock.Unlock()
 		}
 			LogAndPrintf(conn, "%s| [INFO] [%s]: \"Pour ceux qui viendront après\"\n", conn.RemoteAddr().String(), player)
-		
+
 		// Fermeture de la connexion
 		conn.Close()
 		LogAndPrintf(conn, "%s| [INFO] Client déconnecté\n", conn.RemoteAddr())
@@ -349,6 +363,17 @@ func handleConnection(conn net.Conn) {
 			nb_player := 5 - len(PersoChoice)
 			LogAndFprintf(conn, "[SERVER] Il y a actuellement %d membre.s d'expédition\n", nb_player)
 		}
+		if message == "LOOK\n" {
+			WorldLock.Lock()
+			room, err := Look(World, player)
+			WorldLock.Unlock()
+			if err != nil {
+				log.Println("[ERROR] LOOK:", err)
+			} else {
+				data, _ := json.Marshal(room)
+				LogAndFprintf(conn, "OK %s\n", data)
+			}
+		}
 		if message == "QUIT\n" || message == "" {
 			break
 		}
@@ -391,8 +416,22 @@ func handleConnection(conn net.Conn) {
 }
 
 func main() {
-	logfile, _ := os.Create("../protocol.log")
-	log.SetOutput(logfile)
+	logfile, err := os.Create("../protocol.log")
+	if err != nil {
+		log.Fatalln(err)
+	}
+	log.SetOutput(io.MultiWriter(os.Stdout, logfile))
+
+	// Parsing du monde une seule fois au démarrage : c'est cette instance,
+	// partagée par toutes les connexions (voir tcp/common.World), qui garde
+	// l'état des joueurs (Connected, Location, Inventory...) tant que le
+	// serveur tourne.
+	world, worldErrs := parsing.Rally("yaml/world.yaml")
+	if len(worldErrs) > 0 {
+		log.Fatalln(errors.Join(worldErrs...))
+	}
+	World = world
+
 	// Ouverture de l'ecoute tcp sur le port 8080 du localhost
 	ln, err := net.Listen("tcp", "localhost:8080")
 	if err != nil {
@@ -401,6 +440,9 @@ func main() {
 
 	// Fermeture à la fin du programme
 	defer ln.Close()
+
+	fmt.Println("\033[0;32mServer Up and Running\033[0m")
+	fmt.Println("")
 
 	// Boucle infinie pour accepter la connexion des clients au serveur
 	for {
