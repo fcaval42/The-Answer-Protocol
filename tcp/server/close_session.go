@@ -5,6 +5,9 @@ import (
 	. "the_answer_protocol/tcp/common"
 )
 
+// Gere la fermeture de la session d'un client,
+// en supprimant le client de la liste des clients
+// connectés et en libérant les ressources associées.
 func CloseSession(conn net.Conn, player string) {		
 	ClientsLock.Lock()
 		// Supprime le client de la liste a la fermeture

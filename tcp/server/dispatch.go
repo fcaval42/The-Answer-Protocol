@@ -6,6 +6,8 @@ import (
 	"strings"
 )
 
+// Dispatch des commandes du client après la connexion,
+// en fonction de la commande reçue.
 func Dispatch(conn net.Conn, player string) {	
 	for {
 		message := Recept(conn)

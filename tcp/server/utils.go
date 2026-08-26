@@ -11,6 +11,7 @@ import (
 	"bufio"
 )
 
+// Gere l'affichage des groupes disponibles
 func DisplayGroup(conn net.Conn) bool{
 	groupsLock.Lock()
 	defer groupsLock.Unlock()
@@ -37,6 +38,7 @@ func DisplayGroup(conn net.Conn) bool{
 	return true
 }
 
+// Renvoie la liste des joueurs disponibles pour l'invitation
 func GetAvailablePlayers(self string) []string {
 	ClientsLock.Lock()
 	defer ClientsLock.Unlock()
@@ -51,6 +53,7 @@ func GetAvailablePlayers(self string) []string {
 	return availablePlayers
 }
 
+// Vérifie si un joueur est disponible pour l'invitation
 func IsPlayerAvailable(player string, availablePlayers []string) bool {
 	for _, availablePlayer := range availablePlayers {
 		if availablePlayer == player {
@@ -63,6 +66,8 @@ func IsPlayerAvailable(player string, availablePlayers []string) bool {
 	return false
 }
 
+
+// Gere la reception d'un message du client
 func Recept(conn net.Conn) string {
 	reader := bufio.NewReader(conn)
 	message, err := reader.ReadString('\n')
@@ -79,6 +84,7 @@ func Recept(conn net.Conn) string {
 	return message
 }
 
+// Recherche le groupe auquel appartient un joueur
 func SearchPlayerGroup(player string) *Group {
 	var currentGroup *Group
 	groupsLock.Lock()
@@ -92,7 +98,7 @@ func SearchPlayerGroup(player string) *Group {
 	return currentGroup
 }
 
-
+// Affiche le chat d'un groupe ou du chat global
 func PrintChat(conn net.Conn, messages []string) {
 	chat := ""
 	for _, m := range messages {
@@ -102,6 +108,7 @@ func PrintChat(conn net.Conn, messages []string) {
 	fmt.Fprintf(conn, "%s\n", chat)
 }
 
+// Envoie un message à tous les clients spécifiés
 func Broadcast(receiver []net.Conn, messages []string) {
 	for _, client := range receiver {
 		PrintChat(client, messages)
