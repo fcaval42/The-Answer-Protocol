@@ -85,17 +85,30 @@ func searchPlayerGroup(player string) *Group {
 	groupsLock.Unlock()
 	return currentGroup
 }
-func displayGroup() {
+func displayGroup(conn net.Conn) bool{
 	groupsLock.Lock()
 	defer groupsLock.Unlock()
+	var result string
+	if len(groups) == 0 {
+		LogAndFprintf(conn, "[SERVER] Aucun groupe n'existe actuellement.\n")
+		return false
+	}
 	for _, group := range groups {
 		group.Mu.Lock()
-		fmt.Printf("Groupe %s :\n", group.ID)
-		for player := range group.Members {
-			fmt.Printf("  - %s\n", player)
+		result = fmt.Sprintf("Groupe %s :\\", group.ID)
+		for player, connect := range group.Members {
+			if conn == connect {
+				LogAndFprintf(conn, "[SERVER] Vous êtes déjà dans le groupe %s.\n", group.ID)
+				group.Mu.Unlock()
+				return false
+			}
+			result += fmt.Sprintf("  - %s\\", player)
 		}
 		group.Mu.Unlock()
 	}
+	result += "Entrez l'ID du groupe que vous souhaitez rejoindre :\\"
+	fmt.Fprintf(conn, "[SERVER] %s\n", result)
+	return true
 }
 
 func groupJoin(conn net.Conn, player string, groupID string) {
@@ -114,6 +127,7 @@ func groupJoin(conn net.Conn, player string, groupID string) {
 		return
 	}
 	group.Members[player] = conn
+	group.messages = append(group.messages, fmt.Sprintf("%s a rejoint le groupe.", player))
 	group.Mu.Unlock()
 	LogAndFprintf(conn, "[SERVER] Vous avez rejoint le groupe %s !\n", groupID)
 }
@@ -186,6 +200,7 @@ func GroupInvite(conn net.Conn, player string) {
     groupsLock.Lock()
     defer groupsLock.Unlock()
     currentGroup.Members[invitee] = inviteeConn
+	currentGroup.messages = append(currentGroup.messages, fmt.Sprintf("%s a rejoint le groupe.", invitee))
     LogAndFprintf(conn, "[SERVER] %s a rejoint le groupe %s !\n", invitee, currentGroup.ID)
 }
 
@@ -193,6 +208,7 @@ func groupLeave(player string) bool{
 	if searchPlayerGroup(player) != nil {
 	currentGroup := searchPlayerGroup(player)
 	currentGroup.Mu.Lock()
+	currentGroup.messages = append(currentGroup.messages, fmt.Sprintf("%s a quitté le groupe.", player))
 	delete(currentGroup.Members, player)
 	currentGroup.Mu.Unlock()
 	return true
@@ -431,11 +447,11 @@ func handleConnection(conn net.Conn) {
 		case "GROUP INVITE\n":
 			GroupInvite(conn, player)
 		case "GROUP JOIN\n":
-			LogAndFprintf(conn, "[SERVER] Entrez l'ID du groupe que vous souhaitez rejoindre :\n")
-			displayGroup()
-			groupID := recept(conn)
-			groupID = strings.TrimSpace(groupID)
-			groupJoin(conn, player, groupID)
+			if displayGroup(conn){
+				groupID := recept(conn)
+				groupID = strings.TrimSpace(groupID)
+				groupJoin(conn, player, groupID)
+			}
 		case "GROUP LEAVE\n":
 			if groupLeave(player) {
 				LogAndFprintf(conn, "[SERVER] Vous avez quitté le groupe.\n")
