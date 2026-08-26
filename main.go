@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"os"
 
 	//"image/color" // image = permet de toucher aux images en Go
 	//// color = fournit couleurs/modèles prêts à l'emploi.
@@ -14,6 +15,8 @@ import (
 	"fyne.io/fyne/v2/widget"
 
 	"the_answer_protocol/gui"
+
+	"the_answer_protocol/parsing"
 )
 
 
@@ -278,6 +281,21 @@ func buildChatMapNav(w fyne.Window) fyne.CanvasObject {
 
 
 func main() {
+
+	// p := parsing.Player_t{
+	// 	Name:         "Gustave",
+	// 	Hp:           100.0,
+	// 	Localisation: "Village_gestral",
+	// 	Inventory:    []string{},
+	// }
+
+	world_path := "yaml/world.yaml"
+	world, err := parsing.Rally(world_path)
+
+	if err != nil {
+		os.Exit(1)
+	}
+	fmt.Println(world)
 	a := app.New()
 	w := a.NewWindow("The Answer Protocol")
 	w.Resize(fyne.NewSize(1400, 850))

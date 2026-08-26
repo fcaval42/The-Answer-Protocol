@@ -1,21 +1,27 @@
-package main
+package commands
 
 import(
-	"net"
 	"bufio"
 	"fmt"
+	"net"
 	. "the_answer_protocol/tcp/common"
 	"log"
 	"strings"
 	"strconv"
 	"slices"
+	"os"
 )
 
 
-// Selection du personnage joueur
-func selectPlayer(conn net.Conn) string {
+func ConnectCom(conn net.Conn) string{
 	// Lock du mutex pour le rendre indisponible pour les autres
 	PersoLock.Lock()
+	file, err := os.OpenFile("../protocol.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	if err != nil {
+		log.Fatalf("[ERROR] Erreur lors de l'ouverture du fichier de log : %v", err)
+	}
+	defer file.Close()
+	log.SetOutput(file)
 	// Le mutex sera unlock à la fin de la fonction selectPlayer
 	defer PersoLock.Unlock()
 	// Initialisation d'un buffer en écoute sur le client
@@ -32,13 +38,13 @@ func selectPlayer(conn net.Conn) string {
 		charactere[i] = fmt.Sprintf("%d. %s", i+1, perso)
 	}
 	msg := fmt.Sprintf("[INFO] Choisissez votre joueur parmi en entrant le numéro correspondant: %s\n", strings.Join(charactere, ", "))
-	LogAndFprintf(conn, msg)
+	LogAndFprintf(conn, "%s", msg)
 
 	// Boucle infinie tant que le joueur n'a pas effectué un bon choix
 	for {
 		// Recois le choix du joueur par le client
 		player, err := reader.ReadString('\n')
-		LogAndPrintf(conn, conn.RemoteAddr().String()+"| " + player)
+		LogAndPrintf(conn, "%s| %s", conn.RemoteAddr().String(), player)
 		if player != "\n" {
 			if err != nil {
 				log.Println(conn.RemoteAddr().String() + "| [ERROR] " + err.Error())
@@ -53,15 +59,16 @@ func selectPlayer(conn net.Conn) string {
 					return ""
 				}
 				// On verifie que le choix correspond à la liste de personnage
-				if isInList(indextest) {
+				if IsInList(indextest) {
 					player = PersoChoice[indextest-1]
 					// On supprime le choix fait par le joueur des choix pour les prochains joueurs
 					PersoChoice = slices.Delete(PersoChoice, indextest-1, indextest)
+					LogAndFprintf(conn, "%s| Connection réussie ! Bienvenue %s !\n", conn.RemoteAddr().String(), player)
 					// On retourne le personnage choisi
 					return player
 				}
 			}
 		}
-		LogAndFprintf(conn, msg)
+		LogAndFprintf(conn, "%s", msg)
 	}
 }

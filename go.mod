@@ -1,8 +1,13 @@
 module the_answer_protocol
 
+require gopkg.in/yaml.v3 v3.0.1
+
 go 1.25.1
 
-require fyne.io/fyne/v2 v2.8.0
+require (
+	fyne.io/fyne/v2 v2.8.0
+	github.com/chzyer/readline v1.5.1
+)
 
 require (
 	fyne.io/systray v1.12.2 // indirect
@@ -40,5 +45,4 @@ require (
 	golang.org/x/net v0.35.0 // indirect
 	golang.org/x/sys v0.30.0 // indirect
 	golang.org/x/text v0.22.0 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
