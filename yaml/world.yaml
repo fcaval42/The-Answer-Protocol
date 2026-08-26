@@ -5,7 +5,7 @@ world:
     Lumière:
       name: "Lumière"
       description: "Une clarté douce et constante baigne les lieux, comme si la
-        lumière elle-même y était née."
+        Lumière elle-même y était née."
       exits:
         east: "Vallées_fleuries"
         south: "Vieille_lumière"
@@ -78,8 +78,8 @@ world:
       description: "Le sang qui gît ici y est plus rouge que le
         coucher du soleil."
       exits:
-        east: "falaise_rochevague"
-        north: "vieille_lumière"
+        east: "Falaise_rochevague"
+        north: "Vieille_lumière"
         west: "Falaise_rochevague"
         south: "Vieille_lumière"
 
@@ -90,16 +90,14 @@ world:
       exits:
         west: "Terres_oubliées"
         north: "Lumière"
+        south: "Terres_oubliées"
       enemies: ["Peintress"]
-        south: "terres_oubliées"
-        north: "lumière"
-      npcs: ["Peintress"]
 
 
 items:
   Lumina:
     name: "Lumina"
-    description: "Un fragment de lumière condensée."
+    description: "Un fragment de Lumière condensée."
     obtainable: true
 
   Chroma:
@@ -123,7 +121,6 @@ items:
   Abysseram:
     name: "Abysseram"
     critical: 0.2
-    description: "Forgée dans le silence des Eaux Volantes, cette lame abyssale
     description: "Forgée dans le silence des Eaux Volantes, cette lame abyssale
       semble lourde des secrets de l'océan et pulse au rythme de la vie de Gustave."
     obtainable: true
@@ -190,8 +187,6 @@ enemies:
   Peintress:
     name: "Peintress"
     role: "enemy"
-    description: "Souffle tragique à l'origine du désastre, la Peintresse applique
-      sur le monde ses touches de mort, condamnant chaque année toute une
     description: "Souffle tragique à l'origine du désastre, la Peintresse applique
       sur le monde ses touches de mort, condamnant chaque année toute une
       génération à s'effacer dans le néant au gré de ses funestes coups de pinceau"
@@ -270,7 +265,7 @@ quests:
   Nevron_blanc:
     name: "Lumen rursus accendens"
     giver: "Sophie"
-    description: "Chercher la lumière pour rallumer sa lampe."
+    description: "Chercher la Lumière pour rallumer sa lampe."
     objective:
       type: "fetch"
       item: "Lumina"

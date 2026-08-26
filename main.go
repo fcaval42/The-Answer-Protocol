@@ -19,7 +19,6 @@ import (
 	"the_answer_protocol/parsing"
 )
 
-
 // ---- Données factices, en attendant le vrai serveur ----
 
 type Room struct {
@@ -73,7 +72,6 @@ var fakePlayer = Player{
 	inventory: []string{"Lumina", "Pictos"},
 }
 
-
 // ----------------- Header (titre + infos salles) ------------------
 
 func buildHeader() fyne.CanvasObject {
@@ -83,10 +81,9 @@ func buildHeader() fyne.CanvasObject {
 	return container.NewBorder(nil, gui.Fix(0, 40), title, nil, nil)
 }
 
-
 // ----------------- Panneau de salle (gauche) ------------------
 
-func buildRoomPanel(r Room) fyne.CanvasObject{
+func buildRoomPanel(r Room) fyne.CanvasObject {
 	// r Room = structure Room qui contient données de la salle
 	// sortie fyne.CanvasObject = élément graphique (conteneur, widget...)
 
@@ -100,7 +97,7 @@ func buildRoomPanel(r Room) fyne.CanvasObject{
 	// NewHBox = crée nv conteneur + objets seront placés de gauche à droite et
 	// tjrs affichés à leur taille min horizontale.
 	for _, e := range r.exits {
-		exit := e // on crée une nvlle variable locale à chaque tour.
+		exit := e                                 // on crée une nvlle variable locale à chaque tour.
 		exitsRow.Add(gui.NewButton(exit, func() { // acxtion du bouton
 			fmt.Println("MOVE TO: ", exit) // A REMPLACER par ex sendCommand
 		}))
@@ -119,10 +116,10 @@ func buildRoomPanel(r Room) fyne.CanvasObject{
 	npcsRow := container.NewHBox()
 	for _, n := range r.npcs {
 		npc := n
-		npcsRow.Add(gui.NewButton(npc + "TALK", func() {
+		npcsRow.Add(gui.NewButton(npc+"TALK", func() {
 			fmt.Println("TALK: ", npc) // A REMPLACER
 		}))
-		npcsRow.Add(gui.NewButton(npc + "ATTACK", func() {
+		npcsRow.Add(gui.NewButton(npc+"ATTACK", func() {
 			fmt.Println("ATTACK:", npc) // A REMPLACER
 		}))
 	}
@@ -130,10 +127,10 @@ func buildRoomPanel(r Room) fyne.CanvasObject{
 	// ----------------- ACTIONS --------------------
 	actionsGrid := container.NewGridWithColumns(2,
 		gui.NewButton("Status", func() { fmt.Println("STATUS") }), // A REMPLACER
-		gui.NewButton("Quest", func() { fmt.Println("QUEST") }), // A REMPLACER
+		gui.NewButton("Quest", func() { fmt.Println("QUEST") }),   // A REMPLACER
 		gui.NewButton("Status", func() { fmt.Println("STATUS") }), // A REMPLACER
-		gui.NewButton("Quit", func() { fmt.Println("QUIT") }), // A REMPLACER
-		)
+		gui.NewButton("Quit", func() { fmt.Println("QUIT") }),     // A REMPLACER
+	)
 
 	// conteneur vertical. Respecte ordre d'affichage
 	return container.NewVBox(
@@ -168,7 +165,6 @@ func statCell(label string, value string) fyne.CanvasObject {
 
 	return container.NewVBox(l, v)
 }
-
 
 func buildCharacterPanel(p Player) fyne.CanvasObject {
 	name := gui.NewTitleText(p.name, 70)
@@ -270,7 +266,6 @@ func buildChatMapNav(w fyne.Window) fyne.CanvasObject {
 		d.Show()
 	})
 
-
 	iconsRow := container.NewGridWithColumns(2,
 		container.NewCenter(chatIcon),
 		container.NewCenter(mapIcon),
@@ -278,7 +273,6 @@ func buildChatMapNav(w fyne.Window) fyne.CanvasObject {
 
 	return container.NewVBox(titlesRow, gui.Fix(0, 0), iconsRow)
 }
-
 
 func main() {
 
@@ -322,8 +316,7 @@ func main() {
 		roomContainer.Refresh()
 	}
 	changeRoom(fakeRoom) // affichage initial
-	_ = demoRooms // gardé pour un futur test manuel : changeRoom(demoRooms["cimetière gestral"])
-
+	_ = demoRooms        // gardé pour un futur test manuel : changeRoom(demoRooms["cimetière gestral"])
 
 	rightPanel := gui.WithMinWidth(container.NewVBox(
 		buildCharacterPanel(fakePlayer),

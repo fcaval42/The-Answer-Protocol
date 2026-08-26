@@ -103,8 +103,8 @@
       s'appelle `world_path`), et `entities_path` n'est jamais utilisé : à
       corriger, en faisant remonter l'erreur (`return err` / `os.Exit(1)`) au
       lieu d'un simple `fmt.Println`.
-- [ ] Les accents dans les clés (`lumière`, `vallées_fleuries`,
-      `océan_suspendu`...) sont gérés nativement en UTF-8 par yaml.v3, mais si
+- [ ] Les accents dans les clés (`Lumière`, `Vallées_fleuries`,
+      `Océan_suspendu`...) sont gérés nativement en UTF-8 par yaml.v3, mais si
       vous faites de la recherche insensible à la casse/accents sur les IDs,
       pensez à normaliser (`strings.ToLower` ne suffit pas pour les accents).
 - [ ] yaml.v3 expose des erreurs typées (`*yaml.TypeError`) avec le détail des

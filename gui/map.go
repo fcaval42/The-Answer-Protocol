@@ -5,16 +5,15 @@ import (
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/canvas"
-	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/layout"
 )
-
 
 const mapCellSizeH = 150
 const mapCellSizeV = 120
 const rows, cols = 3, 3
 
-var mapCellColor = color.NRGBA{R: 255, G: 255, B: 225, A: 20} // couleur blanche de base
+var mapCellColor = color.NRGBA{R: 255, G: 255, B: 225, A: 20}        // couleur blanche de base
 var mapCurrentCellColor = color.NRGBA{R: 232, G: 216, B: 176, A: 90} // beige comme le thème de base
 
 type mapNode struct {
@@ -22,20 +21,19 @@ type mapNode struct {
 }
 
 var mapNames = map[mapNode]string{
-		{0, 0}: "Lumière",
-		{0, 1}: "",
-		{0, 2}: "Vallons fleuries",
-		{0, 3}: "Plage",
-		{1, 0}: "",
-		{1, 1}: "Nid d'Esquie",
-		{1, 2}: "Océan Suspendu",
-		{1, 3}: "Village Gestral",
-		{1, 4}: "Cimetière Gestral",
-		{2, 0}: "Vieille Lumière",
-		{2, 1}: "Terres oubliées",
-		{2, 2}: "Falaise de Rochevague",
-	}
-
+	{0, 0}: "Lumière",
+	{0, 1}: "",
+	{0, 2}: "Vallons fleuries",
+	{0, 3}: "Plage",
+	{1, 0}: "",
+	{1, 1}: "Nid d'Esquie",
+	{1, 2}: "Océan Suspendu",
+	{1, 3}: "Village Gestral",
+	{1, 4}: "Cimetière Gestral",
+	{2, 0}: "Vieille Lumière",
+	{2, 1}: "Terres oubliées",
+	{2, 2}: "Falaise de Rochevague",
+}
 
 func mapCell(current bool, name string) fyne.CanvasObject {
 	if name == "" {
@@ -52,7 +50,7 @@ func mapCell(current bool, name string) fyne.CanvasObject {
 
 	frame := canvas.NewRectangle(fill)
 	frame.StrokeColor = TitleColor // couleur du contour (bordure du rectangle)
-	frame.StrokeWidth = 1 // épaisseur de la ligne
+	frame.StrokeWidth = 1          // épaisseur de la ligne
 
 	if current {
 		frame.StrokeWidth = 2
@@ -62,20 +60,18 @@ func mapCell(current bool, name string) fyne.CanvasObject {
 
 	label := NewBodyText(name, 14)
 
-
 	return container.NewVBox(
 		container.New(layout.NewGridWrapLayout(fyne.NewSize(mapCellSizeH, mapCellSizeV)), frame),
 		container.NewCenter(label),
 	)
 }
 
-
 // on construit la carte du monde
 func BuildMapPanel(currentRow, currentCol int) fyne.CanvasObject {
 	rowsCols := []int{4, 5, 3}
 
 	rows := container.NewVBox()
-	for r, cols := range rowsCols{
+	for r, cols := range rowsCols {
 		row := container.NewHBox()
 		for c := 0; c < cols; c++ {
 			if c > 0 { // ajouter espace que si pas première case
