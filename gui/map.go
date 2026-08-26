@@ -31,8 +31,9 @@ var mapNames = map[mapNode]string{
 	{1, 3}: "Village Gestral",
 	{1, 4}: "Cimetière Gestral",
 	{2, 0}: "Vieille Lumière",
-	{2, 1}: "Terres oubliées",
-	{2, 2}: "Falaise de Rochevague",
+	{2, 1}: "",
+	{2, 2}: "Terres oubliées",
+	{2, 3}: "Falaise de Rochevague",
 }
 
 func mapCell(current bool, name string) fyne.CanvasObject {
@@ -68,7 +69,7 @@ func mapCell(current bool, name string) fyne.CanvasObject {
 
 // on construit la carte du monde
 func BuildMapPanel(currentRow, currentCol int) fyne.CanvasObject {
-	rowsCols := []int{4, 5, 3}
+	rowsCols := []int{4, 5, 4}
 
 	rows := container.NewVBox()
 	for r, cols := range rowsCols {
