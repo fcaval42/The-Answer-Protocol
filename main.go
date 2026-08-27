@@ -28,6 +28,8 @@ type Room struct {
 	items       []string
 	npcs        []string
 	background  string // chemin vers le gif de fond propre à cette salle
+	mapRow      int    // position de la salle sur la carte du monde
+	mapCol      int
 }
 
 type Player struct {
@@ -51,6 +53,8 @@ var fakeRoom = Room{
 	items:       []string{"Chroma"},
 	npcs:        []string{"Renoir"},
 	background:  "assets/room/vallons_fleuries.png",
+	mapRow:      1,
+	mapCol:      3,
 }
 
 // deuxième salle factice, juste pour tester visuellement le changement de
@@ -60,6 +64,8 @@ var fakeRoom2 = Room{
 	description: "De minuscules tombes, dont certaines sont vides.",
 	exits:       []string{"Village Gestral"},
 	background:  "assets/room/cimetiere_gestral.png",
+	mapRow:      1,
+	mapCol:      4,
 }
 
 var fakePlayer = Player{
@@ -249,7 +255,7 @@ var (
 	mapIconPath  = "assets/icons/icon_map.png"
 )
 
-func buildChatMapNav(w fyne.Window) fyne.CanvasObject {
+func buildChatMapNav(w fyne.Window, getCurrentRoom func() Room) fyne.CanvasObject {
 	titlesRow := container.NewGridWithColumns(2,
 		container.NewCenter(gui.NewTitleText("Chat", 25)),
 		container.NewCenter(gui.NewTitleText("Carte", 25)),
@@ -261,7 +267,8 @@ func buildChatMapNav(w fyne.Window) fyne.CanvasObject {
 		d.Show()
 	})
 	mapIcon := gui.NewBigIconButton(mapIconPath, chatMapIconSize, func() {
-		d := dialog.NewCustom("", "Fermer", gui.BuildMapPanel(1, 1), w)
+		room := getCurrentRoom()
+		d := dialog.NewCustom("", "Fermer", gui.BuildMapPanel(room.mapRow, room.mapCol), w)
 		d.Resize(fyne.NewSize(1100, 650))
 		d.Show()
 	})
@@ -310,7 +317,10 @@ func main() {
 	// reconstruire toute la fenêtre à chaque changement de salle.
 	roomContainer := container.NewStack()
 
+	currentRoom := fakeRoom // salle actuellement affichée, suivie pour la carte
+
 	changeRoom := func(newRoom Room) {
+		currentRoom = newRoom
 		gui.SetRoomBackground(bgImage, newRoom.background)
 		roomContainer.Objects = []fyne.CanvasObject{buildRoomPanel(newRoom)} // VOIR
 		roomContainer.Refresh()
@@ -321,7 +331,7 @@ func main() {
 	rightPanel := gui.WithMinWidth(container.NewVBox(
 		buildCharacterPanel(fakePlayer),
 		gui.Fix(0, 15),
-		buildChatMapNav(w),
+		buildChatMapNav(w, func() Room { return currentRoom }),
 	), 420)
 
 	body := container.NewBorder(nil, nil, gui.WithMinWidth(roomContainer, 420), rightPanel, nil)
