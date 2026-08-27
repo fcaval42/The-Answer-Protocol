@@ -15,6 +15,7 @@ const rows, cols = 3, 3
 
 var mapCellColor = color.NRGBA{R: 255, G: 255, B: 225, A: 20}        // couleur blanche de base
 var mapCurrentCellColor = color.NRGBA{R: 232, G: 216, B: 176, A: 90} // beige comme le thème de base
+var mapBackgroundColor = color.NRGBA{R: 130, G: 50, B: 45, A: 255}
 
 type mapNode struct {
 	row, col int
@@ -114,5 +115,7 @@ func BuildMapPanel(currentRow, currentCol int) fyne.CanvasObject {
 		}
 		rows.Add(row)
 	}
-	return container.New(layout.NewCustomPaddedLayout(0, 0, 20, 10), rows)
+	background := canvas.NewRectangle(mapBackgroundColor)
+
+	return container.NewStack(background, container.New(layout.NewCustomPaddedLayout(0, 0, 20, 10), rows))
 }
