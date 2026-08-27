@@ -9,14 +9,18 @@ import (
 	"fyne.io/fyne/v2/layout"
 )
 
-const mapCellSizeH = 150
-const mapCellSizeV = 120
+const mapCellSizeH = 220
+const mapCellSizeV = 110
 const rows, cols = 3, 3
 
 var mapCellColor = color.NRGBA{R: 255, G: 255, B: 225, A: 20}        // couleur blanche de base
 var mapCurrentCellColor = color.NRGBA{R: 232, G: 216, B: 176, A: 90} // beige comme le thème de base
 
 type mapNode struct {
+	row, col int
+}
+
+type mapPathfile struct {
 	row, col int
 }
 
@@ -36,11 +40,28 @@ var mapNames = map[mapNode]string{
 	{2, 3}: "Falaise de Rochevague",
 }
 
-func mapCell(current bool, name string) fyne.CanvasObject {
+var mapPath = map[mapPathfile]string{
+	{0, 0}: "assets/room/lumiere.png",
+	{0, 1}: "",
+	{0, 2}: "assets/room/vallons_fleuries.png",
+	{0, 3}: "assets/room/plage.png",
+	{1, 0}: "",
+	{1, 1}: "assets/room/nid_esquie.png",
+	{1, 2}: "assets/room/océan_suspendu.png",
+	{1, 3}: "assets/room/village_gestral.png",
+	{1, 4}: "assets/room/cimetiere_gestral.png",
+	{2, 0}: "assets/room/vieille_lumiere.png",
+	{2, 1}: "",
+	{2, 2}: "assets/room/terres_oubliees.png",
+	{2, 3}: "assets/room/falaise.png",
+}
+
+
+func mapCell(current bool, name string, img *canvas.Image) fyne.CanvasObject {
 	if name == "" {
 		// case invisible
 		spacer := canvas.NewRectangle(color.Transparent)
-		spacer.SetMinSize(fyne.NewSize(mapCellSizeH, mapCellSizeV))
+		spacer.SetMinSize(fyne.NewSize(100, 50))
 		return spacer
 	}
 
@@ -49,20 +70,22 @@ func mapCell(current bool, name string) fyne.CanvasObject {
 		fill = mapCurrentCellColor
 	}
 
-	frame := canvas.NewRectangle(fill)
-	frame.StrokeColor = TitleColor // couleur du contour (bordure du rectangle)
-	frame.StrokeWidth = 1          // épaisseur de la ligne
+	background := canvas.NewRectangle(fill)
+	background.SetMinSize(fyne.NewSize(mapCellSizeH, mapCellSizeV))
+
+	border := canvas.NewRectangle(color.Transparent)
+	border.StrokeColor = TitleColor // couleur du contour
+	border.StrokeWidth = 1  // épaisseur de la ligne
 
 	if current {
-		frame.StrokeWidth = 2
+		border.StrokeColor = HPColor
+		border.StrokeWidth = 5
 	}
-
-	frame.SetMinSize(fyne.NewSize(mapCellSizeH, mapCellSizeV))
 
 	label := NewBodyText(name, 14)
 
 	return container.NewVBox(
-		container.New(layout.NewGridWrapLayout(fyne.NewSize(mapCellSizeH, mapCellSizeV)), frame),
+		container.New(layout.NewGridWrapLayout(fyne.NewSize(mapCellSizeH, mapCellSizeV)), container.NewStack(background, img, border)),
 		container.NewCenter(label),
 	)
 }
@@ -79,13 +102,17 @@ func BuildMapPanel(currentRow, currentCol int) fyne.CanvasObject {
 				row.Add(Fix(40, 0))
 			}
 			name := mapNames[mapNode{r, c}]
-			row.Add(mapCell(r == currentRow && c == currentCol, name))
+			var img *canvas.Image
+			if name != "" {
+				img = canvas.NewImageFromFile(mapPath[mapPathfile{r, c}])
+				img.FillMode = canvas.ImageFillContain
+			}
+			row.Add(mapCell(r == currentRow && c == currentCol, name, img))
 		}
 		if r > 0 {
-			rows.Add(Fix(0, 60))
+			rows.Add(Fix(0, 55))
 		}
 		rows.Add(row)
 	}
-
-	return container.New(layout.NewCustomPaddedLayout(0, 0, 70, 0), rows)
+	return container.New(layout.NewCustomPaddedLayout(0, 0, 20, 10), rows)
 }

@@ -262,7 +262,7 @@ func buildChatMapNav(w fyne.Window) fyne.CanvasObject {
 	})
 	mapIcon := gui.NewBigIconButton(mapIconPath, chatMapIconSize, func() {
 		d := dialog.NewCustom("", "Fermer", gui.BuildMapPanel(1, 1), w)
-		d.Resize(fyne.NewSize(1100, 700))
+		d.Resize(fyne.NewSize(1100, 650))
 		d.Show()
 	})
 
