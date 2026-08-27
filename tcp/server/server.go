@@ -1,9 +1,11 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net"
 	"os"
+	. "the_answer_protocol/parsing"
 	. "the_answer_protocol/tcp/common"
 )
 
@@ -12,7 +14,7 @@ func roomChat(conn net.Conn, room string) {
 }
 
 // Gestion de la connexion pour un client
-func handleConnection(conn net.Conn) {
+func handleConnection(conn net.Conn, world WorldFile, maps map[string]Location) {
 	var player string
 
 	// Gestion de la fin de connexion
@@ -20,6 +22,8 @@ func handleConnection(conn net.Conn) {
 		CloseSession(conn, player)
 	}()
 	Connexion(conn, player)
+	char := world.Players[player]
+	fmt.Fprintf(conn, char)
 	Dispatch(conn, player)
 }
 
@@ -34,7 +38,11 @@ func main() {
 
 	// Fermeture à la fin du programme
 	defer ln.Close()
-
+	world, errs := Rally("../../yaml/world.yaml")
+	if len(errs) != 0 {
+		log.Fatalln(errs)
+	}
+	maps := world.World.Locations
 	// Boucle infinie pour accepter la connexion des clients au serveur
 	for {
 		conn, err := ln.Accept()
@@ -50,6 +58,6 @@ func main() {
 		LogAndPrintf(conn, "%s| [INFO] Nouveau client connecté\n", conn.RemoteAddr())
 
 		// Gestion individuelle (Thread) du client
-		go handleConnection(conn)
+		go handleConnection(conn, world, maps)
 	}
 }

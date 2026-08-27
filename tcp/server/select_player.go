@@ -19,5 +19,6 @@ func select_Player(conn net.Conn) string{
 	case "900":
 		return ""
 	}
+	
 	return player
 }
