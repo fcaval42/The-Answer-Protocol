@@ -22,7 +22,7 @@ type Player struct {
 	Respawn Respawn `yaml:"respawn"`
 	Location Location
 	Inventory []Item
-	Quest []Quest
+	Quests []PlayerQuest
 	Connected bool
 }
 
@@ -36,10 +36,15 @@ func validatePlayers(wf WorldFile) []error {
 		}
 		if isBlank(player.Name) {
 			errs = append(errs, fmt.Errorf("player %q: name is empty", id))
-		} else if otherID, ok := seenPlayerNames[player.Name]; ok {
-			errs = append(errs, fmt.Errorf("players %q and %q share the same name %q", otherID, id, player.Name))
 		} else {
-			seenPlayerNames[player.Name] = id
+			if slug := slugifyName(player.Name); slug != id {
+				errs = append(errs, fmt.Errorf("player %q: name %q does not match its id (expected id %q)", id, player.Name, slug))
+			}
+			if otherID, ok := seenPlayerNames[player.Name]; ok {
+				errs = append(errs, fmt.Errorf("players %q and %q share the same name %q", otherID, id, player.Name))
+			} else {
+				seenPlayerNames[player.Name] = id
+			}
 		}
 		if player.HP < 0 {
 			errs = append(errs, fmt.Errorf("player %q: hp %d is negative", id, player.HP))

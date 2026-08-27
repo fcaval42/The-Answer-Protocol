@@ -24,7 +24,10 @@ func handleConnection(conn net.Conn) {
 	defer func() {
 		CloseSession(conn, player)
 	}()
-	Connexion(conn, player)
+	player = Connexion(conn, player)
+	if player == "" {
+		return
+	}
 	Dispatch(conn, player)
 }
 
