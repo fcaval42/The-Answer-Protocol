@@ -2,57 +2,31 @@ package tcp
 
 import (
 	"fmt"
-	"the_answer_protocol/parsing"
 	"encoding/json"
 )
 
-func worldInString(world parsing.WorldFile) string {
-	data, err := json.Marshal(world)
+func ToString[T any](data T) string {
+	b, err := json.Marshal(data)
 	if err != nil {
 		fmt.Println("Error during conversion", err)
 		return ""
 	}
-
-	return string(data)
+	return string(b)
 }
 
-func stringInWorld(word string) parsing.WorldFile {
-
-	var w parsing.WorldFile
-
-	err := json.Unmarshal([]byte(word), &w)
-
+func FromString[T any](s string) T {
+	var v T
+	err := json.Unmarshal([]byte(s), &v)
 	if err != nil {
 		fmt.Println("Error during conversion", err)
-		return w
 	}
-
-	return w
+	return v
 }
 
 
+//Utilisation example:
+// worldStr := toString(world)
+// w := fromString[parsing.WorldFile](worldStr)
 
-func mapInString(world parsing.Location) string {
-	data, err := json.Marshal(world)
-	if err != nil {
-		fmt.Println("Error during conversion", err)
-		return ""
-	}
-
-	return string(data)
-}
-
-func stringInMap(word string) parsing.Location {
-
-	var w parsing.Location
-
-	err := json.Unmarshal([]byte(word), &w)
-
-	if err != nil {
-		fmt.Println("Error during conversion", err)
-		return w
-	}
-
-	return w
-}
-
+// locStr := toString(location)
+// loc := fromString[parsing.Location](locStr)

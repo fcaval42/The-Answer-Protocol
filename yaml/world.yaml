@@ -220,7 +220,7 @@ players:
       hp: 50
       location: "Lumière"
 
-  Maelle:
+  Maëlle:
     name: "Maëlle"
     hp: 130
     weapon:

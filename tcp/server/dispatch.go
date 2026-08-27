@@ -2,6 +2,7 @@ package main
 
 import (
 	. "the_answer_protocol/tcp/common"
+	. "the_answer_protocol/tcp"
 	"net"
 	"strings"
 )
@@ -25,6 +26,18 @@ func Dispatch(conn net.Conn, player string) {
 				ch <- message
 				continue
 			}
+		case "DEBUG LOC\n":
+			mapsLock.Lock()
+			mainloop:
+			for _, loc := range maps {
+				for _, p := range loc.Players {
+					if p.Name == player {
+						LogAndFprintf(conn, "%s\n", ToString(loc))
+						break mainloop
+					}
+				}
+			}
+			mapsLock.Unlock()
 		case "CHAT\n":
 			for {
 				LogAndFprintf(conn, "[SERVER] À qui souhaitez vous envoyer un message (GLOBAL, ROOM, GROUP)?\n")

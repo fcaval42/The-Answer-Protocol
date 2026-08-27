@@ -1,9 +1,7 @@
 package parsing
 
-import (
-	"fmt"
-	"net"
-)
+import ("fmt"
+	"net")
 
 type Weapon struct {
 	Name     string  `yaml:"name"`
@@ -24,7 +22,7 @@ type Player struct {
 	Respawn Respawn `yaml:"respawn"`
 	Inventory []Item
 	Quest []Quest
-	Connect net.Conn
+	Connect net.Conn `json:"-"`
 }
 
 func validatePlayers(wf WorldFile) []error {

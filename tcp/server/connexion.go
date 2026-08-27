@@ -8,7 +8,7 @@ import (
 // Gere la connexion d'un client,
 // en attendant que le client envoie la commande "CONNECT"
 // et en traitant la selection du joueur.
-func Connexion(conn net.Conn, player string) {	
+func Connexion(conn net.Conn, player string) string{	
 	for {
 		message := Recept(conn)
 		if message != "" {
@@ -17,14 +17,14 @@ func Connexion(conn net.Conn, player string) {
 		if message == "CONNECT\n" {
 			player = select_Player(conn)
 			if player == "" {
-				return
+				return ""
 			}
 			ConnectedLock.Lock()
 			ConnectedClients[player] = conn
 			ConnectedLock.Unlock()
-			break
+			return player
 		}
 		if message == "QUIT\n" || message == "" {
-			return
+			return ""
 		}
 	}}
