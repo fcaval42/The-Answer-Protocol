@@ -56,8 +56,9 @@ func main() {
 				if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
 					continue
 				}
-				log.Println("[ERROR] Erreur de lecture :", err)
-				return
+				log.Println("[ERROR] Fin de connexion :", err)
+				fmt.Print("La Peintresse a déchirée la toile !\n")
+				os.Exit(0)
 			}
 			if strings.Contains(response, "\\") {
 				response = strings.ReplaceAll(response, "\\", "\n")
