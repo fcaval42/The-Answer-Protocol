@@ -21,7 +21,7 @@ func Take(world parsing.WorldFile, item string, Player parsing.Player_t) (string
 }
 
 // Inventory renvoie la reponse "OK [...]" listant les ids des items
-// actuellement dans l'inventaire de playerName (cf. RFC 42TAP §5.4.3).
+// actuellement dans l'inventaire de playerName
 func Inventory(world parsing.WorldFile, playerName string) (string, error) {
 	_, player, ok := findPlayerByName(world, playerName)
 	if !ok {

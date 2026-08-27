@@ -8,7 +8,7 @@ import (
 	"the_answer_protocol/parsing"
 )
 
-// Structures dediees a la reponse LOOK (cf. RFC 42TAP §5.1.2), separees du
+// Structures dediees a la reponse LOOK , separees du
 // modele parsing.Location : ce dernier porte des champs internes (Spawns,
 // Players en tant que parsing.Player complets...) qui ne correspondent pas
 // au format attendu par le protocole.
@@ -31,7 +31,7 @@ type lookResponse struct {
 // ConnectCom/PersoChoice, ex: "Maëlle") qui circule comme identifiant de
 // session dans tcp/server, alors que la cle yaml peut differer legerement
 // (accents, tirets...). La cle est tout de meme renvoyee : les commandes qui
-// modifient l'etat du joueur (cf. Quest dans quests.go) en ont besoin pour
+// modifient l'etat du joueur  en ont besoin pour
 // ecrire leur mise a jour dans world.Players.
 func findPlayerByName(world parsing.WorldFile, name string) (id string, player parsing.Player, ok bool) {
 	for id, p := range world.Players {

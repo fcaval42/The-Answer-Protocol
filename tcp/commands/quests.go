@@ -9,7 +9,7 @@ import (
 )
 
 // findNPCInRoom cherche, parmi les npcs presents dans loc, celui dont l'id
-// ou le nom affiche vaut npcName (cf. RFC 42TAP §8.3 : les ressources
+// ou le nom affiche vaut npcName  les ressources
 // peuvent etre referencees par id ou par nom).
 func findNPCInRoom(world parsing.WorldFile, loc parsing.Location, npcName string) (parsing.NPC, bool) {
 	for _, npcID := range loc.NPCs {
@@ -72,10 +72,10 @@ func questProgress(player parsing.Player, q parsing.Quest) string {
 	return "0/1"
 }
 
-// Quest traite la commande QUEST <npc> (cf. RFC 42TAP §5.4.7) : le joueur
+// Quest traite la commande QUEST <npc> : le joueur
 // demande une quete au npc npcName, present dans sa salle courante.
 //
-// Design choice (cf. README "Quest System") : il n'existe pas de commande
+// Design choice : il n'existe pas de commande
 // ACCEPT_QUEST dans le RFC, donc demander une quete a son giver l'ajoute
 // directement au journal du joueur (statut "active") si ce n'est pas deja
 // fait ; redemander une quete deja en cours renvoie simplement ses
@@ -131,11 +131,11 @@ func Quest(world parsing.WorldFile, playerName string, npcName string) (string, 
 	return fmt.Sprintf("OK %s", data), nil
 }
 
-// Quests traite la commande QUESTS (cf. RFC 42TAP §5.4.8) : renvoie le
+// Quests traite la commande QUESTS : renvoie le
 // journal de quetes du joueur. Le statut "completed" est recalcule a chaque
 // appel via questProgress plutot que stocke : ca evite une etape de
 // synchronisation separee tant qu'il n'existe pas de recompense a distribuer
-// au moment precis de la completion (cf. remarque README "Quest System").
+// au moment precis de la completion
 func Quests(world parsing.WorldFile, playerName string) (string, error) {
 	_, player, ok := findPlayerByName(world, playerName)
 	if !ok {
