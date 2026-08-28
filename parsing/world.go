@@ -63,10 +63,6 @@ func ParseWorld(worldYAML []byte) (WorldFile, []error) {
 		enemy.ID = id
 		wf.Enemies[id] = enemy
 	}
-	for id, player := range wf.Players {
-		player.ID = id
-		wf.Players[id] = player
-	}
 	for id, quest := range wf.Quests {
 		quest.ID = id
 		wf.Quests[id] = quest
@@ -87,7 +83,6 @@ func (wf WorldFile) Validate() []error {
 	errs = append(errs, validateItems(wf)...)
 	errs = append(errs, validateNPCs(wf)...)
 	errs = append(errs, validateEnemies(wf)...)
-	errs = append(errs, validatePlayers(wf)...)
 	errs = append(errs, validateQuests(wf)...)
 
 	return errs

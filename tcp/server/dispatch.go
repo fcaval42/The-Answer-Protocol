@@ -3,17 +3,42 @@ package main
 import (
 	. "the_answer_protocol/tcp/commands"
 	. "the_answer_protocol/tcp/common"
+	. "the_answer_protocol/tcp"
+	. "the_answer_protocol/parsing"
 	"net"
 	"strings"
 )
 
+func Move(conn net.Conn, player Player, loc string, message string) Location {
+	// Récupère la direction du mouvement à partir du message
+	direction := strings.TrimSpace(strings.TrimPrefix(message, "MOVE"))
+	mapsLock.Lock()
+	locate := maps[loc]
+	mapsLock.Unlock()
+
+	if locate.Exits[direction] == ""{
+		LogAndFprintf(conn, "[SERVER] Vous ne pouvez pas vous déplacer dans cette direction.\n")
+		return locate
+	}
+	deletePlayerInMap(player.Name)
+	direction = locate.Exits[direction]
+	mapsLock.Lock()
+	locate = maps[direction]
+	locate.Players = append(locate.Players, player)
+	maps[direction] = locate
+	mapsLock.Unlock()
+	return locate
+}
+
+
+
 // Dispatch des commandes du client après la connexion,
 // en fonction de la commande reçue.
-func Dispatch(conn net.Conn, player string) {	
+func Dispatch(conn net.Conn, player Player, loc Location) {	
 	for {
 		message := Recept(conn)
 		pendingInvitesLock.Lock()
-		ch, hasPendingInvite := pendingInvites[player]
+		ch, hasPendingInvite := pendingInvites[player.Name]
 		pendingInvitesLock.Unlock()
 		switch message{
 		case "":
@@ -53,7 +78,20 @@ func Dispatch(conn net.Conn, player string) {
 				ch <- message
 				continue
 			}
+		case "DEBUG LOC\n":
+			mapsLock.Lock()
+			mainloop:
+			for _, l := range maps {
+				for _, p := range l.Players {
+					if p.Name == player.Name {
+						LogAndFprintf(conn, "%s\n", ToString(l))
+						break mainloop
+					}
+				}
+			}
+			mapsLock.Unlock()
 		case "CHAT\n":
+			chat:
 			for {
 				LogAndFprintf(conn, "[SERVER] À qui souhaitez vous envoyer un message (GLOBAL, ROOM, GROUP)?\n")
 				message := Recept(conn)
@@ -63,28 +101,28 @@ func Dispatch(conn net.Conn, player string) {
 				LogAndPrintf(conn, "%s| %s", conn.RemoteAddr().String(), message)
 				switch message {
 				case "GLOBAL\n":
-					GlobalChat(conn, player)
-					return
-					// case "ROOM":
-					// 	roomChat()
-					// 	break chatLoop
-					case "GROUP\n":
-						GroupChat(conn, player)
-						return
+					GlobalChat(conn, player.Name)
+					break chat
+				case "ROOM\n":
+					RoomChat(conn, loc.Name, player.Name)
+					break chat
+				case "GROUP\n":
+					GroupChat(conn, player.Name)
+					break chat
 				}
 			}
 		case "GROUP CREATE\n":
-			GroupCreate(conn, player)
+			GroupCreate(conn, player.Name)
 		case "GROUP INVITE\n":
-			GroupInvite(conn, player)
+			GroupInvite(conn, player.Name)
 		case "GROUP JOIN\n":
 			if DisplayGroup(conn){
 				groupID := Recept(conn)
 				groupID = strings.TrimSpace(groupID)
-				GroupJoin(conn, player, groupID)
+				GroupJoin(conn, player.Name, groupID)
 			}
 		case "GROUP LEAVE\n":
-			if GroupLeave(player) {
+			if GroupLeave(player.Name) {
 				LogAndFprintf(conn, "[SERVER] Vous avez quitté le groupe.\n")
 			} else {
 				LogAndFprintf(conn, "[SERVER] Vous n'êtes pas dans un groupe.\n")
@@ -107,6 +145,9 @@ func Dispatch(conn net.Conn, player string) {
 					LogAndFprintf(conn, "%s\n", resp)
 				}
 			}
+		}
+		if strings.HasPrefix(message, "MOVE"){
+			loc = Move(conn, player, loc.Name, message)
 		}
 		}
 	}
