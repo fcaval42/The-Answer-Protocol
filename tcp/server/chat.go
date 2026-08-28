@@ -45,9 +45,6 @@ func RoomChat(conn net.Conn, loc string, player string) {
 		}
 		roomMessagesMu.Lock()
 		roomMessages[loc] = append(roomMessages[loc], send)
-		for key, value := range roomMessages {
-			LogAndPrintf(conn, "loc: %s\nValue: %s",key, value )
-		}
 		if len(roomMessages[loc]) > 10 {
 			roomMessages[loc] = roomMessages[loc][len(roomMessages[loc])-10:]
 		}

@@ -25,6 +25,16 @@ var (
 	worldLock = sync.Mutex{}
 )
 
+
+func deletePlayerInMap(player string){
+	mapsLock.Lock()
+	for _, loc := range maps {
+		loc.Players = DeletePlayer(loc.Players, player)
+		maps[loc.Name] = loc
+	}
+	mapsLock.Unlock()
+}
+
 func DeletePlayer(players []Player, player string) []Player {
 	for i, p := range players {
 		if p.Name == player {
@@ -34,18 +44,29 @@ func DeletePlayer(players []Player, player string) []Player {
 	return players
 }
 
+
+
+func sendLocation(location Location, conn net.Conn) Location {
+	mapsLock.Lock()
+	defer mapsLock.Unlock()
+	for _, l := range maps{
+		if l.Name == location.Name {
+			location = l
+			break
+		}
+	}
+	fmt.Fprintf(conn, "%s\n", ToString(location))
+	return location
+}
+
+
 // Gestion de la connexion pour un client
 func handleConnection(conn net.Conn) {
 	var player string
 
 	// Gestion de la fin de connexion
 	defer func() {
-		mapsLock.Lock()
-		for _, loc := range maps {
-			loc.Players = DeletePlayer(loc.Players, player)
-			maps[loc.Name] = loc
-		}
-		mapsLock.Unlock()
+		deletePlayerInMap(player)
 		CloseSession(conn, player)
 	}()
 	player = Connexion(conn, player)
@@ -65,15 +86,13 @@ func handleConnection(conn net.Conn) {
 	location := maps[play.Respawn.Location]
 	location.Players = append(location.Players, play)
 	maps[play.Respawn.Location] = location
-	LogAndPrintf(conn, "%s", ToString(maps[play.Respawn.Location]))
 	mapsLock.Unlock()
 
 	// Charge le monde et le point de respawn du joueur pour lenvoyer au client
 	fmt.Fprintf(conn, "%s\n", worldChar)
-	loc := ToString(location)
-	fmt.Fprintf(conn, "%s\n", loc)
+	fmt.Fprintf(conn, "%s\n", ToString(location))
 
-	Dispatch(conn, player, location.Name)
+	Dispatch(conn, play, location)
 }
 
 func main() {
