@@ -2,280 +2,304 @@ package gui
 
 import (
 	"fmt"
-	"image/color" // image = permet de toucher aux images en Go
-	// color = fournit couleurs/modèles prêts à l'emploi.
 
 	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/app"
-	"fyne.io/fyne/v2/canvas"
 	"fyne.io/fyne/v2/container"
+	"fyne.io/fyne/v2/dialog"
+	"fyne.io/fyne/v2/layout"
 	"fyne.io/fyne/v2/widget"
 
-	// "the_answer_protocol/gui"
 	"the_answer_protocol/parsing"
-	// "the_answer_protocol/tcp"
-
-	// "the_answer_protocol/tcp/commands"
 )
 
-// ---- Données factices, en attendant le vrai serveur ----
 
-type Room struct {
-	name        string
-	description string
-	exits       []string
-	items       []string
-	npcs        []string
-	background  string // chemin vers le gif de fond propre à cette salle
-}
-
-type Player struct {
-	name      string
-	hp        float64 // 0-100
-	localisation string
-	inventory []string
-}
-
-var fakeRoom = Room{
-	name:        "Village Gestral",
-	description: "Une odeur de sueur et de métal flotte entre les huttes.",
-	exits:       []string{"Océan suspendu", "Cimetière gestral"},
-	items:       []string{"Chroma"},
-	npcs:        []string{"Renoir"},
-	background:  "assets/village_gestral.png",
-}
-
-// deuxième salle factice, juste pour tester visuellement le changement de
-// fond avant que le vrai MOVE réseau soit branché au serveur
-var fakeRoom2 = Room{
-	name:        "Cimetière Gestral",
-	description: "De minuscules tombes, dont certaines sont vides.",
-	exits:       []string{"Village Gestral"},
-	background:  "assets/cimetiere_gestral.png",
-}
-
-var fakePlayer = Player{
-	name:      "Gustave",
-	hp:        100,
-	inventory: []string{"Lumina", "Pictos"},
-}
-
-
-// je met un rectangle en fond pour les deux colonnes gauche et droite
-func withMinWidth(obj fyne.CanvasObject, w float32) fyne.CanvasObject {
-	sizer := canvas.NewRectangle(color.Transparent)
-	sizer.SetMinSize(fyne.NewSize(w, 0))
-	return container.NewStack(sizer, obj)
-}
-
-// ----------------- Header (titre + infos salles) ------------------
+// ----------------- Header (titre) ------------------
 
 func buildHeader() fyne.CanvasObject {
-	title := widget.NewLabelWithStyle(
-		"The Answer Protocol",
-		fyne.TextAlignLeading,
-		fyne.TextStyle{Bold: true},
-	)
-	counters := widget.NewLabel("2 dans la salle - 7 en ligne")
+	title := NewTitleText("The Answer Protocol", 60)
 
-	return container.NewBorder(nil, nil, title, counters, nil)
+	return container.NewBorder(nil, Fix(0, 40), title, nil, nil)
 }
-
 
 // ----------------- Panneau de salle (gauche) ------------------
 
-func buildRoomPanel(r Room) fyne.CanvasObject{
-	// r Room = structure Room qui contient données de la salle
-	// sortie fyne.CanvasObject = élément graphique (conteneur, widget...)
+func buildRoomPanel(loc parsing.Location, world parsing.WorldFile,
+	changeRoom func(parsing.Location)) fyne.CanvasObject {
 
 	// ------------------ TITRE ------------------
-	title := widget.NewLabelWithStyle(
-		r.name,
-		fyne.TextAlignLeading,  // alignement à gauche
-		fyne.TextStyle{Bold: true},  // texte en gras
-	)
-	desc := widget.NewLabel(r.description) // label pour la description
-	desc.Wrapping = fyne.TextWrapWord // active retour à la ligne auto (texte
-	// s'adapte à la largeur du conteneur)
+	title := NewTitleText(loc.Name, 40)
+	desc := NewWrappingBodyText(loc.Description)
 
 	// ------------------ SORTIE -----------------
-	exitsRow := container.NewHBox() // conteneur horizontal qui contiendra les
-	// boutons des sorties
-	// NewHBox = crée nv conteneur + objets seront placés de gauche à droite et
-	// tjrs affichés à leur taille min horizontale.
-	for _, e := range r.exits {
-		exit := e // on crée une nvlle variable locale à chaque tour.
-		exitsRow.Add(widget.NewButton(exit, func() { // acxtion du bouton
-			fmt.Println("MOVE TO: ", exit) // A REMPLACER par ex sendCommand
+	exitsRow := container.New(layout.NewGridWrapLayout(fyne.NewSize(180, 40)))
+	seenExits := make(map[string]bool)
+	for _, destID := range loc.Exits {
+		if seenExits[destID] {
+			continue // plusieurs directions peuvent mener à la même salle
+		}
+		seenExits[destID] = true
+
+		destLoc, ok := world.World.Locations[destID]
+		exitLabel := destID
+		if ok {
+			exitLabel = destLoc.Name
+		}
+		dest, destOK := destLoc, ok
+
+		exitsRow.Add(NewButton(exitLabel, func() {
+			fmt.Println("MOVE TO: ", exitLabel)
+			if destOK {
+				changeRoom(dest)
+			}
 		}))
 	}
 
 	// ------------------- ITEMS -----------------
 	itemsRow := container.NewHBox()
-	for _, i := range r.items {
-		item := i // un bouton par objet
-		itemsRow.Add(widget.NewButton(item, func() {
-			fmt.Println("TAKE: ", item) // A REMPLACER
+	for _, itemID := range loc.Items {
+		itemName := itemID
+		if it, ok := world.Items[itemID]; ok {
+			itemName = it.Name
+		}
+		item := itemName // un bouton par objet
+		itemsRow.Add(NewButton(item, func() {
+			fmt.Println("TAKE: ", item)
 		}))
 	}
 
 	// ------------------- PNJ --------------------
 	npcsRow := container.NewHBox()
-	for _, n := range r.npcs {
-		npc := n
-		npcsRow.Add(widget.NewButton(npc + "TALK", func() {
-			fmt.Println("TALK: ", npc) // A REMPLACER
+	for _, npcID := range loc.NPCs {
+		npcName := npcID
+		if n, ok := world.NPCs[npcID]; ok {
+			npcName = n.Name
+		}
+		npc := npcName
+		npcsRow.Add(NewButton(npc+"TALK", func() {
+			fmt.Println("TALK: ", npc)
 		}))
-		npcsRow.Add(widget.NewButton(npc + "ATTACK", func() {
-			fmt.Println("ATTACK:", npc) // A REMPLACER
+		npcsRow.Add(NewButton(npc+"ATTACK", func() {
+			fmt.Println("ATTACK:", npc)
 		}))
 	}
 
 	// ----------------- ACTIONS --------------------
 	actionsGrid := container.NewGridWithColumns(2,
-		widget.NewButton("Status", func() { fmt.Println("STATUS") }), // A REMPLACER
-		widget.NewButton("Quest", func() { fmt.Println("QUEST") }), // A REMPLACER
-		widget.NewButton("Status", func() { fmt.Println("STATUS") }), // A REMPLACER
-		widget.NewButton("Quit", func() { fmt.Println("QUIT") }), // A REMPLACER
-		)
+		NewButton("Status", func() { fmt.Println("STATUS") }),
+		NewButton("Quest", func() { fmt.Println("QUEST") }),
+		NewButton("Inventory", func() { fmt.Println("INVENTORY") }),
+		NewButton("Quit", func() { fmt.Println("QUIT") }),
+	)
 
 	// conteneur vertical. Respecte ordre d'affichage
 	return container.NewVBox(
+		Fix(0, 8),
 		title,
+		Fix(0, 8),
 		desc,
-		widget.NewSeparator(),      // ligne de séparation
-		widget.NewLabel("Sortie"),
+		Fix(0, 10),
+		NewTitleText("Sortie", 25),
+		Fix(0, 8),
 		exitsRow,
-		widget.NewLabel("Objets"),
+		Fix(0, 10),
+		NewTitleText("Objets", 25),
+		Fix(0, 8),
 		itemsRow,
-		widget.NewLabel("PNJ"),
+		Fix(0, 15),
+		NewTitleText("PNJ", 25),
+		Fix(0, 8),
 		npcsRow,
-		widget.NewSeparator(),
-		widget.NewLabelWithStyle("Actions", fyne.TextAlignLeading,
-	fyne.TextStyle{Bold: true}),
+		Fix(0, 15),
+		NewTitleText("Actions", 25),
+		Fix(0, 8),
 		actionsGrid,
 	)
 }
 
 // --- Panneau personnage : PV + inventaire (droite, haute) -----
 
-func buildCharacterPanel(p Player) fyne.CanvasObject {
-	name := widget.NewLabelWithStyle(p.name, fyne.TextAlignLeading,
-		fyne.TextStyle{Bold: true})
+func statCell(label string, value string) fyne.CanvasObject {
+	l := NewBodyText(label, 18)
+	v := NewBodyText(value, 18)
 
-	// widget progress Bar = widget déjà dispo de base youpi
-	hpBar := widget.NewProgressBar()
+	return container.NewVBox(l, v)
+}
+
+func buildCharacterPanel(player parsing.Player) fyne.CanvasObject {
+
+	// ----------------- AVATAR + NOM PERSO --------------------
+	name := NewTitleText(player.Name, 70)
+	name.TextSize = 48
+	name.TextStyle = fyne.TextStyle{Bold: true}
+
+	avatar := NewAvatar(avatarPath(player.Name), 100)
+	nameRow := container.NewHBox(avatar, name)
+
+	// ----------------- BARRE HP --------------------
+
+	hpBar, hpBarThemed := NewColoredProgressBar(HPColor)
 	hpBar.Min = 0
-	hpBar.Max = 100
-	hpBar.Value = p.hp
-	hpLabel := widget.NewLabel(fmt.Sprintf("PV %g/100", p.hp))
+	hpBar.Max = float64(player.HP) // MAX HP ?? voir comment ils mettent à jour
+	hpBar.Value = float64(player.HP)
+	hpBar.TextFormatter = func() string { return "" }
+	hpText := NewTitleText(fmt.Sprintf("%d / %d", player.HP, player.HP), 20)
+	hpStack := container.NewStack(hpBarThemed, container.NewCenter(hpText))
 
-	invLabel := widget.NewLabelWithStyle("Inventaire", fyne.TextAlignLeading,
-		fyne.TextStyle{Bold : true})
+	// ----------------- STATISTIQUES --------------------
+
+	statsTitle := NewTitleText("Statistiques de combat", 25)
+	statsGrid := container.NewGridWithColumns(2,
+		statCell("Puissance d'attaque", fmt.Sprintf("%d", player.Attack)),
+		statCell("Défense", fmt.Sprintf("%d", player.Defense)),
+		statCell("Chances de critique", fmt.Sprintf("%.0f%%", player.Weapon.Critical*100)),
+	)
+
+	// ----------------- INVENTAIRE ---------------------
+
+	invLabel := NewTitleText("Inventaire", 25)
 	invRow := container.NewHBox()
-	for _, i := range p.inventory {
-		item := i
-		invRow.Add(widget.NewButton(item, func() {
+	for _, i := range player.Inventory {
+		item := i.Name
+		invRow.Add(NewButton(item, func() {
 			fmt.Println("DROP: ", item)
 		}))
 	}
 
-	return container.NewVBox(name, hpLabel, hpBar, invLabel, invRow)
+	return container.NewVBox(
+		Fix(0, 8),
+		nameRow,
+		Fix(0, 15),
+		hpStack,
+		Fix(0, 15),
+		statsTitle,
+		Fix(0, 8),
+		statsGrid,
+		Fix(0, 15),
+		invLabel,
+		Fix(0, 8),
+		invRow,
+	)
 }
-
-
-// ---------------- Bouton carte (centre) ------------
-
-func buildMapButton() fyne.CanvasObject {
-	btn := widget.NewButton("Voir Map", func() {
-		fmt.Println("MAP")  // FAIRE une vue carte du monde
-	})
-
-	return container.NewCenter(btn)
-}
-
 
 // ---- Chat (droite, bas) : onglets Global/Salle/Groupe séparés des logs ----
 
 func buildChatPanel() fyne.CanvasObject {
-	// fonction dans une fonction -> Makescope = fonction interne. Définie à
-	// l'intérieur de chat pour créer un conteneur réutilisable avec un sample
-	// différent pour chaque objet
+
 	makeScope := func(sample string) fyne.CanvasObject {
 		messages := widget.NewLabel(sample)
 		messages.Wrapping = fyne.TextWrapWord
 		input := widget.NewEntry()
 		input.SetPlaceHolder("Écrire un message...")
-		send := widget.NewButton("Envoyer", func() {
+		send := NewButton("Envoyer", func() {
 			println("CHAT:", input.Text)
 			input.SetText("")
 		})
 		return container.NewBorder(nil, container.NewBorder(nil, nil, nil, send, input), nil, nil, messages)
 	}
 
-	tabs := container.NewAppTabs(
+	return container.NewAppTabs(
 		container.NewTabItem("Global", makeScope("Alice: ...")),
 		container.NewTabItem("Salle", makeScope("Venus: Parle mieux on comprend rien")),
 		container.NewTabItem("Groupe", makeScope("")),
 	)
+}
 
-	return container.NewBorder(widget.NewLabelWithStyle("Chat",
-	fyne.TextAlignLeading, fyne.TextStyle{Bold: true}), nil, nil, nil, tabs)
+// ---- CHAT / MAP (droite, bas) : boutons pour ouvrir les panneaux dans des fenêtres séparées ----
+
+const chatMapIconSize = 100
+
+var (
+	chatIconPath = "assets/icons/icon_chats.png"
+	mapIconPath  = "assets/icons/icon_map.png"
+)
+
+func buildChatMapNav(w fyne.Window, getCurrentRoom func() parsing.Location) fyne.CanvasObject {
+	titlesRow := container.NewGridWithColumns(2,
+		container.NewCenter(NewTitleText("Chat", 25)),
+		container.NewCenter(NewTitleText("Carte", 25)),
+	)
+
+	chatIcon := NewBigIconButton(chatIconPath, chatMapIconSize, func() {
+		d := dialog.NewCustom("Chat", "Fermer", buildChatPanel(), w)
+		d.Resize(fyne.NewSize(900, 650))
+		d.Show()
+	})
+	mapIcon := NewBigIconButton(mapIconPath, chatMapIconSize, func() {
+		room := getCurrentRoom()
+		row, col, ok := roomGridPosition(room.Name)
+		if !ok {
+			row, col = -1, -1
+		}
+		d := dialog.NewCustom("", "Fermer", BuildMapPanel(row, col), w)
+		d.Resize(fyne.NewSize(1100, 650))
+		d.Show()
+	})
+
+	iconsRow := container.NewGridWithColumns(2,
+		container.NewCenter(chatIcon),
+		container.NewCenter(mapIcon),
+	)
+
+	return container.NewVBox(titlesRow, Fix(0, 0), iconsRow)
+}
+
+// ------- Run ouvre la fenêtre du GUI quand perso vient d'être choisi côté server --------
+
+func findPlayer(world parsing.WorldFile, name string) (parsing.Player, bool) {
+	for _, player := range world.Players {
+		if player.Name == name {
+			return player, true
+		}
+	}
+	return parsing.Player{}, false
 }
 
 
-// Run ouvre la fenêtre du GUI pour le joueur dont le personnage vient
-// d'être choisi côté client TCP.
 func Run(playerName string, world parsing.WorldFile) {
 
-	player := fakePlayer
-	player.name = playerName
-
-	fmt.Println(world)
-	a := app.New()
-	w := a.NewWindow("The Answer Protocol")
-	w.Resize(fyne.NewSize(1300, 800))
-	w.SetFixedSize(true) // empêche utilisateur de redimensionner fenêtre
-
-	// petit annuaire de démo : nom de sortie -> salle cible.
-	// Plus tard, ça n'existera plus : le serveur renverra directement
-	// la nouvelle Room en réponse à MOVE, via le protocole réseau.
-	demoRooms := map[string]Room{
-		"Village Gestral":   fakeRoom,
-		"Cimetière gestral": fakeRoom2,
-		"Cimetière Gestral": fakeRoom2,
+	player, ok := findPlayer(world, playerName)
+	if !ok {
+		fmt.Println("[ATTENTION] joueur inconnu dans world.Players: ", player.Name)
 	}
 
-	background, bgImage := BuildBackground(fakeRoom.background)
+	startLoc := world.World.Locations[player.Respawn.Location]
+
+	a := app.New()
+	w := a.NewWindow("The Answer Protocol")
+	w.Resize(fyne.NewSize(1400, 850))
+	w.SetFixedSize(true) // empêche utilisateur de redimensionner fenêtre
+
+	background, bgImage := BuildBackground(startLoc.Background)
 
 	// garde une référence stable qu'on peut vider/remplir pour ne pas
 	// reconstruire toute la fenêtre à chaque changement de salle.
 	roomContainer := container.NewStack()
 
-	changeRoom := func(newRoom Room) {
-		SetRoomBackground(bgImage, newRoom.background)
-		roomContainer.Objects = []fyne.CanvasObject{buildRoomPanel(newRoom)} // VOIR
+	currentRoom := startLoc // salle actuellement affichée, suivie pour la carte
+
+	// pour changer d'affichage quand on change de room
+	var changeRoom func(newRoom parsing.Location)
+	changeRoom = func(newRoom parsing.Location) {
+		currentRoom = newRoom
+		SetRoomBackground(bgImage, newRoom.Background)
+		roomContainer.Objects = []fyne.CanvasObject{buildRoomPanel(newRoom, world, changeRoom)}
 		roomContainer.Refresh()
 	}
-	changeRoom(fakeRoom) // affichage initial
-	_ = demoRooms // gardé pour un futur test manuel : changeRoom(demoRooms["cimetière gestral"])
+	changeRoom(startLoc) // affichage initial
 
-
-	//roomPanel := withMinWidth(buildRoomPanel(fakeRoom), 420)
-	mapButton := buildMapButton()
-	rightPanel := withMinWidth(container.NewVBox(
+	rightPanel := WithMinWidth(container.NewVBox(
 		buildCharacterPanel(player),
-		widget.NewSeparator(),
-		buildChatPanel(),
+		Fix(0, 15),
+		buildChatMapNav(w, func() parsing.Location { return currentRoom }),
 	), 420)
 
-	body := container.NewBorder(nil, nil, withMinWidth(roomContainer, 420), rightPanel, mapButton)
+	body := container.NewBorder(nil, nil, WithMinWidth(roomContainer, 420), rightPanel, nil)
 
-	// NewBorder = créer un conteneur avec des bordures personnalisées pour
-	// organiser les éléments d'une interface (top, bottom, left, right, content)
+	// NewBorder = conteneur avce header en haut, body au milieu, rightPanel à droite, roomContainer à gauche + bordures personnalisées
 	content := container.NewBorder(buildHeader(), nil, nil, nil, body)
 
-	full := container.NewStack(background, container.NewPadded(content))
+	full := container.NewStack(background, container.New(layout.NewCustomPaddedLayout(12, 4, 47, 47), content))
 
 	w.SetContent(full)
 	w.ShowAndRun()
