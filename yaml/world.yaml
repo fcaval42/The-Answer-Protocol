@@ -10,6 +10,7 @@ world:
         east: "Vallées_fleuries"
         south: "Vieille_lumière"
       npcs: ["Sophie"]
+      background: "assets/room/lumiere.png"
 
     Vallées_fleuries:
       name: "Vallées fleuries"
@@ -21,6 +22,7 @@ world:
         south: "Océan_suspendu"
       enemies: ["Névron"]
       items: ["Lumina"]
+      background: "assets/room/vallons_fleuries.png"
 
     Plage:
       name: "Plage"
@@ -29,6 +31,7 @@ world:
       exits:
         west: "Vallées_fleuries"
       items: ["Abysseram"]
+      background: "assets/room/plage.png"
 
     Océan_suspendu:
       name: "Océan suspendu"
@@ -38,6 +41,7 @@ world:
         north: "Vallées_fleuries"
         west: "Nid_esquie"
         east: "Village_gestral"
+      background: "assets/room/océan_suspendu.png"
 
     Nid_esquie:
       name: "Nid d'Esquie"
@@ -45,6 +49,7 @@ world:
       exits:
         east: "Océan_suspendu"
       npcs: ["Esquie"]
+      background: "assets/room/nid_esquie.png"
 
     Village_gestral:
       name: "Village Gestral"
@@ -52,7 +57,7 @@ world:
       exits:
         west: "Océan_suspendu"
         east: "Cimetière_gestral"
-        south: "Falaise_rochevague"
+        south: "Rochevague"
       items: ["Pictos"]
       background: "assets/village_gestral.png"
 
@@ -63,9 +68,10 @@ world:
       exits:
         west: "Village_gestral"
       enemies: ["Renoir"]
+      background: "assets/room/cimetiere_gestral.png"
 
-    Falaise_rochevague:
-      name: "Falaise de Rochevague"
+    Rochevague:
+      name: "Rochevague"
       description: "Un promontoire rocheux battu par des vagues qui
         n'atteignent jamais le sol, comme si la falaise elle-même
         refusait de tomber."
@@ -73,16 +79,16 @@ world:
         north: "Village_gestral"
         west: "Terres_oubliées"
       items: ["Chroma"]
+      background: "assets/room/falaise.png"
 
     Terres_oubliées:
       name: "Terres oubliées"
       description: "Le sang qui gît ici y est plus rouge que le
         coucher du soleil."
       exits:
-        east: "Falaise_rochevague"
-        north: "Vieille_lumière"
-        west: "Falaise_rochevague"
-        south: "Vieille_lumière"
+        west: "Vieille_lumière"
+        east: "Rochevague"
+      background: "assets/room/terres_oubliees.png"
 
     Vieille_lumière:
       name: "Vieille Lumière"
@@ -93,6 +99,7 @@ world:
         north: "Lumière"
         south: "Terres_oubliées"
       enemies: ["Peintress"]
+      background: "assets/room/vieille_lumiere.png"
 
 
 items:

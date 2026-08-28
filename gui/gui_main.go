@@ -24,24 +24,34 @@ func buildHeader() fyne.CanvasObject {
 
 // ----------------- Panneau de salle (gauche) ------------------
 
-func buildRoomPanel(loc parsing.Location, world parsing.WorldFile) fyne.CanvasObject {
-	// r Room = structure Room qui contient données de la salle
-	// sortie fyne.CanvasObject = élément graphique (conteneur, widget...)
+func buildRoomPanel(loc parsing.Location, world parsing.WorldFile,
+	changeRoom func(parsing.Location)) fyne.CanvasObject {
 
 	// ------------------ TITRE ------------------
 	title := NewTitleText(loc.Name, 40)
 	desc := NewWrappingBodyText(loc.Description)
 
 	// ------------------ SORTIE -----------------
-	exitsRow := container.NewHBox()
+	exitsRow := container.New(layout.NewGridWrapLayout(fyne.NewSize(180, 40)))
+	seenExits := make(map[string]bool)
 	for _, destID := range loc.Exits {
-		destName := destID
-		if dest, ok := world.World.Locations[destID]; ok {
-			destName = dest.Name
+		if seenExits[destID] {
+			continue // plusieurs directions peuvent mener à la même salle
 		}
-		exit := destName
-		exitsRow.Add(NewButton(exit, func() {
-			fmt.Println("MOVE TO: ", exit)
+		seenExits[destID] = true
+
+		destLoc, ok := world.World.Locations[destID]
+		exitLabel := destID
+		if ok {
+			exitLabel = destLoc.Name
+		}
+		dest, destOK := destLoc, ok
+
+		exitsRow.Add(NewButton(exitLabel, func() {
+			fmt.Println("MOVE TO: ", exitLabel)
+			if destOK {
+				changeRoom(dest)
+			}
 		}))
 	}
 
@@ -269,10 +279,11 @@ func Run(playerName string, world parsing.WorldFile) {
 	currentRoom := startLoc // salle actuellement affichée, suivie pour la carte
 
 	// pour changer d'affichage quand on change de room
-	changeRoom := func(newRoom parsing.Location) {
+	var changeRoom func(newRoom parsing.Location)
+	changeRoom = func(newRoom parsing.Location) {
 		currentRoom = newRoom
 		SetRoomBackground(bgImage, newRoom.Background)
-		roomContainer.Objects = []fyne.CanvasObject{buildRoomPanel(newRoom, world)}
+		roomContainer.Objects = []fyne.CanvasObject{buildRoomPanel(newRoom, world, changeRoom)}
 		roomContainer.Refresh()
 	}
 	changeRoom(startLoc) // affichage initial

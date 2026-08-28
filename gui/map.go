@@ -28,17 +28,17 @@ type mapPathfile struct {
 var mapNames = map[mapNode]string{
 	{0, 0}: "Lumière",
 	{0, 1}: "",
-	{0, 2}: "Vallons fleuries",
+	{0, 2}: "Vallées fleuries",
 	{0, 3}: "Plage",
 	{1, 0}: "",
 	{1, 1}: "Nid d'Esquie",
-	{1, 2}: "Océan Suspendu",
+	{1, 2}: "Océan suspendu",
 	{1, 3}: "Village Gestral",
 	{1, 4}: "Cimetière Gestral",
 	{2, 0}: "Vieille Lumière",
 	{2, 1}: "",
 	{2, 2}: "Terres oubliées",
-	{2, 3}: "Falaise de Rochevague",
+	{2, 3}: "Rochevague",
 }
 
 var mapPath = map[mapPathfile]string{
