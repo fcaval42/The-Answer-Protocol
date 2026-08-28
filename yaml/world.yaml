@@ -54,6 +54,7 @@ world:
         east: "Cimetière_gestral"
         south: "Falaise_rochevague"
       items: ["Pictos"]
+      background: "assets/village_gestral.png"
 
     Cimetière_gestral:
       name: "Cimetière Gestral"
