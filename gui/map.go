@@ -9,13 +9,28 @@ import (
 	"fyne.io/fyne/v2/layout"
 )
 
+// cache des images de la map pour ne les lire/décoder qu'une seule fois depuis le disque
+var mapImageCache = map[string]fyne.Resource{}
+
+func loadMapImage(path string) fyne.Resource {
+	if res, ok := mapImageCache[path]; ok {
+		return res
+	}
+	res, err := fyne.LoadResourceFromPath(path)
+	if err != nil {
+		return nil
+	}
+	mapImageCache[path] = res
+	return res
+}
+
 const mapCellSizeH = 220
 const mapCellSizeV = 110
 const rows, cols = 3, 3
 
 var mapCellColor = color.NRGBA{R: 255, G: 255, B: 225, A: 20}        // couleur blanche de base
 var mapCurrentCellColor = color.NRGBA{R: 232, G: 216, B: 176, A: 90} // beige comme le thème de base
-var mapBackgroundPath = "assets/fleur2.png"
+var mapBackgroundPath = "assets/mapBackground.png"
 
 type mapNode struct {
 	row, col int
@@ -105,7 +120,7 @@ func BuildMapPanel(currentRow, currentCol int) fyne.CanvasObject {
 			name := mapNames[mapNode{r, c}]
 			var img *canvas.Image
 			if name != "" {
-				img = canvas.NewImageFromFile(mapPath[mapPathfile{r, c}])
+				img = canvas.NewImageFromResource(loadMapImage(mapPath[mapPathfile{r, c}]))
 				img.FillMode = canvas.ImageFillContain
 			}
 			row.Add(mapCell(r == currentRow && c == currentCol, name, img))
@@ -115,7 +130,7 @@ func BuildMapPanel(currentRow, currentCol int) fyne.CanvasObject {
 		}
 		rows.Add(row)
 	}
-	background := canvas.NewImageFromFile(mapBackgroundPath)
+	background := canvas.NewImageFromResource(loadMapImage(mapBackgroundPath))
 	background.FillMode = canvas.ImageFillStretch
 
 	return container.NewStack(background, container.New(layout.NewCustomPaddedLayout(0, 0, 20, 10), rows))
