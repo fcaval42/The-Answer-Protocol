@@ -9,7 +9,6 @@ import (
 	. "the_answer_protocol/parsing"
 	. "the_answer_protocol/tcp"
 	. "the_answer_protocol/tcp/common"
-	"the_answer_protocol/parsing"
 )
 
 func roomChat(conn net.Conn, room string) {
@@ -34,6 +33,20 @@ func deletePlayerInMap(player string){
 		maps[loc.Name] = loc
 	}
 	mapsLock.Unlock()
+}
+
+// disconnectPlayer marque le joueur comme deconnecte dans le monde partage :
+// contrairement a deletePlayerInMap (reutilisee par MOVE pour changer le
+// joueur de salle), elle ne doit etre appelee qu'a la fermeture reelle de la
+// session.
+func disconnectPlayer(player string) {
+	worldLock.Lock()
+	if p, ok := world.Players[player]; ok {
+		p.Connected = false
+		p.Connect = nil
+		world.Players[player] = p
+	}
+	worldLock.Unlock()
 }
 
 func DeletePlayer(players []Player, player string) []Player {
@@ -68,6 +81,7 @@ func handleConnection(conn net.Conn) {
 	// Gestion de la fin de connexion
 	defer func() {
 		deletePlayerInMap(player)
+		disconnectPlayer(player)
 		CloseSession(conn, player)
 	}()
 	player = Connexion(conn, player)
@@ -78,16 +92,21 @@ func handleConnection(conn net.Conn) {
 	worldLock.Lock()
 	play := world.Players[player]
 	play.Connect = conn
-	world.Players[player] = play
-	worldChar := ToString(world)
+	play.Connected = true
 	worldLock.Unlock()
 
 	// Mets le joueur dans la map a son point de respawn
 	mapsLock.Lock()
 	location := maps[play.Respawn.Location]
+	play.Location = location
 	location.Players = append(location.Players, play)
 	maps[play.Respawn.Location] = location
 	mapsLock.Unlock()
+
+	worldLock.Lock()
+	world.Players[player] = play
+	worldChar := ToString(world)
+	worldLock.Unlock()
 
 	// Charge le monde et le point de respawn du joueur pour lenvoyer au client
 	fmt.Fprintf(conn, "%s\n", worldChar)

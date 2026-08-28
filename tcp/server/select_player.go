@@ -6,7 +6,6 @@ import (
 	"net"
 	"strings"
 	. "the_answer_protocol/tcp/commands"
-	. "the_answer_protocol/tcp/common"
 )
 
 

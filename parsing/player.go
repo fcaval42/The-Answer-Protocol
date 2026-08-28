@@ -21,7 +21,9 @@ type Player struct {
 	Defense int     `yaml:"defense"`
 	Respawn Respawn `yaml:"respawn"`
 	Inventory []Item
-	Quest []Quest
+	Quests []PlayerQuest
+	Location Location
+	Connected bool
 	Connect net.Conn `json:"-"`
 }
 

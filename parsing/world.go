@@ -26,12 +26,12 @@ type Player_t struct {
 	Inventory    []string
 }
 
-type World struct {
+type WorldMap struct {
 	Locations map[string]Location `yaml:"locations"`
 }
 
 type WorldFile struct {
-	World   World             `yaml:"world"`
+	World   WorldMap          `yaml:"world"`
 	Items   map[string]Item   `yaml:"items"`
 	NPCs    map[string]NPC    `yaml:"npcs"`
 	Enemies map[string]Enemy  `yaml:"enemies"`

@@ -1,7 +1,7 @@
 package main
 
 import (
-	. "the_answer_protocol/tcp/commands"
+	"the_answer_protocol/tcp/commands"
 	. "the_answer_protocol/tcp/common"
 	. "the_answer_protocol/tcp"
 	. "the_answer_protocol/parsing"
@@ -24,9 +24,15 @@ func Move(conn net.Conn, player Player, loc string, message string) Location {
 	direction = locate.Exits[direction]
 	mapsLock.Lock()
 	locate = maps[direction]
+	player.Location = locate
 	locate.Players = append(locate.Players, player)
 	maps[direction] = locate
 	mapsLock.Unlock()
+
+	worldLock.Lock()
+	world.Players[player.Name] = player
+	worldLock.Unlock()
+
 	return locate
 }
 
@@ -34,7 +40,7 @@ func Move(conn net.Conn, player Player, loc string, message string) Location {
 
 // Dispatch des commandes du client après la connexion,
 // en fonction de la commande reçue.
-func Dispatch(conn net.Conn, player Player, loc Location) {	
+func Dispatch(conn net.Conn, player Player, loc Location) {
 	for {
 		message := Recept(conn)
 		pendingInvitesLock.Lock()
@@ -47,27 +53,27 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 			nb_player := 5 - len(PersoChoice)
 			LogAndFprintf(conn, "[SERVER] Il y a actuellement %d membre.s d'expédition\n", nb_player)
 		case "LOOK\n":
-			WorldLock.Lock()
-			resp, err := Look(World, player)
-			WorldLock.Unlock()
+			worldLock.Lock()
+			resp, err := commands.Look(world, player.Name)
+			worldLock.Unlock()
 			if err != nil {
 				LogAndFprintf(conn, "ERR 900 CONNECTION_FAILED\n")
 			} else {
 				LogAndFprintf(conn, "%s\n", resp)
 			}
 		case "INVENTORY\n":
-			WorldLock.Lock()
-			resp, err := Inventory(World, player)
-			WorldLock.Unlock()
+			worldLock.Lock()
+			resp, err := commands.Inventory(world, player.Name)
+			worldLock.Unlock()
 			if err != nil {
 				LogAndFprintf(conn, "ERR 900 CONNECTION_FAILED\n")
 			} else {
 				LogAndFprintf(conn, "%s\n", resp)
 			}
 		case "QUESTS\n":
-			WorldLock.Lock()
-			resp, err := Quests(World, player)
-			WorldLock.Unlock()
+			worldLock.Lock()
+			resp, err := commands.Quests(world, player.Name)
+			worldLock.Unlock()
 			if err != nil {
 				LogAndFprintf(conn, "ERR 900 CONNECTION_FAILED\n")
 			} else {
@@ -136,9 +142,9 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 			// faire matcher par un case exact du switch.
 			if npcName, ok := strings.CutPrefix(message, "QUEST "); ok {
 				npcName = strings.TrimSuffix(npcName, "\n")
-				WorldLock.Lock()
-				resp, err := Quest(World, player, npcName)
-				WorldLock.Unlock()
+				worldLock.Lock()
+				resp, err := commands.Quest(world, player.Name, npcName)
+				worldLock.Unlock()
 				if err != nil {
 					LogAndFprintf(conn, "ERR 900 CONNECTION_FAILED\n")
 				} else {
