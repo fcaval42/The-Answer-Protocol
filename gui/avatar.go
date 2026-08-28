@@ -7,8 +7,7 @@ import (
 	"fyne.io/fyne/v2/layout"
 )
 
-// NewAvatar charge une image (ex: portrait du perso) et la fixe à la
-// taille voulue, en carré/rectangle.
+// On charge la photo de profil de l'utilisateur en fonction du perso choisi
 func NewAvatar(path string, size float32) fyne.CanvasObject {
 	img := canvas.NewImageFromFile(path)
 	img.FillMode = canvas.ImageFillContain
