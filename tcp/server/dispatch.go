@@ -1,6 +1,7 @@
 package main
 
 import (
+	. "the_answer_protocol/tcp/commands"
 	. "the_answer_protocol/tcp/common"
 	"net"
 	"strings"
@@ -20,6 +21,33 @@ func Dispatch(conn net.Conn, player string) {
 		case "WHO\n":
 			nb_player := 5 - len(PersoChoice)
 			LogAndFprintf(conn, "[SERVER] Il y a actuellement %d membre.s d'expédition\n", nb_player)
+		case "LOOK\n":
+			WorldLock.Lock()
+			resp, err := Look(World, player)
+			WorldLock.Unlock()
+			if err != nil {
+				LogAndFprintf(conn, "ERR 900 CONNECTION_FAILED\n")
+			} else {
+				LogAndFprintf(conn, "%s\n", resp)
+			}
+		case "INVENTORY\n":
+			WorldLock.Lock()
+			resp, err := Inventory(World, player)
+			WorldLock.Unlock()
+			if err != nil {
+				LogAndFprintf(conn, "ERR 900 CONNECTION_FAILED\n")
+			} else {
+				LogAndFprintf(conn, "%s\n", resp)
+			}
+		case "QUESTS\n":
+			WorldLock.Lock()
+			resp, err := Quests(World, player)
+			WorldLock.Unlock()
+			if err != nil {
+				LogAndFprintf(conn, "ERR 900 CONNECTION_FAILED\n")
+			} else {
+				LogAndFprintf(conn, "%s\n", resp)
+			}
 		case "ACCEPT\n", "DECLINE\n":
 			if hasPendingInvite{
 				ch <- message
@@ -63,6 +91,22 @@ func Dispatch(conn net.Conn, player string) {
 			}
 		case "QUIT\n":
 			return
+		default:
+			// QUEST <npc> porte son argument sur la meme ligne (contrairement
+			// aux autres commandes ci-dessus, sans argument ou qui le
+			// redemandent via une ligne separee) : on ne peut donc pas le
+			// faire matcher par un case exact du switch.
+			if npcName, ok := strings.CutPrefix(message, "QUEST "); ok {
+				npcName = strings.TrimSuffix(npcName, "\n")
+				WorldLock.Lock()
+				resp, err := Quest(World, player, npcName)
+				WorldLock.Unlock()
+				if err != nil {
+					LogAndFprintf(conn, "ERR 900 CONNECTION_FAILED\n")
+				} else {
+					LogAndFprintf(conn, "%s\n", resp)
+				}
+			}
 		}
 		}
 	}
