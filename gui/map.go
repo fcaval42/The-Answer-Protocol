@@ -15,7 +15,7 @@ const rows, cols = 3, 3
 
 var mapCellColor = color.NRGBA{R: 255, G: 255, B: 225, A: 20}        // couleur blanche de base
 var mapCurrentCellColor = color.NRGBA{R: 232, G: 216, B: 176, A: 90} // beige comme le thème de base
-var mapBackgroundPath = "assets/mapBlackground.png"
+var mapBackgroundPath = "assets/mapBackground.png"
 
 type mapNode struct {
 	row, col int
@@ -55,6 +55,17 @@ var mapPath = map[mapPathfile]string{
 	{2, 1}: "",
 	{2, 2}: "assets/room/terres_oubliees.png",
 	{2, 3}: "assets/room/falaise.png",
+}
+
+
+// fonction trouver cellule de la carte correspondant au nom de la salle
+func roomGridPosition(name string) (row int, col int, ok bool) {
+	for node, n := range mapNames {
+		if n == name {
+			return node.row, node.col, true
+		}
+	}
+	return 0, 0, false
 }
 
 

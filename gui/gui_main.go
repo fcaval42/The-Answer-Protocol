@@ -13,62 +13,6 @@ import (
 	"the_answer_protocol/parsing"
 )
 
-// ---- Données factices, en attendant le vrai serveur ----
-
-type Room struct {
-	name        string
-	description string
-	exits       []string
-	items       []string
-	npcs        []string
-	background  string
-	mapRow      int
-	mapCol      int
-}
-
-type Player struct {
-	name      string
-	level     int
-	xp        float64
-	maxXP     float64
-	hp        float64
-	maxHP     float64
-	speed     int
-	attack    int
-	critPct   int
-	defense   int
-	inventory []string
-}
-
-var fakeRoom = Room{
-	name:        "Village Gestral",
-	description: "Une odeur de sueur et de métal flotte entre les huttes.",
-	exits:       []string{"Océan suspendu", "Cimetière gestral"},
-	items:       []string{"Chroma"},
-	npcs:        []string{"Renoir"},
-	background:  "assets/room/vallons_fleuries.png",
-	mapRow:      1,
-	mapCol:      3,
-}
-
-var fakeRoom2 = Room{
-	name:        "Cimetière Gestral",
-	description: "De minuscules tombes, dont certaines sont vides.",
-	exits:       []string{"Village Gestral"},
-	background:  "assets/room/cimetiere_gestral.png",
-	mapRow:      1,
-	mapCol:      4,
-}
-
-var fakePlayer = Player{
-	name:      "Gustave",
-	hp:        478,
-	maxHP:     478,
-	attack:    316,
-	critPct:   24,
-	defense:   33,
-	inventory: []string{"Lumina", "Pictos"},
-}
 
 // ----------------- Header (titre) ------------------
 
@@ -80,18 +24,22 @@ func buildHeader() fyne.CanvasObject {
 
 // ----------------- Panneau de salle (gauche) ------------------
 
-func buildRoomPanel(r Room) fyne.CanvasObject {
+func buildRoomPanel(loc parsing.Location, world parsing.WorldFile) fyne.CanvasObject {
 	// r Room = structure Room qui contient données de la salle
 	// sortie fyne.CanvasObject = élément graphique (conteneur, widget...)
 
 	// ------------------ TITRE ------------------
-	title := NewTitleText(r.name, 40)
-	desc := NewWrappingBodyText(r.description)
+	title := NewTitleText(loc.Name, 40)
+	desc := NewWrappingBodyText(loc.Description)
 
 	// ------------------ SORTIE -----------------
 	exitsRow := container.NewHBox()
-	for _, e := range r.exits {
-		exit := e
+	for _, destID := range loc.Exits {
+		destName := destID
+		if dest, ok := world.World.Locations[destID]; ok {
+			destName = dest.Name
+		}
+		exit := destName
 		exitsRow.Add(NewButton(exit, func() {
 			fmt.Println("MOVE TO: ", exit)
 		}))
@@ -99,8 +47,12 @@ func buildRoomPanel(r Room) fyne.CanvasObject {
 
 	// ------------------- ITEMS -----------------
 	itemsRow := container.NewHBox()
-	for _, i := range r.items {
-		item := i // un bouton par objet
+	for _, itemID := range loc.Items {
+		itemName := itemID
+		if it, ok := world.Items[itemID]; ok {
+			itemName = it.Name
+		}
+		item := itemName // un bouton par objet
 		itemsRow.Add(NewButton(item, func() {
 			fmt.Println("TAKE: ", item)
 		}))
@@ -108,8 +60,12 @@ func buildRoomPanel(r Room) fyne.CanvasObject {
 
 	// ------------------- PNJ --------------------
 	npcsRow := container.NewHBox()
-	for _, n := range r.npcs {
-		npc := n
+	for _, npcID := range loc.NPCs {
+		npcName := npcID
+		if n, ok := world.NPCs[npcID]; ok {
+			npcName = n.Name
+		}
+		npc := npcName
 		npcsRow.Add(NewButton(npc+"TALK", func() {
 			fmt.Println("TALK: ", npc)
 		}))
@@ -160,41 +116,41 @@ func statCell(label string, value string) fyne.CanvasObject {
 	return container.NewVBox(l, v)
 }
 
-func buildCharacterPanel(p Player) fyne.CanvasObject {
+func buildCharacterPanel(player parsing.Player) fyne.CanvasObject {
 
 	// ----------------- AVATAR + NOM PERSO --------------------
-	name := NewTitleText(p.name, 70)
+	name := NewTitleText(player.Name, 70)
 	name.TextSize = 48
 	name.TextStyle = fyne.TextStyle{Bold: true}
 
-	avatar := NewAvatar("assets/players/Gustave.png", 100)
+	avatar := NewAvatar(avatarPath(player.Name), 100)
 	nameRow := container.NewHBox(avatar, name)
 
 	// ----------------- BARRE HP --------------------
 
 	hpBar, hpBarThemed := NewColoredProgressBar(HPColor)
 	hpBar.Min = 0
-	hpBar.Max = p.maxHP
-	hpBar.Value = p.hp
+	hpBar.Max = float64(player.HP) // MAX HP ?? voir comment ils mettent à jour
+	hpBar.Value = float64(player.HP)
 	hpBar.TextFormatter = func() string { return "" }
-	hpText := NewTitleText(fmt.Sprintf("%.0f / %.0f", p.hp, p.maxHP), 20)
+	hpText := NewTitleText(fmt.Sprintf("%d / %d", player.HP, player.HP), 20)
 	hpStack := container.NewStack(hpBarThemed, container.NewCenter(hpText))
 
 	// ----------------- STATISTIQUES --------------------
 
 	statsTitle := NewTitleText("Statistiques de combat", 25)
 	statsGrid := container.NewGridWithColumns(2,
-		statCell("Puissance d'attaque", fmt.Sprintf("%d", p.attack)),
-		statCell("Défense", fmt.Sprintf("%d", p.defense)),
-		statCell("Chances de critique", fmt.Sprintf("%d%%", p.critPct)),
+		statCell("Puissance d'attaque", fmt.Sprintf("%d", player.Attack)),
+		statCell("Défense", fmt.Sprintf("%d", player.Defense)),
+		statCell("Chances de critique", fmt.Sprintf("%.0f%%", player.Weapon.Critical*100)),
 	)
 
 	// ----------------- INVENTAIRE ---------------------
 
 	invLabel := NewTitleText("Inventaire", 25)
 	invRow := container.NewHBox()
-	for _, i := range p.inventory {
-		item := i
+	for _, i := range player.Inventory {
+		item := i.Name
 		invRow.Add(NewButton(item, func() {
 			fmt.Println("DROP: ", item)
 		}))
@@ -248,7 +204,7 @@ var (
 	mapIconPath  = "assets/icons/icon_map.png"
 )
 
-func buildChatMapNav(w fyne.Window, getCurrentRoom func() Room) fyne.CanvasObject {
+func buildChatMapNav(w fyne.Window, getCurrentRoom func() parsing.Location) fyne.CanvasObject {
 	titlesRow := container.NewGridWithColumns(2,
 		container.NewCenter(NewTitleText("Chat", 25)),
 		container.NewCenter(NewTitleText("Carte", 25)),
@@ -261,7 +217,11 @@ func buildChatMapNav(w fyne.Window, getCurrentRoom func() Room) fyne.CanvasObjec
 	})
 	mapIcon := NewBigIconButton(mapIconPath, chatMapIconSize, func() {
 		room := getCurrentRoom()
-		d := dialog.NewCustom("", "Fermer", BuildMapPanel(room.mapRow, room.mapCol), w)
+		row, col, ok := roomGridPosition(room.Name)
+		if !ok {
+			row, col = -1, -1
+		}
+		d := dialog.NewCustom("", "Fermer", BuildMapPanel(row, col), w)
 		d.Resize(fyne.NewSize(1100, 650))
 		d.Show()
 	})
@@ -276,46 +236,51 @@ func buildChatMapNav(w fyne.Window, getCurrentRoom func() Room) fyne.CanvasObjec
 
 // ------- Run ouvre la fenêtre du GUI quand perso vient d'être choisi côté server --------
 
+func findPlayer(world parsing.WorldFile, name string) (parsing.Player, bool) {
+	for _, player := range world.Players {
+		if player.Name == name {
+			return player, true
+		}
+	}
+	return parsing.Player{}, false
+}
+
+
 func Run(playerName string, world parsing.WorldFile) {
 
-	player := fakePlayer
-	player.name = playerName
+	player, ok := findPlayer(world, playerName)
+	if !ok {
+		fmt.Println("[ATTENTION] joueur inconnu dans world.Players: ", player.Name)
+	}
 
-	fmt.Println(world)
+	startLoc := world.World.Locations[player.Respawn.Location]
+
 	a := app.New()
 	w := a.NewWindow("The Answer Protocol")
 	w.Resize(fyne.NewSize(1400, 850))
 	w.SetFixedSize(true) // empêche utilisateur de redimensionner fenêtre
 
-	// DONNEES PROVISOIRES POUR TESTS MANUELS
-	demoRooms := map[string]Room{
-		"Village Gestral":   fakeRoom,
-		"Cimetière gestral": fakeRoom2,
-		"Cimetière Gestral": fakeRoom2,
-	}
-
-	background, bgImage := BuildBackground(fakeRoom.background)
+	background, bgImage := BuildBackground(startLoc.Background)
 
 	// garde une référence stable qu'on peut vider/remplir pour ne pas
 	// reconstruire toute la fenêtre à chaque changement de salle.
 	roomContainer := container.NewStack()
 
-	currentRoom := fakeRoom // salle actuellement affichée, suivie pour la carte
+	currentRoom := startLoc // salle actuellement affichée, suivie pour la carte
 
 	// pour changer d'affichage quand on change de room
-	changeRoom := func(newRoom Room) {
+	changeRoom := func(newRoom parsing.Location) {
 		currentRoom = newRoom
-		SetRoomBackground(bgImage, newRoom.background)
-		roomContainer.Objects = []fyne.CanvasObject{buildRoomPanel(newRoom)} // VOIR
+		SetRoomBackground(bgImage, newRoom.Background)
+		roomContainer.Objects = []fyne.CanvasObject{buildRoomPanel(newRoom, world)}
 		roomContainer.Refresh()
 	}
-	changeRoom(fakeRoom) // affichage initial
-	_ = demoRooms
+	changeRoom(startLoc) // affichage initial
 
 	rightPanel := WithMinWidth(container.NewVBox(
-		buildCharacterPanel(fakePlayer),
+		buildCharacterPanel(player),
 		Fix(0, 15),
-		buildChatMapNav(w, func() Room { return currentRoom }),
+		buildChatMapNav(w, func() parsing.Location { return currentRoom }),
 	), 420)
 
 	body := container.NewBorder(nil, nil, WithMinWidth(roomContainer, 420), rightPanel, nil)
