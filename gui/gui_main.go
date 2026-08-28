@@ -121,7 +121,7 @@ func buildRoomPanel(r Room) fyne.CanvasObject {
 	// ----------------- ACTIONS --------------------
 	actionsGrid := container.NewGridWithColumns(2,
 		NewButton("Status", func() { fmt.Println("STATUS") }),
-		NewButton("Quest", func() { fmt.Println("QUEST") }), 
+		NewButton("Quest", func() { fmt.Println("QUEST") }),
 		NewButton("Inventory", func() { fmt.Println("INVENTORY") }),
 		NewButton("Quit", func() { fmt.Println("QUIT") }),
 	)
@@ -310,6 +310,7 @@ func Run(playerName string, world parsing.WorldFile) {
 		roomContainer.Refresh()
 	}
 	changeRoom(fakeRoom) // affichage initial
+	_ = demoRooms
 
 	rightPanel := WithMinWidth(container.NewVBox(
 		buildCharacterPanel(fakePlayer),
