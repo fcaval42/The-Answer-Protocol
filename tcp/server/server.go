@@ -62,18 +62,18 @@ func handleConnection(conn net.Conn) {
 
 	// Mets le joueur dans la map a son point de respawn
 	mapsLock.Lock()
-	spawn := maps[play.Respawn.Location]
-	spawn.Players = append(spawn.Players, play)
-	maps[play.Respawn.Location] = spawn
+	location := maps[play.Respawn.Location]
+	location.Players = append(location.Players, play)
+	maps[play.Respawn.Location] = location
 	LogAndPrintf(conn, "%s", ToString(maps[play.Respawn.Location]))
 	mapsLock.Unlock()
 
 	// Charge le monde et le point de respawn du joueur pour lenvoyer au client
 	fmt.Fprintf(conn, "%s\n", worldChar)
-	loc := ToString(spawn)
+	loc := ToString(location)
 	fmt.Fprintf(conn, "%s\n", loc)
 
-	Dispatch(conn, player)
+	Dispatch(conn, player, location.Name)
 }
 
 func main() {

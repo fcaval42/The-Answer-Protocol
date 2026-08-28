@@ -9,7 +9,7 @@ import (
 
 // Dispatch des commandes du client après la connexion,
 // en fonction de la commande reçue.
-func Dispatch(conn net.Conn, player string) {	
+func Dispatch(conn net.Conn, player string, loc string) {	
 	for {
 		message := Recept(conn)
 		pendingInvitesLock.Lock()
@@ -50,12 +50,12 @@ func Dispatch(conn net.Conn, player string) {
 				case "GLOBAL\n":
 					GlobalChat(conn, player)
 					return
-					// case "ROOM":
-					// 	roomChat()
-					// 	break chatLoop
-					case "GROUP\n":
-						GroupChat(conn, player)
-						return
+				case "ROOM\n":
+					RoomChat(conn, loc, player)
+					return
+				case "GROUP\n":
+					GroupChat(conn, player)
+					return
 				}
 			}
 		case "GROUP CREATE\n":

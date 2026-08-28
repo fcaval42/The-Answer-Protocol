@@ -3,9 +3,57 @@ package main
 import (
 	"fmt"
 	"net"
+	"sync"
 	. "the_answer_protocol/tcp/common"
 	"slices"
 )
+
+var (
+	inRoomChat map[string][]net.Conn
+	inRoomChatMu sync.Mutex
+)
+
+var (roomMessages = make(map[string][]string)
+	roomMessagesMu sync.Mutex)
+
+func RoomChat(conn net.Conn, loc string, player string) {
+	inRoomChatMu.Lock()
+	if inRoomChat == nil {
+		inRoomChat = make(map[string][]net.Conn)
+	}
+	inRoomChat[loc] = append(inRoomChat[loc], conn)
+	inRoomChatMu.Unlock()
+	defer func() {
+		inRoomChatMu.Lock()
+		for i, con := range inRoomChat[loc] {
+			if conn == con {
+				inRoomChat[loc] = slices.Delete(inRoomChat[loc], i, i+1)
+				break
+			}
+		}
+		inRoomChatMu.Unlock()
+	}()
+	for {
+		inRoomChatMu.Lock()
+		Broadcast(inRoomChat[loc], roomMessages[loc])
+		inRoomChatMu.Unlock()
+		send := Recept(conn)
+		if send == "EXIT\n" || send == "" || send == "QUIT\n" {
+			return
+		} else {
+			send = fmt.Sprintf("[%s]: %s", player, send)
+		}
+		roomMessagesMu.Lock()
+		roomMessages[loc] = append(roomMessages[loc], send)
+		for key, value := range roomMessages {
+			LogAndPrintf(conn, "loc: %s\nValue: %s",key, value )
+		}
+		if len(roomMessages[loc]) > 10 {
+			roomMessages[loc] = roomMessages[loc][len(roomMessages[loc])-10:]
+		}
+		roomMessagesMu.Unlock()
+	}
+}
 
 func GroupChat(conn net.Conn, player string) {
 	inGroupChatLock.Lock()
