@@ -1,4 +1,4 @@
-package main
+package gui
 
 import (
 	"fmt"
@@ -281,21 +281,13 @@ func buildChatMapNav(w fyne.Window, getCurrentRoom func() Room) fyne.CanvasObjec
 	return container.NewVBox(titlesRow, gui.Fix(0, 0), iconsRow)
 }
 
-func main() {
+// Run ouvre la fenêtre du GUI pour le joueur dont le personnage vient
+// d'être choisi côté client TCP.
+func Run(playerName string, world parsing.WorldFile) {
 
-	// p := parsing.Player_t{
-	// 	Name:         "Gustave",
-	// 	Hp:           100.0,
-	// 	Localisation: "Village_gestral",
-	// 	Inventory:    []string{},
-	// }
+	player := fakePlayer
+	player.name = playerName
 
-	world_path := "yaml/world.yaml"
-	world, err := parsing.Rally(world_path)
-
-	if err != nil {
-		os.Exit(1)
-	}
 	fmt.Println(world)
 	a := app.New()
 	w := a.NewWindow("The Answer Protocol")
@@ -311,7 +303,7 @@ func main() {
 		"Cimetière Gestral": fakeRoom2,
 	}
 
-	background, bgImage := gui.BuildBackground(fakeRoom.background)
+	background, bgImage := BuildBackground(fakeRoom.background)
 
 	// garde une référence stable qu'on peut vider/remplir pour ne pas
 	// reconstruire toute la fenêtre à chaque changement de salle.

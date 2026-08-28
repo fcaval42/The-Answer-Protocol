@@ -48,6 +48,7 @@ func ParseWorld(worldYAML []byte) (WorldFile, []error) {
 
 	for id, loc := range wf.World.Locations {
 		loc.ID = id
+		loc.Background = resolveBackground(loc.Background)
 		wf.World.Locations[id] = loc
 	}
 	for id, item := range wf.Items {

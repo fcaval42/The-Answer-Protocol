@@ -1,6 +1,9 @@
 package parsing
 
-import "fmt"
+import (
+	"fmt"
+	"os"
+)
 
 type Spawn struct {
 	NPCType string `yaml:"npc_type"`
@@ -16,7 +19,27 @@ type Location struct {
 	NPCs        []string          `yaml:"npcs"`
 	Enemies     []string          `yaml:"enemies"`
 	Spawns      []Spawn           `yaml:"spawns"`
+	Background  string            `yaml:"background"`
 	Players     []Player
+}
+
+// defaultBackground est utilise quand une location ne precise pas de fond
+// d'ecran dans le YAML, ou que le chemin fourni est invalide : le client
+// GUI a toujours une image a afficher.
+const defaultBackground = "assets/default_background.png"
+
+// resolveBackground renvoie path si le fichier existe sur disque, sinon
+// defaultBackground. Une coquille dans le YAML (chemin vide ou fichier
+// introuvable) ne fait donc pas echouer le parsing : la location retombe
+// simplement sur le fond par defaut.
+func resolveBackground(path string) string {
+	if isBlank(path) {
+		return defaultBackground
+	}
+	if info, err := os.Stat(path); err != nil || info.IsDir() {
+		return defaultBackground
+	}
+	return path
 }
 
 func validateLocations(wf WorldFile) []error {

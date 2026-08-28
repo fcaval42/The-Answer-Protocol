@@ -54,6 +54,7 @@ world:
         east: "Cimetière_gestral"
         south: "Falaise_rochevague"
       items: ["Pictos"]
+      background: "assets/village_gestral.png"
 
     Cimetière_gestral:
       name: "Cimetière Gestral"
@@ -224,7 +225,7 @@ players:
       hp: 50
       location: "Lumière"
 
-  Maelle:
+  Maëlle:
     name: "Maëlle"
     hp: 130
     weapon:

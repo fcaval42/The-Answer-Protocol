@@ -31,6 +31,17 @@ func slugifyLocationName(name string) string {
 	return strings.Join(parts, "_")
 }
 
+// slugifyName derive la cle attendue pour un item/npc/enemy/player a partir
+// de son nom affiche : espaces, tirets et apostrophes deviennent des
+// underscores, la casse et les accents sont conserves. Contrairement a
+// slugifyLocationName (noms de lieux, potentiellement composes de plusieurs
+// mots avec des connecteurs comme "de"/"le"), ces noms sont des noms propres
+// simples : pas de connecteur a retirer ni de mot a mettre en minuscule.
+func slugifyName(name string) string {
+	replacer := strings.NewReplacer(" ", "_", "-", "_", "'", "_", "’", "_")
+	return replacer.Replace(name)
+}
+
 func duplicatesIn(refs []string) []string {
 	seen := make(map[string]bool, len(refs))
 	var dups []string

@@ -23,6 +23,16 @@ type Quest struct {
 	Reward      QuestReward    `yaml:"reward"`
 }
 
+// PlayerQuest est une entree du journal de quetes d'un joueur (cf.
+// parsing.Player.Quests). Contrairement a Quest, qui est le catalogue
+// immuable charge depuis le yaml et partage par tous les joueurs, une
+// PlayerQuest porte un etat propre a un joueur donne (Status), qui evolue
+// independamment de la meme quete chez un autre joueur.
+type PlayerQuest struct {
+	QuestID string
+	Status  string // "active" ou "completed"
+}
+
 func validateQuests(wf WorldFile) []error {
 	var errs []error
 
