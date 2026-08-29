@@ -25,7 +25,7 @@ var welcomeRe = regexp.MustCompile(`Bienvenue (\S+) !`)
 // au client. world est passé en paramètre pour que cette fonction (et celles
 // qui suivront) puisse s'y référer, comme le font déjà les commandes du
 // package tcp/commands.
-func readServerMessages(conn net.Conn, rl *readline.Instance, world parsing.WorldFile, withGUI bool, playerChosen chan<- string) {
+func readServerMessages(conn net.Conn, rl *readline.Instance, world parsing.WorldFile, withGUI bool, playerChosen chan<- string, sess *gui.Session) {
 	connRoutine := bufio.NewReader(conn)
 	for {
 		response, err := connRoutine.ReadString('\n')
@@ -38,6 +38,11 @@ func readServerMessages(conn net.Conn, rl *readline.Instance, world parsing.Worl
 		}
 		if strings.Contains(response, "\\") {
 			response = strings.ReplaceAll(response, "\\", "\n")
+		}
+		// Une ligne attendue par un Send() du GUI (bouton en cours de
+		// traitement) est detournee vers lui plutot qu'affichee ici.
+		if sess.Deliver(response) {
+			continue
 		}
 		if response != "\n" {
 			ClearScreen()
@@ -109,6 +114,10 @@ func main() {
 		conn.Close()
 	}()
 
+	// Permet au GUI d'envoyer une commande et de recuperer sa reponse sans
+	// se la faire voler par la boucle de lecture ci-dessous (cf. gui.Session).
+	sess := gui.NewSession(conn)
+
 	// Déclenche immédiatement le menu de sélection de personnage côté serveur
 	// (cf. tcp/server/server.go, qui attend "CONNECT\n" avant d'afficher quoi
 	// que ce soit) : sans ça, le joueur se retrouve devant un prompt vide sans
@@ -118,7 +127,7 @@ func main() {
 	playerChosen := make(chan string, 1)
 
 	// Goroutine qui va chercher en continue ce qu'envoie le serveur
-	go readServerMessages(conn, rl, world, withGUI, playerChosen)
+	go readServerMessages(conn, rl, world, withGUI, playerChosen, sess)
 
 	if !withGUI {
 		runInputLoop(conn, rl, world)
@@ -130,5 +139,5 @@ func main() {
 	// pendant que le client textuel continue de tourner en tâche de fond.
 	go runInputLoop(conn, rl, world)
 	player := <-playerChosen
-	gui.Run(player, world)
+	gui.Run(player, world, sess)
 }

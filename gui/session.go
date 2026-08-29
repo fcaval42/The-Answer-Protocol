@@ -24,7 +24,7 @@ type Session struct {
 
 
 // initialiser nouvelle session
-func New(conn net.Conn) *Session {
+func NewSession(conn net.Conn) *Session {
 	return &Session{conn: conn, pending: make(chan string, 1)}
 }
 

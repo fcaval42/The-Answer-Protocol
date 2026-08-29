@@ -140,10 +140,10 @@ func buildCharacterPanel(player parsing.Player) fyne.CanvasObject {
 
 	hpBar, hpBarThemed := NewColoredProgressBar(HPColor)
 	hpBar.Min = 0
-	hpBar.Max = float64(player.HP) // MAX HP ?? voir comment ils mettent à jour
+	hpBar.Max = float64(player.MaxHP)
 	hpBar.Value = float64(player.HP)
 	hpBar.TextFormatter = func() string { return "" }
-	hpText := NewTitleText(fmt.Sprintf("%d / %d", player.HP, player.HP), 20)
+	hpText := NewTitleText(fmt.Sprintf("%d / %d", player.HP, player.MaxHP), 20)
 	hpStack := container.NewStack(hpBarThemed, container.NewCenter(hpText))
 
 	// ----------------- STATISTIQUES --------------------
@@ -256,7 +256,7 @@ func findPlayer(world parsing.WorldFile, name string) (parsing.Player, bool) {
 }
 
 
-func Run(playerName string, world parsing.WorldFile) {
+func Run(playerName string, world parsing.WorldFile, sess *Session) {
 
 	player, ok := findPlayer(world, playerName)
 	if !ok {
