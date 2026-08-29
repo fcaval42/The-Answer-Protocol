@@ -26,12 +26,12 @@ type Player_t struct {
 	Inventory    []string
 }
 
-type World struct {
+type WorldMap struct {
 	Locations map[string]Location `yaml:"locations"`
 }
 
 type WorldFile struct {
-	World   World             `yaml:"world"`
+	World   WorldMap          `yaml:"world"`
 	Items   map[string]Item   `yaml:"items"`
 	NPCs    map[string]NPC    `yaml:"npcs"`
 	Enemies map[string]Enemy  `yaml:"enemies"`
@@ -63,13 +63,13 @@ func ParseWorld(worldYAML []byte) (WorldFile, []error) {
 		enemy.ID = id
 		wf.Enemies[id] = enemy
 	}
-	for id, player := range wf.Players {
-		player.ID = id
-		wf.Players[id] = player
-	}
 	for id, quest := range wf.Quests {
 		quest.ID = id
 		wf.Quests[id] = quest
+	}
+	for id, player := range wf.Players {
+		player.MaxHP = player.HP
+		wf.Players[id] = player
 	}
 
 	err := wf.Validate()
@@ -87,7 +87,6 @@ func (wf WorldFile) Validate() []error {
 	errs = append(errs, validateItems(wf)...)
 	errs = append(errs, validateNPCs(wf)...)
 	errs = append(errs, validateEnemies(wf)...)
-	errs = append(errs, validatePlayers(wf)...)
 	errs = append(errs, validateQuests(wf)...)
 
 	return errs

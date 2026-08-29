@@ -1,20 +1,60 @@
 package main
 
 import (
-	"io"
 	"fmt"
-	"errors"
 	"log"
 	"net"
 	"os"
-
+	"sync"
+	. "the_answer_protocol/parsing"
+	. "the_answer_protocol/tcp"
 	. "the_answer_protocol/tcp/common"
-	"the_answer_protocol/parsing"
 )
 
-func roomChat(conn net.Conn, room string) {
+var (
+	maps     map[string]Location
+	mapsLock = sync.Mutex{}
+)
 
+var (
+	world     WorldFile
+	worldLock = sync.Mutex{}
+)
+
+
+func deletePlayerInMap(player string){
+	mapsLock.Lock()
+	for _, loc := range maps {
+		loc.Players = DeletePlayer(loc.Players, player)
+		maps[loc.Name] = loc
+	}
+	mapsLock.Unlock()
 }
+
+// disconnectPlayer marque le joueur comme deconnecte dans le monde partage :
+// contrairement a deletePlayerInMap (reutilisee par MOVE pour changer le
+// joueur de salle), elle ne doit etre appelee qu'a la fermeture reelle de la
+// session.
+func disconnectPlayer(player string) {
+	worldLock.Lock()
+	if p, ok := world.Players[player]; ok {
+		p.Connected = false
+		p.Connect = nil
+		world.Players[player] = p
+	}
+	worldLock.Unlock()
+}
+
+func DeletePlayer(players []Player, player string) []Player {
+	for i, p := range players {
+		if p.Name == player {
+			return append(players[:i], players[i+1:]...)
+		}
+	}
+	return players
+}
+
+
 
 // Gestion de la connexion pour un client
 func handleConnection(conn net.Conn) {
@@ -22,32 +62,45 @@ func handleConnection(conn net.Conn) {
 
 	// Gestion de la fin de connexion
 	defer func() {
+		deletePlayerInMap(player)
+		disconnectPlayer(player)
 		CloseSession(conn, player)
 	}()
 	player = Connexion(conn, player)
 	if player == "" {
 		return
 	}
-	Dispatch(conn, player)
+	// Charge le joueur et attribue la connexion
+	worldLock.Lock()
+	play := world.Players[player]
+	play.Connect = conn
+	play.Connected = true
+	worldLock.Unlock()
+
+	// Mets le joueur dans la map a son point de respawn
+	mapsLock.Lock()
+	location := maps[play.Respawn.Location]
+	play.Location = location
+	location.Players = append(location.Players, play)
+	maps[play.Respawn.Location] = location
+	mapsLock.Unlock()
+
+	worldLock.Lock()
+	world.Players[player] = play
+	worldChar := ToString(world)
+	worldLock.Unlock()
+
+	// Charge le monde et le point de respawn du joueur pour lenvoyer au client
+	fmt.Fprintf(conn, "%s\n", worldChar)
+	fmt.Fprintf(conn, "%s\n", ToString(location))
+
+	Dispatch(conn, play, location)
 }
 
 func main() {
-	logfile, err := os.Create("../protocol.log")
-	if err != nil {
-		log.Fatalln(err)
-	}
-	log.SetOutput(io.MultiWriter(os.Stdout, logfile))
-
-	// Parsing du monde une seule fois au démarrage : c'est cette instance,
-	// partagée par toutes les connexions (voir tcp/common.World), qui garde
-	// l'état des joueurs (Connected, Location, Inventory...) tant que le
-	// serveur tourne.
-	world, worldErrs := parsing.Rally("yaml/world.yaml")
-	if len(worldErrs) > 0 {
-		log.Fatalln(errors.Join(worldErrs...))
-	}
-	World = world
-
+	logfile, _ := os.Create("../protocol.log")
+	log.SetOutput(logfile)
+	maps = make(map[string]Location)
 	// Ouverture de l'ecoute tcp sur le port 8080 du localhost
 	ln, err := net.Listen("tcp", "localhost:8080")
 	if err != nil {
@@ -56,15 +109,18 @@ func main() {
 
 	// Fermeture à la fin du programme
 	defer ln.Close()
-
-	fmt.Println("\033[0;32mServer Up and Running\033[0m")
-	fmt.Println("")
-
+	var errs []error
+	world, errs = Rally("yaml/world.yaml")
+	if len(errs) != 0 {
+		log.Fatalln(errs)
+	}
+	maps = world.World.Locations
 	// Boucle infinie pour accepter la connexion des clients au serveur
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
 			log.Println(conn.RemoteAddr().String() + "| " + err.Error())
+			continue
 		}
 
 		// Ajout du client a la liste des clients

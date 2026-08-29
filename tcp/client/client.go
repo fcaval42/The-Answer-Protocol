@@ -5,11 +5,26 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"sync"
 	"os"
 	"strings"
+	"io"
 	"github.com/chzyer/readline"
 	. "the_answer_protocol/tcp/common"
+	. "the_answer_protocol/tcp"
+	. "the_answer_protocol/parsing"
 	// "strings"
+)
+
+
+var (
+    locMu	sync.Mutex
+    loc Location
+)
+
+var (
+    worldMapMu sync.Mutex
+    worldMap WorldFile
 )
 
 func main() {
@@ -19,6 +34,8 @@ func main() {
 		log.Fatalf("[ERROR] Erreur lors de l'ouverture du fichier de log : %v", err)
 	}
 	defer file.Close()
+	var wg sync.WaitGroup
+	wg.Add(2)
 	// reader := bufio.NewReader(os.Stdin)
 	rl, err := readline.New(">>> ")
 	if err != nil {
@@ -41,12 +58,13 @@ func main() {
 		fmt.Fprint(conn, "QUIT\n")
 		conn.Close()
 	}()
-
 	// Goroutine qui va chercher en continue ce qu'envoie le serveur
 	go func() {
 		// Buffer en ecoute du serveur, unique a la goroutine pour eviter
 		// que plusieurs thread utilisent le meme buffer
 		connRoutine := bufio.NewReader(conn)
+		defer wg.Done()
+		
 
 		// Boucle infinie
 		for {
@@ -63,6 +81,22 @@ func main() {
 			if strings.Contains(response, "\\") {
 				response = strings.ReplaceAll(response, "\\", "\n")
 			}
+			if strings.HasPrefix(response, "{\"ID\":") {
+				response = strings.TrimSpace(response)
+				location := FromString[Location](response)
+				locMu.Lock()
+				loc = location
+				locMu.Unlock()
+				continue
+			}
+			if strings.HasPrefix(response, "{\"World\":{") {
+				response = strings.TrimSpace(response)
+				world := FromString[WorldFile](response)
+				worldMapMu.Lock()
+				worldMap = world
+				worldMapMu.Unlock()
+				continue
+			}
 			// On affiche le message s'il n'est pas vide
 			if response != "\n" {
 				ClearScreen()
@@ -70,24 +104,42 @@ func main() {
 			}
 		}
 	}()
-	// Boucle infinie pour les inputs
-	for {
-		// Recuperation de l'input
-		line, err := rl.Readline()
-		if err != nil {
-			log.Println("[ERROR] Erreur de lecture :", err)
+	go func() {
+		defer wg.Done()
+		// Boucle infinie pour les inputs
+		for {
+			// Recuperation de l'input
+			line, err := rl.Readline()
+			if err != nil {
+				if err == readline.ErrInterrupt || err == io.EOF {
+				log.Println("[INFO] Interruption demandée par l'utilisateur")
+				fmt.Print("Au revoir, Mon ami !\n")
+			} else {
+				log.Println("[ERROR] Erreur de lecture :", err)
+			}
+			conn.Close()   // débloque la goroutine réseau bloquée sur ReadString
 			return
+			}
+			line = strings.TrimSpace(line)
+			if line == "DEBUG ROOM" {
+				fmt.Print()
+			}
+			if line == "DEBUG WORLD" {
+				fmt.Print(worldMap)
+			}
+			if line == "DEBUG LOC" {
+				fmt.Print(loc)
+			}
+			// Si l'input est "exit", gestion de la fermeture de la connexion
+			if line == "QUIT" {
+				fmt.Fprintf(conn, "%s", line)
+				fmt.Fprint(conn, "[INFO] Fermeture de la connexion...\n")
+				fmt.Print("Au revoir, Mon ami !\n")
+				os.Exit(0)
+			}
+			// On envoie l'input au serveur
+			fmt.Fprintf(conn, "%s\n", line)
 		}
-		line = strings.TrimSpace(line)
-
-		// Si l'input est "exit", gestion de la fermeture de la connexion
-		if line == "QUIT" {
-			fmt.Fprintf(conn, "%s", line)
-			fmt.Fprint(conn, "[INFO] Fermeture de la connexion...\n")
-			fmt.Print("Au revoir, Mon ami !\n")
-			return
-		}
-		// On envoie l'input au serveur
-		fmt.Fprintf(conn, "%s\n", line)
-	}
+	}()
+	wg.Wait()
 }
