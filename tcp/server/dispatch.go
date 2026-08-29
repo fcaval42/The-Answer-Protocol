@@ -79,6 +79,15 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 			} else {
 				LogAndFprintf(conn, "%s\n", resp)
 			}
+		case "STATUS\n":
+			worldLock.Lock()
+			resp, err := commands.Status(world, player.Name)
+			worldLock.Unlock()
+			if err != nil {
+				LogAndFprintf(conn, "ERR 900 CONNECTION_FAILED\n")
+			} else {
+				LogAndFprintf(conn, "%s\n", resp)
+			}
 		case "ACCEPT\n", "DECLINE\n":
 			if hasPendingInvite{
 				ch <- message
@@ -144,6 +153,26 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 				npcName = strings.TrimSuffix(npcName, "\n")
 				worldLock.Lock()
 				resp, err := commands.Quest(world, player.Name, npcName)
+				worldLock.Unlock()
+				if err != nil {
+					LogAndFprintf(conn, "ERR 900 CONNECTION_FAILED\n")
+				} else {
+					LogAndFprintf(conn, "%s\n", resp)
+				}
+			} else if npcName, ok := strings.CutPrefix(message, "TALK "); ok {
+				npcName = strings.TrimSuffix(npcName, "\n")
+				worldLock.Lock()
+				resp, err := commands.Talk(world, player.Name, npcName)
+				worldLock.Unlock()
+				if err != nil {
+					LogAndFprintf(conn, "ERR 900 CONNECTION_FAILED\n")
+				} else {
+					LogAndFprintf(conn, "%s\n", resp)
+				}
+			} else if npcName, ok := strings.CutPrefix(message, "ATTACK "); ok {
+				npcName = strings.TrimSuffix(npcName, "\n")
+				worldLock.Lock()
+				resp, err := commands.Attack(world, player.Name, npcName)
 				worldLock.Unlock()
 				if err != nil {
 					LogAndFprintf(conn, "ERR 900 CONNECTION_FAILED\n")

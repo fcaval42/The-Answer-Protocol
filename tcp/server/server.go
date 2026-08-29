@@ -128,7 +128,7 @@ func main() {
 	// Fermeture à la fin du programme
 	defer ln.Close()
 	var errs []error
-	world, errs = Rally("../../yaml/world.yaml")
+	world, errs = Rally("yaml/world.yaml")
 	if len(errs) != 0 {
 		log.Fatalln(errs)
 	}

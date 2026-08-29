@@ -67,6 +67,10 @@ func ParseWorld(worldYAML []byte) (WorldFile, []error) {
 		quest.ID = id
 		wf.Quests[id] = quest
 	}
+	for id, player := range wf.Players {
+		player.MaxHP = player.HP
+		wf.Players[id] = player
+	}
 
 	err := wf.Validate()
 	if err != nil {

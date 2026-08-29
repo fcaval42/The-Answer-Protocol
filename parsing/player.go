@@ -16,6 +16,7 @@ type Respawn struct {
 type Player struct {
 	Name    string  `yaml:"name"`
 	HP      int     `yaml:"hp"`
+	MaxHP   int     `yaml:"-"`
 	Weapon  Weapon  `yaml:"weapon"`
 	Attack  int     `yaml:"attack"`
 	Defense int     `yaml:"defense"`
