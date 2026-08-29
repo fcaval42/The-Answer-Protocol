@@ -11,10 +11,6 @@ import (
 	. "the_answer_protocol/tcp/common"
 )
 
-func roomChat(conn net.Conn, room string) {
-
-}
-
 var (
 	maps     map[string]Location
 	mapsLock = sync.Mutex{}
@@ -58,20 +54,6 @@ func DeletePlayer(players []Player, player string) []Player {
 	return players
 }
 
-
-
-func sendLocation(location Location, conn net.Conn) Location {
-	mapsLock.Lock()
-	defer mapsLock.Unlock()
-	for _, l := range maps{
-		if l.Name == location.Name {
-			location = l
-			break
-		}
-	}
-	fmt.Fprintf(conn, "%s\n", ToString(location))
-	return location
-}
 
 
 // Gestion de la connexion pour un client

@@ -1,14 +1,18 @@
-.PHONY: server client gui clean
+.PHONY: server stop-server client gui clean
 
 all:
 	@echo "Use the following commands"
 	@echo "make server"
+	@echo "make stop-server"
 	@echo "make client"
 	@echo "make gui"
 	@echo "make clean"
 
 server:
 	go run ./tcp/server
+
+stop-server:
+	fuser -k 8080/tcp
 
 client:
 	go run .
