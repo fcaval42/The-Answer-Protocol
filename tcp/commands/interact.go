@@ -8,9 +8,6 @@ import (
 	"the_answer_protocol/parsing"
 )
 
-// findEnemyInRoom cherche, parmi les enemies presents dans loc, celui dont
-// l'id ou le nom affiche vaut enemyName (memes regles de reference que
-// findNPCInRoom pour les npcs, cf. quests.go).
 func findEnemyInRoom(world parsing.WorldFile, loc parsing.Location, enemyName string) (parsing.Enemy, bool) {
 	for _, enemyID := range loc.Enemies {
 		enemy, ok := world.Enemies[enemyID]
@@ -24,8 +21,6 @@ func findEnemyInRoom(world parsing.WorldFile, loc parsing.Location, enemyName st
 	return parsing.Enemy{}, false
 }
 
-// Talk traite la commande TALK <npc> : renvoie la premiere ligne de
-// dialogue du npc npcName, present dans la salle courante du joueur.
 func Talk(world parsing.WorldFile, playerName string, npcName string) (string, error) {
 	_, player, ok := findPlayerByName(world, playerName)
 	if !ok || player.Location.ID == "" {
@@ -45,10 +40,6 @@ func Talk(world parsing.WorldFile, playerName string, npcName string) (string, e
 	return fmt.Sprintf("OK %s", npc.Dialogue[0]), nil
 }
 
-// statusLabel derive un statut lisible a partir du ratio hp/max_hp. Choix
-// simple (pas d'effets de statut type poison/buff, cf. RFC 6.1.1) qui garde
-// "healthy" pour une blessure legere, comme dans l'exemple du RFC
-// (80/100 -> "healthy").
 func statusLabel(hp int, maxHP int) string {
 	if hp <= 0 {
 		return "dead"
@@ -67,11 +58,6 @@ func statusLabel(hp int, maxHP int) string {
 	}
 }
 
-// Status traite la commande STATUS : renvoie les points de vie courants du
-// joueur. parsing.Player.MaxHP est capture une fois au parsing (cf.
-// parsing.ParseWorld) a partir du hp de depart du yaml : Respawn.HP n'aurait
-// pas convenu, c'est le hp (reduit) auquel le joueur revient apres une
-// defaite, pas son plafond.
 func Status(world parsing.WorldFile, playerName string) (string, error) {
 	_, player, ok := findPlayerByName(world, playerName)
 	if !ok {
@@ -96,16 +82,6 @@ func Status(world parsing.WorldFile, playerName string) (string, error) {
 	return fmt.Sprintf("OK %s", data), nil
 }
 
-// Attack traite la commande ATTACK <npc> : engage le combat contre l'enemy
-// enemyName present dans la salle courante du joueur.
-//
-// Design choice (cf. RFC 6.1.1, laisse a l'implementation) : pas de systeme
-// de tour explicite - chaque ATTACK est un echange complet : le joueur
-// frappe en premier, puis l'enemy contre-attaque s'il est encore en vie.
-// Les degats sont attaque - defense de la cible, plancher a 1 pour qu'un
-// combat progresse toujours meme contre une grosse defense. L'enemy est
-// partage au niveau du monde (pas une instance par joueur) : ses HP restent
-// donc reduits pour tous les joueurs tant qu'il n'est pas vaincu.
 func Attack(world parsing.WorldFile, playerName string, enemyName string) (string, error) {
 	playerID, player, ok := findPlayerByName(world, playerName)
 	if !ok || player.Location.ID == "" {

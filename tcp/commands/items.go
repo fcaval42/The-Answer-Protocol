@@ -7,8 +7,6 @@ import (
 	// "errors"
 )
 
-// Inventory renvoie la reponse "OK [...]" listant les ids des items
-// actuellement dans l'inventaire de playerName
 func Inventory(world parsing.WorldFile, playerName string) (string, error) {
 	_, player, ok := findPlayerByName(world, playerName)
 	if !ok {
