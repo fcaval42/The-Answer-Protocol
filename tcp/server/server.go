@@ -15,6 +15,7 @@ func roomChat(conn net.Conn, room string) {
 
 }
 
+
 var (
 	maps     map[string]Location
 	mapsLock = sync.Mutex{}
