@@ -145,10 +145,6 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 		case "QUIT\n":
 			return
 		default:
-			// QUEST <npc> porte son argument sur la meme ligne (contrairement
-			// aux autres commandes ci-dessus, sans argument ou qui le
-			// redemandent via une ligne separee) : on ne peut donc pas le
-			// faire matcher par un case exact du switch.
 			if npcName, ok := strings.CutPrefix(message, "QUEST "); ok {
 				npcName = strings.TrimSuffix(npcName, "\n")
 				worldLock.Lock()
