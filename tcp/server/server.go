@@ -31,10 +31,6 @@ func deletePlayerInMap(player string){
 	mapsLock.Unlock()
 }
 
-// disconnectPlayer marque le joueur comme deconnecte dans le monde partage :
-// contrairement a deletePlayerInMap (reutilisee par MOVE pour changer le
-// joueur de salle), elle ne doit etre appelee qu'a la fermeture reelle de la
-// session.
 func disconnectPlayer(player string) {
 	worldLock.Lock()
 	if p, ok := world.Players[player]; ok {
@@ -110,7 +106,7 @@ func main() {
 	// Fermeture à la fin du programme
 	defer ln.Close()
 	var errs []error
-	world, errs = Rally("yaml/world.yaml")
+	world, errs = Rally("../../yaml/world.yaml")
 	if len(errs) != 0 {
 		log.Fatalln(errs)
 	}

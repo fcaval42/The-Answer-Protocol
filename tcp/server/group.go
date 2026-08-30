@@ -45,7 +45,7 @@ func GroupJoin(conn net.Conn, player string, groupID string) {
 		return
 	}
 	group.Members[player] = conn
-	group.messages = append(group.messages, fmt.Sprintf("%s a rejoint le groupe.", player))
+	group.messages = append(group.messages, fmt.Sprintf("%s a rejoint le groupe.\n", player))
 	group.Mu.Unlock()
 	LogAndFprintf(conn, "[SERVER] Vous avez rejoint le groupe %s !\n", groupID)
 }
@@ -119,7 +119,7 @@ func GroupInvite(conn net.Conn, player string) {
     groupsLock.Lock()
     defer groupsLock.Unlock()
     currentGroup.Members[invitee] = inviteeConn
-	currentGroup.messages = append(currentGroup.messages, fmt.Sprintf("%s a rejoint le groupe.", invitee))
+	currentGroup.messages = append(currentGroup.messages, fmt.Sprintf("%s a rejoint le groupe.\n", invitee))
     LogAndFprintf(conn, "[SERVER] %s a rejoint le groupe %s !\n", invitee, currentGroup.ID)
 }
 
@@ -127,7 +127,7 @@ func GroupLeave(player string) bool{
 	if SearchPlayerGroup(player) != nil {
 	currentGroup := SearchPlayerGroup(player)
 	currentGroup.Mu.Lock()
-	currentGroup.messages = append(currentGroup.messages, fmt.Sprintf("%s a quitté le groupe.", player))
+	currentGroup.messages = append(currentGroup.messages, fmt.Sprintf("%s a quitté le groupe.\n", player))
 	delete(currentGroup.Members, player)
 	currentGroup.Mu.Unlock()
 	return true

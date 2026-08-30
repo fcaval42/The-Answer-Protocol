@@ -17,6 +17,7 @@ import (
 	"github.com/chzyer/readline"
 )
 
+// generer par claude pck je comprend pas ce que hugo faisait sert pour le makefile
 // Capture le nom du personnage dans le message de confirmation envoyé par
 // le serveur une fois la sélection terminée (cf. tcp/commands/session.go).
 var welcomeRe = regexp.MustCompile(`Bienvenue (\S+) !`)
