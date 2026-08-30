@@ -121,9 +121,6 @@ func main() {
 			return
 			}
 			line = strings.TrimSpace(line)
-			if line == "DEBUG ROOM" {
-				fmt.Print()
-			}
 			if line == "DEBUG WORLD" {
 				fmt.Print(worldMap)
 			}
