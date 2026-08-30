@@ -53,6 +53,7 @@ func Move(conn net.Conn, player Player, loc string, message string) Location {
 	locate.Players = append(locate.Players, player)
 	maps[direction] = locate
 	mapsLock.Unlock()
+	LogAndFprintf(conn, "%s\n", ToString(locate))
 	LogAndFprintf(conn, "Vous êtes maintenant dans %s\n", locate.Name)
 	return locate
 }
