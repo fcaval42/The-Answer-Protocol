@@ -10,6 +10,7 @@ package gui
 import (
 	"fmt"
 	"net"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -33,11 +34,21 @@ func NewSession(conn net.Conn) *Session {
 // "est-ce que quelqu'un attend cette ligne ?" = awaiting = vrai = pousse dans pending
 // qui réveille le Send qui était bloqué dessus.
 func (s *Session) Deliver(line string) bool {
-	if s.awaiting.Load() {
-		s.pending <- line
-		return true
+	if !s.awaiting.Load() {
+		return false
 	}
-	return false
+	// Le serveur peut envoyer une ligne non sollicitée (ex: "[SERVER][WARN]
+	// Attention à ne pas envoyer la même commande", cf. tcp/server/dispatch.go
+	// quand deux commandes identiques se suivent) en plus de la vraie réponse
+	// à la commande. Une vraie réponse commence toujours par "OK ", "ERR", ou
+	// (cas de MOVE, qui renvoie la Location brute en JSON) "{" ; tout le reste
+	// n'est pas ce qu'on attend, on le laisse suivre son chemin normal
+	// (affichage terminal) et on continue d'attendre.
+	if !strings.HasPrefix(line, "OK ") && !strings.HasPrefix(line, "ERR") && !strings.HasPrefix(line, "{") {
+		return false
+	}
+	s.pending <- line
+	return true
 }
 
 

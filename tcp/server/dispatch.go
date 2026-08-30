@@ -53,6 +53,15 @@ func Move(conn net.Conn, player Player, loc string, message string) Location {
 	locate.Players = append(locate.Players, player)
 	maps[direction] = locate
 	mapsLock.Unlock()
+
+	// Sans ça, world.Players (source consultee par Attack/Talk/Quest/Status/
+	// Inventory pour savoir dans quelle salle se trouve le joueur) reste
+	// bloque sur la salle de depart : maps est mis a jour ci-dessus mais
+	// c'est une structure distincte, non relue par tcp/commands.
+	worldLock.Lock()
+	world.Players[player.Name] = player
+	worldLock.Unlock()
+
 	LogAndFprintf(conn, "%s\n", ToString(locate))
 	LogAndFprintf(conn, "Vous êtes maintenant dans %s\n", locate.Name)
 	return locate
@@ -250,7 +259,11 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 			}
 		}
 		if strings.HasPrefix(message, "MOVE"){
-			loc = Move(conn, player, loc.Name, message)
+			// maps est indexee par ID, pas par nom affiche (ex: nom "Vallées
+			// fleuries" mais ID "Vallées_fleuries") : passer loc.Name faisait
+			// echouer la recherche pour toute salle dont le nom differe de
+			// son ID, et MOVE renvoyait alors une erreur silencieuse.
+			loc = Move(conn, player, loc.ID, message)
 		}
 		if strings.HasPrefix(message, "TAKE"){
 			loc = takeItem(conn, player, loc, message)
