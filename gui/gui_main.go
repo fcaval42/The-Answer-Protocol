@@ -17,7 +17,6 @@ import (
 	"the_answer_protocol/parsing"
 )
 
-
 // ----------------- Header (titre) ------------------
 
 func buildHeader() fyne.CanvasObject {
@@ -159,38 +158,58 @@ func buildRoomPanel(loc parsing.Location, world parsing.WorldFile, player parsin
 			enemyMaxHP = e.HP
 		}
 
-		npcsRow.Add(NewButton(enemy+" ATTACK", func() {
-			go func() {
-				resp, err := sess.Send("ATTACK " + id)
-				if resp == "" && err == nil {
-					return // ignore silencieusement (cooldown / action deja en cours)
-				}
-				if err != nil {
-					fyne.Do(func() { showMessage("Erreur", err.Error()) })
-					return
-				}
-				if strings.HasPrefix(resp, "ERR") {
-					fyne.Do(func() { showMessage("Erreur", resp) })
-					return
-				}
-				var result struct {
-					AttackerHP int    `json:"attacker_hp"`
-					TargetHP   int    `json:"target_hp"`
-					Damage     int    `json:"damage"`
-					Status     string `json:"status"`
-				}
-				json.Unmarshal([]byte(strings.TrimPrefix(resp, "OK ")), &result)
-				updated := player
-				updated.HP = result.AttackerHP
-				fyne.Do(func() {
-					refreshCharacter(updated)
-					showMessage("Combat", fmt.Sprintf(
-						"Dégâts infligés : %d\nPV de %s : %d / %d (%s)",
-						result.Damage, enemy, result.TargetHP, enemyMaxHP, result.Status,
-					))
-				})
-			}()
-		}))
+		enemyBar, enemyBarThemed := NewColoredProgressBar(HPColor)
+		enemyBar.Min = 0
+		enemyBar.Max = float64(enemyMaxHP)
+		enemyBar.Value = float64(enemyMaxHP)
+		enemyBar.TextFormatter = func() string { return "" }
+		enemyHPText := NewTitleText(fmt.Sprintf("%d / %d", enemyMaxHP, enemyMaxHP), 14)
+		enemyHPStack := container.NewStack(enemyBarThemed, container.NewCenter(enemyHPText))
+		enemyHPFixed := container.New(layout.NewGridWrapLayout(fyne.NewSize(160, 22)), enemyHPStack)
+
+		npcsRow.Add(container.NewVBox(
+			enemyHPFixed,
+			NewButton(enemy+" ATTACK", func() {
+				go func() {
+					resp, err := sess.Send("ATTACK " + id)
+					if resp == "" && err == nil {
+						return // ignore silencieusement (cooldown / action deja en cours)
+					}
+					if err != nil {
+						fyne.Do(func() { showMessage("Erreur", err.Error()) })
+						return
+					}
+					if strings.HasPrefix(resp, "ERR") {
+						fyne.Do(func() { showMessage("Erreur", resp) })
+						return
+					}
+					var result struct {
+						AttackerHP int    `json:"attacker_hp"`
+						TargetHP   int    `json:"target_hp"`
+						Damage     int    `json:"damage"`
+						Status     string `json:"status"`
+					}
+					json.Unmarshal([]byte(strings.TrimPrefix(resp, "OK ")), &result)
+					updated := player
+					updated.HP = result.AttackerHP
+					fyne.Do(func() {
+						refreshCharacter(updated)
+						enemyBar.Value = float64(result.TargetHP)
+						enemyBar.Refresh()
+						enemyHPText.Text = fmt.Sprintf("%d / %d", result.TargetHP, enemyMaxHP)
+						enemyHPText.Refresh()
+						if result.Status == "victory" {
+							showMessage("Combat", "VICTORY")
+							return
+						}
+						showMessage("Combat", fmt.Sprintf(
+							"Dégâts infligés : %d\nPV de %s : %d / %d (%s)",
+							result.Damage, enemy, result.TargetHP, enemyMaxHP, result.Status,
+						))
+					})
+				}()
+			}),
+		))
 	}
 
 	// ----------------- ACTIONS --------------------
@@ -451,7 +470,6 @@ func findPlayer(world parsing.WorldFile, name string) (parsing.Player, bool) {
 	return parsing.Player{}, false
 }
 
-
 func Run(playerName string, world parsing.WorldFile, sess *Session) {
 
 	player, ok := findPlayer(world, playerName)
@@ -462,6 +480,7 @@ func Run(playerName string, world parsing.WorldFile, sess *Session) {
 	startLoc := world.World.Locations[player.Respawn.Location]
 
 	a := app.New()
+	a.Settings().SetTheme(NewCustomTheme())
 	w := a.NewWindow("The Answer Protocol")
 	w.Resize(fyne.NewSize(1400, 850))
 	w.SetFixedSize(true) // empêche utilisateur de redimensionner fenêtre
@@ -473,16 +492,29 @@ func Run(playerName string, world parsing.WorldFile, sess *Session) {
 	roomContainer := container.NewStack()
 	currentRoom := startLoc // salle actuellement affichée, suivie pour la carte
 
-
 	showMessage := func(title, msg string) {
 		defer func() {
 			if r := recover(); r != nil {
 				fmt.Println("[GUI] échec d'affichage de la popup", title, ":", msg, "(", r, ")")
 			}
 		}()
-		dialog.NewInformation(title, msg, w).Show()
+		body := container.NewVBox()
+		lines := strings.Split(msg, "\n")
+		for i, line := range lines {
+			body.Add(NewWrappingBodyText(line))
+			if i < len(lines)-1 {
+				body.Add(Fix(10, 6))
+			}
+		}
+		content := container.NewVBox(
+			container.NewCenter(NewTitleText(title, 28)),
+			Fix(0, 25),
+			body,
+		)
+		d := dialog.NewCustom("", "Fermer", content, w)
+		d.Resize(fyne.NewSize(480, 320))
+		d.Show()
 	}
-
 
 	var changeRoom func(newRoom parsing.Location)
 	var refreshCharacter func(p parsing.Player)
