@@ -15,7 +15,7 @@ stop-server:
 	fuser -k 8080/tcp
 
 client:
-	go run .
+	go run ./tcp/client
 
 gui:
 	go run . gui

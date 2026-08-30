@@ -31,7 +31,7 @@ var (
 	globaleMessage     []string
 	globaleMessageLock sync.Mutex
 )
-var (inGroupChat	 []net.Conn
+var (inGroupChat	 map[string][]net.Conn
 	inGroupChatLock sync.Mutex
 )
 var (
