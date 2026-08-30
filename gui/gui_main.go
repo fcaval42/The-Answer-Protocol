@@ -19,10 +19,17 @@ import (
 
 // ----------------- Header (titre) ------------------
 
-func buildHeader() fyne.CanvasObject {
+func buildHeader(extra ...fyne.CanvasObject) fyne.CanvasObject {
 	title := NewTitleText("The Answer Protocol", 60)
 
-	return container.NewBorder(nil, Fix(0, 40), title, nil, nil)
+	var headerContent fyne.CanvasObject
+	if len(extra) > 0 {
+		headerContent = container.NewHBox(append([]fyne.CanvasObject{title, layout.NewSpacer()}, extra...)...)
+	} else {
+		headerContent = title
+	}
+
+	return container.NewBorder(nil, Fix(0, 40), headerContent, nil, nil)
 }
 
 // ----------------- Panneau de salle (gauche) ------------------
@@ -285,34 +292,6 @@ func buildRoomPanel(loc parsing.Location, world parsing.WorldFile, player parsin
 				})
 			}()
 		}),
-		NewButton("Who", func() {
-			go func() {
-				resp, err := sess.Send("WHO")
-				if resp == "" && err == nil {
-					return // ignore silencieusement (cooldown / action deja en cours)
-				}
-				if err != nil {
-					fyne.Do(func() { showMessage("Erreur", err.Error()) })
-					return
-				}
-				if strings.HasPrefix(resp, "ERR") {
-					fyne.Do(func() { showMessage("Erreur", resp) })
-					return
-				}
-				var who struct {
-					Room   []string `json:"room"`
-					Server int      `json:"server"`
-				}
-				json.Unmarshal([]byte(strings.TrimPrefix(resp, "OK ")), &who)
-				fyne.Do(func() {
-					showMessage("Qui est là", fmt.Sprintf(
-						"Dans cette salle : %s\nConnectés au serveur : %d",
-						strings.Join(who.Room, ", "), who.Server,
-					))
-				})
-			}()
-		}),
-		NewButton("Quit", func() { fmt.Println("QUIT") }),
 	)
 
 	// conteneur vertical. Respecte ordre d'affichage
@@ -502,10 +481,6 @@ func Run(playerName string, world parsing.WorldFile, sess *Session) {
 	currentRoom := startLoc // salle actuellement affichée, suivie pour la carte
 
 	showMessage := func(title, msg string) {
-		// Bug connu de Fyne/harfbuzz (go-text/typesetting) : le rendu de
-		// certains textes dans une popup peut paniquer en interne. Sans ce
-		// recover, ça tue tout le processus GUI. On perd juste ce message
-		// (loggue au terminal) plutot que de crasher toute la partie.
 		defer func() {
 			if r := recover(); r != nil {
 				fmt.Println("[GUI] échec d'affichage de la popup", title, ":", msg, "(", r, ")")
@@ -514,10 +489,7 @@ func Run(playerName string, world parsing.WorldFile, sess *Session) {
 		dialog.NewInformation(title, msg, w).Show()
 	}
 
-	// changeRoom et refreshCharacter se referencent mutuellement (une action
-	// dans la salle peut changer le perso - TAKE/ATTACK - et une action du
-	// panneau perso peut changer la salle - DROP), donc toutes deux sont
-	// pre-declarees avant d'etre definies.
+
 	var changeRoom func(newRoom parsing.Location)
 	var refreshCharacter func(p parsing.Player)
 
@@ -537,6 +509,36 @@ func Run(playerName string, world parsing.WorldFile, sess *Session) {
 	}
 	changeRoom(startLoc) // affichage initial
 
+	// Boutons Who et Quit pour le header
+	whoBtn := NewButton("Who", func() {
+		go func() {
+			resp, err := sess.Send("WHO")
+			if resp == "" && err == nil {
+				return
+			}
+			if err != nil {
+				fyne.Do(func() { showMessage("Erreur", err.Error()) })
+				return
+			}
+			if strings.HasPrefix(resp, "ERR") {
+				fyne.Do(func() { showMessage("Erreur", resp) })
+				return
+			}
+			var who struct {
+				Room   []string `json:"room"`
+				Server int      `json:"server"`
+			}
+			json.Unmarshal([]byte(strings.TrimPrefix(resp, "OK ")), &who)
+			fyne.Do(func() {
+				showMessage("Qui est là", fmt.Sprintf(
+					"Dans cette salle : %s\nConnectés au serveur : %d",
+					strings.Join(who.Room, ", "), who.Server,
+				))
+			})
+		}()
+	})
+	quitBtn := NewButton("Quit", func() { fmt.Println("QUIT") })
+
 	rightPanel := WithMinWidth(container.NewVBox(
 		characterContainer,
 		Fix(0, 15),
@@ -546,7 +548,7 @@ func Run(playerName string, world parsing.WorldFile, sess *Session) {
 	body := container.NewBorder(nil, nil, WithMinWidth(roomContainer, 420), rightPanel, nil)
 
 	// NewBorder = conteneur avce header en haut, body au milieu, rightPanel à droite, roomContainer à gauche + bordures personnalisées
-	content := container.NewBorder(buildHeader(), nil, nil, nil, body)
+	content := container.NewBorder(buildHeader(quitBtn, whoBtn), nil, nil, nil, body)
 
 	full := container.NewStack(background, container.New(layout.NewCustomPaddedLayout(12, 4, 47, 47), content))
 

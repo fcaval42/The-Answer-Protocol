@@ -26,7 +26,7 @@ func deletePlayerInMap(player string){
 	mapsLock.Lock()
 	for _, loc := range maps {
 		loc.Players = DeletePlayer(loc.Players, player)
-		maps[loc.Name] = loc
+		maps[loc.ID] = loc
 	}
 	mapsLock.Unlock()
 }
