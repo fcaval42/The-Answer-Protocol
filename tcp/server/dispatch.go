@@ -29,7 +29,7 @@ func dropItem(conn net.Conn, player Player, loc Location, message string) Locati
 			}
 		}
 	}
-	LogAndFprintf(conn, "[SERVER] Vous ne possédez pas l'objet %s.\n", itemName)
+	LogAndFprintf(conn, "[SERVER] ERRNO 404: Vous ne possédez pas l'objet %s.\n", itemName)
 	return loc
 }
 
@@ -41,7 +41,7 @@ func Move(conn net.Conn, player Player, loc string, message string) Location {
 	mapsLock.Unlock()
 
 	if locate.Exits[direction] == ""{
-		LogAndFprintf(conn, "[SERVER] Vous ne pouvez pas vous déplacer dans cette direction.\n")
+		LogAndFprintf(conn, "[SERVER] ERRNO 301: Vous ne pouvez pas vous déplacer dans cette direction.\n")
 		return locate
 	}
 	deletePlayerInMap(player.Name)
@@ -88,7 +88,7 @@ func takeItem(conn net.Conn, player Player, loc Location, message string) Locati
 			}
 		}
 	}
-	LogAndFprintf(conn, "[SERVER] L'objet %s n'est pas disponible dans cette location.\n", itemName)
+	LogAndFprintf(conn, "[SERVER] ERRNO 404: L'objet %s n'est pas disponible dans cet endroit.\n", itemName)
 	return loc
 }
 
@@ -109,6 +109,7 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 		case "ACCEPT\n", "DECLINE\n":
 			if hasPendingInvite{
 				ch <- message
+				LogAndFprintf(conn, "[SERVER] Vous avez répondu à l'invitation avec: %s\n", strings.TrimSpace(message))
 				continue
 			}
 		case "DEBUG LOC\n":

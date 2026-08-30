@@ -39,6 +39,7 @@ func RoomChat(conn net.Conn, loc string, player string) {
 		inRoomChatMu.Unlock()
 		send := Recept(conn)
 		if send == "EXIT\n" || send == "" || send == "QUIT\n" {
+			LogAndFprintf(conn, "[SERVER] Vous avez quitté le chat de la salle.\n")
 			return
 		} else {
 			send = fmt.Sprintf("[%s]: %s", player, send)
@@ -82,6 +83,7 @@ func GroupChat(conn net.Conn, player string) {
 		Broadcast(receivers, currentGroup.messages)
 		send := Recept(conn)
 		if send == "EXIT\n" || send == "" || send == "QUIT\n" {
+			LogAndFprintf(conn, "[SERVER] Vous avez quitté le chat de groupe.\n")
 			return
 		} else {
 			send = fmt.Sprintf("[%s]: %s", player, send)
@@ -114,6 +116,7 @@ func GlobalChat(conn net.Conn, player string) {
 		Broadcast(inGlobal, globaleMessage)
 		send := Recept(conn)
 		if send == "EXIT\n" || send == "" || send == "QUIT\n" {
+			LogAndFprintf(conn, "[SERVER] Vous avez quitté le chat global.\n")
 			return
 		} else {
 			send = fmt.Sprintf("[%s]: %s", player, send)
