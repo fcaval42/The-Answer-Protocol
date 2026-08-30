@@ -91,7 +91,7 @@ func main() {
 
 	withGUI := len(os.Args) > 1 && strings.EqualFold(os.Args[1], "gui")
 
-	file, err := os.OpenFile("../protocol.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	file, err := os.OpenFile("protocol.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {
 		log.Fatalf("[ERROR] Erreur lors de l'ouverture du fichier de log : %v", err)
 	}

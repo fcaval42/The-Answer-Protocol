@@ -55,31 +55,37 @@ func RoomChat(conn net.Conn, loc string, player string) {
 
 func GroupChat(conn net.Conn, player string) {
 	inGroupChatLock.Lock()
-	inGroupChat = append(inGroupChat, conn)
+	if inGroupChat == nil {
+		inGroupChat = make(map[string][]net.Conn)
+	}
+	var currentGroup *Group
+	currentGroup = SearchPlayerGroup(player)
+	if currentGroup == nil {
+		LogAndFprintf(conn, "[SERVER] Vous n'êtes pas dans un groupe. Créez-en un d'abord.\n")
+		inGroupChatLock.Unlock()
+		return
+	}
+	inGroupChat[currentGroup.ID] = append(inGroupChat[currentGroup.ID], conn)
 	inGroupChatLock.Unlock()
 	defer func() {
 		inGroupChatLock.Lock()
-		for i, con := range inGroupChat {
+		for i, con := range inGroupChat[currentGroup.ID] {
 			if conn == con {
-				inGroupChat = slices.Delete(inGroupChat, i, i+1)
+				group := inGroupChat[currentGroup.ID]
+				group = slices.Delete(inGroupChat[currentGroup.ID], i, i+1)
+				inGroupChat[currentGroup.ID] = group
 				break
 			}
 		}
 		inGroupChatLock.Unlock()
 	}()
-	var currentGroup *Group
-	currentGroup = SearchPlayerGroup(player)
-	if currentGroup == nil {
-		LogAndFprintf(conn, "[SERVER] Vous n'êtes pas dans un groupe. Créez-en un d'abord.\n")
-		return
-	}
-	receivers := make([]net.Conn, 0, len(currentGroup.Members))
 	for{
-		for _, memberConn := range currentGroup.Members {
-			if slices.Contains(inGroupChat, memberConn) {
-				receivers = append(receivers, memberConn)
+		receivers := make([]net.Conn, 0, len(currentGroup.Members))
+		inGroupChatLock.Lock()
+		for _, memberConn := range inGroupChat[currentGroup.ID] {
+			receivers = append(receivers, memberConn)
 			}
-		}
+		inGroupChatLock.Unlock()
 		Broadcast(receivers, currentGroup.messages)
 		send := Recept(conn)
 		if send == "EXIT\n" || send == "" || send == "QUIT\n" {
