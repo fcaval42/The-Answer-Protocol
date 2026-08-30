@@ -11,11 +11,6 @@ import (
 	. "the_answer_protocol/tcp/common"
 )
 
-func roomChat(conn net.Conn, room string) {
-
-}
-
-
 var (
 	maps     map[string]Location
 	mapsLock = sync.Mutex{}
@@ -36,6 +31,16 @@ func deletePlayerInMap(player string){
 	mapsLock.Unlock()
 }
 
+func disconnectPlayer(player string) {
+	worldLock.Lock()
+	if p, ok := world.Players[player]; ok {
+		p.Connected = false
+		p.Connect = nil
+		world.Players[player] = p
+	}
+	worldLock.Unlock()
+}
+
 func DeletePlayer(players []Player, player string) []Player {
 	for i, p := range players {
 		if p.Name == player {
@@ -47,20 +52,6 @@ func DeletePlayer(players []Player, player string) []Player {
 
 
 
-func sendLocation(location Location, conn net.Conn) Location {
-	mapsLock.Lock()
-	defer mapsLock.Unlock()
-	for _, l := range maps{
-		if l.Name == location.Name {
-			location = l
-			break
-		}
-	}
-	fmt.Fprintf(conn, "%s\n", ToString(location))
-	return location
-}
-
-
 // Gestion de la connexion pour un client
 func handleConnection(conn net.Conn) {
 	var player string
@@ -68,6 +59,7 @@ func handleConnection(conn net.Conn) {
 	// Gestion de la fin de connexion
 	defer func() {
 		deletePlayerInMap(player)
+		disconnectPlayer(player)
 		CloseSession(conn, player)
 	}()
 	player = Connexion(conn, player)
@@ -78,16 +70,21 @@ func handleConnection(conn net.Conn) {
 	worldLock.Lock()
 	play := world.Players[player]
 	play.Connect = conn
-	world.Players[player] = play
-	worldChar := ToString(world)
+	play.Connected = true
 	worldLock.Unlock()
 
 	// Mets le joueur dans la map a son point de respawn
 	mapsLock.Lock()
 	location := maps[play.Respawn.Location]
+	play.Location = location
 	location.Players = append(location.Players, play)
 	maps[play.Respawn.Location] = location
 	mapsLock.Unlock()
+
+	worldLock.Lock()
+	world.Players[player] = play
+	worldChar := ToString(world)
+	worldLock.Unlock()
 
 	// Charge le monde et le point de respawn du joueur pour lenvoyer au client
 	fmt.Fprintf(conn, "%s\n", worldChar)
@@ -109,7 +106,7 @@ func main() {
 	// Fermeture à la fin du programme
 	defer ln.Close()
 	var errs []error
-	world, errs = Rally("../../yaml/world.yaml")
+	world, errs = Rally("yaml/world.yaml")
 	if len(errs) != 0 {
 		log.Fatalln(errs)
 	}

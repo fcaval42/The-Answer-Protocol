@@ -31,6 +31,11 @@ func slugifyLocationName(name string) string {
 	return strings.Join(parts, "_")
 }
 
+func slugifyName(name string) string {
+	replacer := strings.NewReplacer(" ", "_", "-", "_", "'", "_", "’", "_")
+	return replacer.Replace(name)
+}
+
 func duplicatesIn(refs []string) []string {
 	seen := make(map[string]bool, len(refs))
 	var dups []string

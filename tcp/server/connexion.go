@@ -8,7 +8,7 @@ import (
 // Gere la connexion d'un client,
 // en attendant que le client envoie la commande "CONNECT"
 // et en traitant la selection du joueur.
-func Connexion(conn net.Conn, player string) string{	
+func Connexion(conn net.Conn, player string) string{
 	for {
 		message := Recept(conn)
 		if message != "" {
@@ -27,4 +27,5 @@ func Connexion(conn net.Conn, player string) string{
 		if message == "QUIT\n" || message == "" {
 			return ""
 		}
-	}}
+	}
+}

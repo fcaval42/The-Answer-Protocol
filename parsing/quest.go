@@ -23,6 +23,11 @@ type Quest struct {
 	Reward      QuestReward    `yaml:"reward"`
 }
 
+type PlayerQuest struct {
+	QuestID string
+	Status  string // "active" ou "completed"
+}
+
 func validateQuests(wf WorldFile) []error {
 	var errs []error
 

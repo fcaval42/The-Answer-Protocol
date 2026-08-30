@@ -1,9 +1,10 @@
 package main
 
 import (
+	// "fmt"
+	"log"
 	"net"
 	"strings"
-	"log"
 	. "the_answer_protocol/tcp/commands"
 )
 
@@ -19,6 +20,6 @@ func select_Player(conn net.Conn) string{
 	case "900":
 		return ""
 	}
-	
+
 	return player
 }

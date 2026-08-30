@@ -16,12 +16,15 @@ type Respawn struct {
 type Player struct {
 	Name    string  `yaml:"name"`
 	HP      int     `yaml:"hp"`
+	MaxHP   int     `yaml:"-"`
 	Weapon  Weapon  `yaml:"weapon"`
 	Attack  int     `yaml:"attack"`
 	Defense int     `yaml:"defense"`
 	Respawn Respawn `yaml:"respawn"`
 	Inventory []Item
-	Quest []Quest
+	Quests []PlayerQuest
+	Location Location
+	Connected bool
 	Connect net.Conn `json:"-"`
 }
 
@@ -35,10 +38,15 @@ func validatePlayers(wf WorldFile) []error {
 		}
 		if isBlank(player.Name) {
 			errs = append(errs, fmt.Errorf("player %q: name is empty", id))
-		} else if otherID, ok := seenPlayerNames[player.Name]; ok {
-			errs = append(errs, fmt.Errorf("players %q and %q share the same name %q", otherID, id, player.Name))
 		} else {
-			seenPlayerNames[player.Name] = id
+			if slug := slugifyName(player.Name); slug != id {
+				errs = append(errs, fmt.Errorf("player %q: name %q does not match its id (expected id %q)", id, player.Name, slug))
+			}
+			if otherID, ok := seenPlayerNames[player.Name]; ok {
+				errs = append(errs, fmt.Errorf("players %q and %q share the same name %q", otherID, id, player.Name))
+			} else {
+				seenPlayerNames[player.Name] = id
+			}
 		}
 		if player.HP < 0 {
 			errs = append(errs, fmt.Errorf("player %q: hp %d is negative", id, player.HP))

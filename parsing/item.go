@@ -20,10 +20,15 @@ func validateItems(wf WorldFile) []error {
 		}
 		if isBlank(item.Name) {
 			errs = append(errs, fmt.Errorf("item %q: name is empty", id))
-		} else if otherID, ok := seenItemNames[item.Name]; ok {
-			errs = append(errs, fmt.Errorf("items %q and %q share the same name %q", otherID, id, item.Name))
 		} else {
-			seenItemNames[item.Name] = id
+			if slug := slugifyName(item.Name); slug != id {
+				errs = append(errs, fmt.Errorf("item %q: name %q does not match its id (expected id %q)", id, item.Name, slug))
+			}
+			if otherID, ok := seenItemNames[item.Name]; ok {
+				errs = append(errs, fmt.Errorf("items %q and %q share the same name %q", otherID, id, item.Name))
+			} else {
+				seenItemNames[item.Name] = id
+			}
 		}
 		if isBlank(item.Description) {
 			errs = append(errs, fmt.Errorf("item %q: description is empty", id))

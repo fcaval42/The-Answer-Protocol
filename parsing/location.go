@@ -1,6 +1,9 @@
 package parsing
 
-import "fmt"
+import (
+	"fmt"
+	"os"
+)
 
 type Spawn struct {
 	NPCType string `yaml:"npc_type"`
@@ -16,7 +19,20 @@ type Location struct {
 	NPCs        []string          `yaml:"npcs"`
 	Enemies     []string          `yaml:"enemies"`
 	Spawns      []Spawn           `yaml:"spawns"`
+	Background  string            `yaml:"background"`
 	Players     []Player
+}
+
+const defaultBackground = "assets/default_background.png"
+
+func resolveBackground(path string) string {
+	if isBlank(path) {
+		return defaultBackground
+	}
+	if info, err := os.Stat(path); err != nil || info.IsDir() {
+		return defaultBackground
+	}
+	return path
 }
 
 func validateLocations(wf WorldFile) []error {
