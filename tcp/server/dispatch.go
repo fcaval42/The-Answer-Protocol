@@ -8,6 +8,31 @@ import (
 	"strings"
 )
 
+func dropItem(conn net.Conn, player Player, loc Location, message string) Location {
+	// Récupère le nom de l'objet à déposer à partir du message
+	itemName := strings.TrimSpace(strings.TrimPrefix(message, "DROP"))
+	mapsLock.Lock()
+	defer mapsLock.Unlock()
+	for i, p := range loc.Players {
+		if p.Name == player.Name {
+			for j, item := range p.Inventory {
+				if item.Name == itemName {
+					// Supprime l'objet de l'inventaire du joueur
+					loc.Players[i].Inventory = append(loc.Players[i].Inventory[:j], loc.Players[i].Inventory[j+1:]...)
+					// Ajoute l'objet à la liste des objets de la location
+					loc.Items = append(loc.Items, itemName)
+					maps[loc.Name] = loc
+					LogAndFprintf(conn, "[SERVER] Vous avez déposé l'objet: %s\n", itemName)
+					LogAndFprintf(conn, "%s\n", ToString(loc))
+					return loc
+				}
+			}
+		}
+	}
+	LogAndFprintf(conn, "[SERVER] Vous ne possédez pas l'objet %s.\n", itemName)
+	return loc
+}
+
 func Move(conn net.Conn, player Player, loc string, message string) Location {
 	// Récupère la direction du mouvement à partir du message
 	direction := strings.TrimSpace(strings.TrimPrefix(message, "MOVE"))
@@ -26,10 +51,46 @@ func Move(conn net.Conn, player Player, loc string, message string) Location {
 	locate.Players = append(locate.Players, player)
 	maps[direction] = locate
 	mapsLock.Unlock()
+	LogAndFprintf(conn, "Vous êtes maintenant dans %s\n", locate.Name)
 	return locate
 }
 
-
+func takeItem(conn net.Conn, player Player, loc Location, message string) Location {
+	// Récupère le nom de l'objet à prendre à partir du message
+	itemName := strings.TrimSpace(strings.TrimPrefix(message, "TAKE"))
+	mapsLock.Lock()
+	defer mapsLock.Unlock()
+	for i, p := range loc.Players {
+		if p.Name == player.Name {
+			for j, item := range loc.Items {
+				if item == itemName {
+					worldLock.Lock()
+					for _, it := range world.Items {
+						if it.Name == itemName && !it.Obtainable {
+							LogAndFprintf(conn, "[SERVER] L'objet %s n'est pas obtenable.\n", itemName)
+							worldLock.Unlock()
+							return loc
+						}
+						if it.Name == itemName{
+						// Ajoute l'objet à l'inventaire du joueur
+						loc.Players[i].Inventory = append(loc.Players[i].Inventory, it)
+						// Supprime l'objet de la liste des objets de la location
+						loc.Items = append(loc.Items[:j], loc.Items[j+1:]...)
+						maps[loc.Name] = loc
+						worldLock.Unlock()
+						LogAndFprintf(conn, "[SERVER] Vous avez pris l'objet: %s\n", itemName)
+						LogAndFprintf(conn, "%s\n", ToString(loc))
+						return loc
+						}
+					}
+				}
+				worldLock.Unlock()
+			}
+		}
+	}
+	LogAndFprintf(conn, "[SERVER] L'objet %s n'est pas disponible dans cette location.\n", itemName)
+	return loc
+}
 
 // Dispatch des commandes du client après la connexion,
 // en fonction de la commande reçue.
@@ -105,5 +166,11 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 		if strings.HasPrefix(message, "MOVE"){
 			loc = Move(conn, player, loc.Name, message)
 		}
+		if strings.HasPrefix(message, "TAKE"){
+			loc = takeItem(conn, player, loc, message)
 		}
+		if strings.HasPrefix(message, "DROP"){
+			loc = dropItem(conn, player, loc, message)
+		}
+	}
 	}

@@ -37,7 +37,7 @@ func ConnectCom(conn net.Conn) string{
 	for i, perso := range PersoChoice {
 		charactere[i] = fmt.Sprintf("%d. %s", i+1, perso)
 	}
-	msg := fmt.Sprintf("[INFO] Choisissez votre joueur parmi en entrant le numéro correspondant: %s\n", strings.Join(charactere, ", "))
+	msg := fmt.Sprintf("[INFO] Choisissez votre joueur parmi la liste en entrant le numéro correspondant: %s\n", strings.Join(charactere, ", "))
 	LogAndFprintf(conn, "%s", msg)
 
 	// Boucle infinie tant que le joueur n'a pas effectué un bon choix
