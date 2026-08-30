@@ -2,6 +2,7 @@ package gui
 
 import (
 	"fmt"
+	"os"
 
 	"encoding/json"
 	"strings"
@@ -288,25 +289,25 @@ func buildRoomPanel(loc parsing.Location, world parsing.WorldFile, player parsin
 
 	// conteneur vertical. Respecte ordre d'affichage
 	return container.NewVBox(
-		Fix(0, 8),
+		Fix(0, 5),
 		title,
-		Fix(0, 8),
+		Fix(0, 5),
 		desc,
-		Fix(0, 10),
+		Fix(0, 8),
 		NewTitleText("Sortie", 25),
-		Fix(0, 8),
+		Fix(0, 5),
 		exitsRow,
-		Fix(0, 10),
+		Fix(0, 8),
 		NewTitleText("Objets", 25),
-		Fix(0, 8),
+		Fix(0, 5),
 		itemsRow,
-		Fix(0, 15),
+		Fix(0, 8),
 		NewTitleText("PNJ", 25),
-		Fix(0, 8),
+		Fix(0, 5),
 		npcsRow,
-		Fix(0, 15),
+		Fix(0, 10),
 		NewTitleText("Actions", 25),
-		Fix(0, 8),
+		Fix(0, 5),
 		actionsGrid,
 	)
 }
@@ -501,7 +502,10 @@ func Run(playerName string, world parsing.WorldFile, sess *Session) {
 	}
 	changeRoom(startLoc) // affichage initial
 
-	quitBtn := NewSemiTransparentButton("Quit", 140, func() { fmt.Println("QUIT") })
+	quitBtn := NewSemiTransparentButton("Quit", 140, func() {
+		sess.Quit()
+		os.Exit(0)
+	})
 
 	// Boutons Who et Quit à droite de la fenêtre (même taille que les autres : 180x40)
 	whoBtn := NewSemiTransparentButton("Who", 140, func() {
@@ -532,10 +536,7 @@ func Run(playerName string, world parsing.WorldFile, sess *Session) {
 		}()
 	})
 
-	// Boutons à taille fixe 180x40, alignés côte à côte dans un HBox
-	// (GridWrapLayout seul ne convient pas ici : son MinSize ne renvoie que
-	// la largeur d'une cellule, donc le Border ci-dessous ne lui laisserait
-	// jamais assez de place et les boutons repasseraient en colonne).
+	// Boutons haut à droite (who et quit)
 	fixedSize := func(obj fyne.CanvasObject) fyne.CanvasObject {
 		return container.New(layout.NewGridWrapLayout(fyne.NewSize(180, 40)), obj)
 	}

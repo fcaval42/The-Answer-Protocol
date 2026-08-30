@@ -44,19 +44,9 @@ func (s *Session) Deliver(line string) bool {
 	if !s.awaiting.Load() {
 		return false
 	}
-	// Une vraie réponse commence toujours par "OK ", "ERR", ou
-	// (cas de MOVE, qui renvoie la Location brute en JSON) "{" ; tout le reste
-	// n'est pas ce qu'on attend, on le laisse suivre son chemin normal
-	// (affichage terminal) et on continue d'attendre.
 	if !strings.HasPrefix(line, "OK ") && !strings.HasPrefix(line, "ERR") && !strings.HasPrefix(line, "{") {
 		return false
 	}
-	// Envoi non-bloquant : pending a une capacite de 1, donc si une ligne y
-	// est deja en attente (ne devrait plus arriver depuis que chaque
-	// commande ne renvoie plus qu'une seule ligne, cf. tcp/server/dispatch.go),
-	// on ne bloque jamais la boucle de lecture unique du client entier pour
-	// autant - on log et on laisse tomber cette ligne en trop plutot que de
-	// geler toute reception reseau en attendant qu'un Send() vienne la lire.
 	select {
 	case s.pending <- line:
 	default:
@@ -123,4 +113,9 @@ func (s *Session) Send(cmd string) (string, error) {
 	case <-time.After(5 * time.Second):
 		return "", fmt.Errorf("timeout wainting for response to %q", cmd)
 	}
+}
+
+
+func (s *Session) Quit() {
+	fmt.Fprint(s.conn, "QUIT\n")
 }
