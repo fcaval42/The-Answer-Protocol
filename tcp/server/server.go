@@ -35,7 +35,6 @@ func disconnectPlayer(player string) {
 	worldLock.Lock()
 	if p, ok := world.Players[player]; ok {
 		p.Connected = false
-		p.Connect = nil
 		world.Players[player] = p
 	}
 	worldLock.Unlock()
@@ -69,7 +68,6 @@ func handleConnection(conn net.Conn) {
 	// Charge le joueur et attribue la connexion
 	worldLock.Lock()
 	play := world.Players[player]
-	play.Connect = conn
 	play.Connected = true
 	worldLock.Unlock()
 

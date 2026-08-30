@@ -25,7 +25,6 @@ type Player struct {
 	Quests []PlayerQuest
 	Location Location
 	Connected bool
-	Connect net.Conn `json:"-"`
 }
 
 func validatePlayers(wf WorldFile) []error {
