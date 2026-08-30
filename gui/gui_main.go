@@ -473,6 +473,7 @@ func Run(playerName string, world parsing.WorldFile, sess *Session) {
 	roomContainer := container.NewStack()
 	currentRoom := startLoc // salle actuellement affichée, suivie pour la carte
 
+
 	showMessage := func(title, msg string) {
 		defer func() {
 			if r := recover(); r != nil {
