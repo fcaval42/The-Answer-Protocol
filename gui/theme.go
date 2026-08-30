@@ -74,9 +74,10 @@ func NewBodyText(text string, size float32) *canvas.Text {
 
 type fontTheme struct {
 	fyne.Theme
-	font  fyne.Resource
-	color color.Color
-	size  float32
+	font    fyne.Resource
+	color   color.Color
+	size    float32
+	bgAlpha uint8 // 0 = fond du bouton inchangé, sinon force cette opacité
 }
 
 func newFontTheme(font fyne.Resource, col color.Color, size float32) fyne.Theme {
@@ -93,6 +94,11 @@ func (t *fontTheme) Font(style fyne.TextStyle) fyne.Resource {
 func (t *fontTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) color.Color {
 	if name == theme.ColorNameForeground {
 		return t.color
+	}
+	if t.bgAlpha > 0 && (name == theme.ColorNameButton || name == theme.ColorNameDisabledButton) {
+		base := t.Theme.Color(name, variant)
+		r, g, b, _ := base.RGBA()
+		return color.NRGBA{R: uint8(r >> 8), G: uint8(g >> 8), B: uint8(b >> 8), A: t.bgAlpha}
 	}
 	return t.Theme.Color(name, variant)
 }
@@ -157,6 +163,14 @@ func (t *fontTheme) Size(name fyne.ThemeSizeName) float32 {
 func NewButton(label string, tapped func()) fyne.CanvasObject {
 	btn := widget.NewButton(label, tapped)
 	return container.NewThemeOverride(btn, newFontTheme(bodyFont, BodyColor, ButtonTextSize))
+}
+
+// NewSemiTransparentButton crée un bouton identique à NewButton mais avec un
+// fond semi-transparent (alpha 0-255, ex. 140 pour ~55% d'opacité).
+func NewSemiTransparentButton(label string, alpha uint8, tapped func()) fyne.CanvasObject {
+	btn := widget.NewButton(label, tapped)
+	th := &fontTheme{Theme: theme.DefaultTheme(), font: bodyFont, color: BodyColor, size: ButtonTextSize, bgAlpha: alpha}
+	return container.NewThemeOverride(btn, th)
 }
 
 // ------------------------- THEME DU TEXTE DE BASE ----------------------------

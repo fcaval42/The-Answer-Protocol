@@ -21,7 +21,7 @@ import (
 
 func buildHeader() fyne.CanvasObject {
 	title := NewTitleText("The Answer Protocol", 60)
-	return container.NewBorder(nil, Fix(0, 40), title, nil, nil)
+	return container.NewBorder(nil, nil, title, nil, nil)
 }
 
 // ----------------- Panneau de salle (gauche) ------------------
@@ -501,8 +501,10 @@ func Run(playerName string, world parsing.WorldFile, sess *Session) {
 	}
 	changeRoom(startLoc) // affichage initial
 
-	// Boutons Who et Quit à droite de la fenêtre
-	whoBtn := NewButton("Who", func() {
+	quitBtn := NewSemiTransparentButton("Quit", 140, func() { fmt.Println("QUIT") })
+
+	// Boutons Who et Quit à droite de la fenêtre (même taille que les autres : 180x40)
+	whoBtn := NewSemiTransparentButton("Who", 140, func() {
 		go func() {
 			resp, err := sess.Send("WHO")
 			if resp == "" && err == nil {
@@ -529,7 +531,15 @@ func Run(playerName string, world parsing.WorldFile, sess *Session) {
 			})
 		}()
 	})
-	quitBtn := NewButton("Quit", func() { fmt.Println("QUIT") })
+
+	// Boutons à taille fixe 180x40, alignés côte à côte dans un HBox
+	// (GridWrapLayout seul ne convient pas ici : son MinSize ne renvoie que
+	// la largeur d'une cellule, donc le Border ci-dessous ne lui laisserait
+	// jamais assez de place et les boutons repasseraient en colonne).
+	fixedSize := func(obj fyne.CanvasObject) fyne.CanvasObject {
+		return container.New(layout.NewGridWrapLayout(fyne.NewSize(180, 40)), obj)
+	}
+	buttonsContainer := container.NewHBox(fixedSize(whoBtn), fixedSize(quitBtn))
 
 	rightPanel := WithMinWidth(container.NewVBox(
 		characterContainer,
@@ -540,12 +550,12 @@ func Run(playerName string, world parsing.WorldFile, sess *Session) {
 	body := container.NewBorder(nil, nil, WithMinWidth(roomContainer, 420), rightPanel, nil)
 
 	// Header avec titre au centre et boutons à droite
-	headerContent := container.NewBorder(nil, Fix(0, 40), buildHeader(), container.NewHBox(quitBtn, whoBtn), nil)
+	headerContent := container.NewBorder(nil, Fix(0, 23), buildHeader(), container.NewCenter(buttonsContainer), nil)
 
 	// NewBorder = conteneur avec header en haut, body au milieu
 	content := container.NewBorder(headerContent, nil, nil, nil, body)
 
-	full := container.NewStack(background, container.New(layout.NewCustomPaddedLayout(12, 4, 47, 47), content))
+	full := container.NewStack(background, container.New(layout.NewCustomPaddedLayout(20, 4, 47, 47), content))
 
 	w.SetContent(full)
 	w.ShowAndRun()
