@@ -22,13 +22,12 @@ var (
 )
 
 
-func deletePlayerInMap(player string){
-	mapsLock.Lock()
-	for _, loc := range maps {
-		loc.Players = DeletePlayer(loc.Players, player)
-		maps[loc.Name] = loc
+func deletePlayerInMap(player string) map[string]Location {
+	for _, l := range maps {
+		l.Players = DeletePlayer(l.Players, player)
+		maps[l.ID] = l
 	}
-	mapsLock.Unlock()
+	return maps
 }
 
 func disconnectPlayer(player string) {
@@ -74,7 +73,6 @@ func handleConnection(conn net.Conn) {
 	// Mets le joueur dans la map a son point de respawn
 	mapsLock.Lock()
 	location := maps[play.Respawn.Location]
-	play.Location = location
 	location.Players = append(location.Players, play)
 	maps[play.Respawn.Location] = location
 	mapsLock.Unlock()

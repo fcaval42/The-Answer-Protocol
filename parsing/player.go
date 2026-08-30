@@ -1,7 +1,6 @@
 package parsing
 
-import ("fmt"
-	"net")
+import "fmt"
 
 type Weapon struct {
 	Name     string  `yaml:"name"`
@@ -23,7 +22,6 @@ type Player struct {
 	Respawn Respawn `yaml:"respawn"`
 	Inventory []Item
 	Quests []PlayerQuest
-	Location Location
 	Connected bool
 }
 
