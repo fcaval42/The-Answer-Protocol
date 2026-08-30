@@ -98,11 +98,19 @@ func takeItem(conn net.Conn, player Player, loc Location, message string) Locati
 // Dispatch des commandes du client après la connexion,
 // en fonction de la commande reçue.
 func Dispatch(conn net.Conn, player Player, loc Location) {
+	var previous string
 	for {
 		message := Recept(conn)
 		pendingInvitesLock.Lock()
 		ch, hasPendingInvite := pendingInvites[player.Name]
 		pendingInvitesLock.Unlock()
+		if message == previous {
+			LogAndPrintf(conn, "%s| [WARN] %s", conn.RemoteAddr(), message)
+			LogAndFprintf(conn, "[SERVER][WARN] Attention à ne pas envoyer la même commande: %s\n", message)
+		} else {
+			LogAndPrintf(conn, "%s| %s", conn.RemoteAddr().String(), message)
+		}
+		previous = message
 		switch message{
 		case "":
 			return
@@ -171,7 +179,13 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 				if message == "" {
 					return
 				}
-				LogAndPrintf(conn, "%s| %s", conn.RemoteAddr().String(), message)
+				if message == previous {
+					LogAndPrintf(conn, "%s| [WARN] %s", conn.RemoteAddr(), message)
+					LogAndFprintf(conn, "[SERVER][WARN] Attention à ne pas envoyer la même commande: %s\n", message)
+				} else {
+					LogAndPrintf(conn, "%s| %s", conn.RemoteAddr().String(), message)
+				}
+				previous = message
 				switch message {
 				case "GLOBAL\n":
 					GlobalChat(conn, player.Name)

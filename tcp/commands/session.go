@@ -40,11 +40,18 @@ func ConnectCom(conn net.Conn) string{
 	msg := fmt.Sprintf("[INFO] Choisissez votre joueur parmi la liste en entrant le numéro correspondant: %s\n", strings.Join(charactere, ", "))
 	LogAndFprintf(conn, "%s", msg)
 
+	var previous string
 	// Boucle infinie tant que le joueur n'a pas effectué un bon choix
 	for {
 		// Recois le choix du joueur par le client
 		player, err := reader.ReadString('\n')
-		LogAndPrintf(conn, "%s| %s", conn.RemoteAddr().String(), player)
+		if player == previous {
+			LogAndPrintf(conn, "%s| [WARN] %s", conn.RemoteAddr(), player)
+			LogAndFprintf(conn, "[SERVER] Attention à ne pas envoyer la même commande: %s\n", player)
+		} else {
+			LogAndPrintf(conn, "%s| %s", conn.RemoteAddr().String(), player)
+		}
+		previous = player
 		if player != "\n" {
 			if err != nil {
 				log.Println(conn.RemoteAddr().String() + "| [ERROR] " + err.Error())
