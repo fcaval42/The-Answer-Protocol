@@ -125,12 +125,12 @@ func GroupInvite(conn net.Conn, player string) {
 
 func GroupLeave(player string) bool{
 	if SearchPlayerGroup(player) != nil {
-	currentGroup := SearchPlayerGroup(player)
-	currentGroup.Mu.Lock()
-	currentGroup.messages = append(currentGroup.messages, fmt.Sprintf("%s a quitté le groupe.\n", player))
-	delete(currentGroup.Members, player)
-	currentGroup.Mu.Unlock()
-	return true
+		currentGroup := SearchPlayerGroup(player)
+		currentGroup.Mu.Lock()
+		currentGroup.messages = append(currentGroup.messages, fmt.Sprintf("%s a quitté le groupe.\n", player))
+		delete(currentGroup.Members, player)
+		currentGroup.Mu.Unlock()
+		return true
 	}
 	return false
 }

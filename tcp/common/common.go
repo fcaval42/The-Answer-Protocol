@@ -29,7 +29,7 @@ func LogAndPrintf(conn net.Conn, format string, args ...interface{}) {
 		"[SERVER]",
 		log.Ldate | log.Ltime,
 	)
-	file, err := os.OpenFile("../protocol.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	file, err := os.OpenFile("protocol.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {
 		log.Fatalf("[ERROR] Erreur lors de l'ouverture du fichier de log : %v", err)
 	}
@@ -42,7 +42,7 @@ func LogAndPrintf(conn net.Conn, format string, args ...interface{}) {
 }
 
 func LogAndFprintf(conn net.Conn, format string, args ...interface{}) {
-	file, err := os.OpenFile("../protocol.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	file, err := os.OpenFile("protocol.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {
 		log.Fatalf("[ERROR] Erreur lors de l'ouverture du fichier de log : %v", err)
 	}

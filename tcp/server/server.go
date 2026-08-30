@@ -94,7 +94,7 @@ func handleConnection(conn net.Conn) {
 }
 
 func main() {
-	logfile, _ := os.Create("../protocol.log")
+	logfile, _ := os.Create("protocol.log")
 	log.SetOutput(logfile)
 	maps = make(map[string]Location)
 	// Ouverture de l'ecoute tcp sur le port 8080 du localhost
@@ -106,7 +106,7 @@ func main() {
 	// Fermeture à la fin du programme
 	defer ln.Close()
 	var errs []error
-	world, errs = Rally("../../yaml/world.yaml")
+	world, errs = Rally("yaml/world.yaml")
 	if len(errs) != 0 {
 		log.Fatalln(errs)
 	}
