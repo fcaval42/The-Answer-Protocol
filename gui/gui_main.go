@@ -19,17 +19,9 @@ import (
 
 // ----------------- Header (titre) ------------------
 
-func buildHeader(extra ...fyne.CanvasObject) fyne.CanvasObject {
+func buildHeader() fyne.CanvasObject {
 	title := NewTitleText("The Answer Protocol", 60)
-
-	var headerContent fyne.CanvasObject
-	if len(extra) > 0 {
-		headerContent = container.NewHBox(append([]fyne.CanvasObject{title, layout.NewSpacer()}, extra...)...)
-	} else {
-		headerContent = title
-	}
-
-	return container.NewBorder(nil, Fix(0, 40), headerContent, nil, nil)
+	return container.NewBorder(nil, Fix(0, 40), title, nil, nil)
 }
 
 // ----------------- Panneau de salle (gauche) ------------------
@@ -509,7 +501,7 @@ func Run(playerName string, world parsing.WorldFile, sess *Session) {
 	}
 	changeRoom(startLoc) // affichage initial
 
-	// Boutons Who et Quit pour le header
+	// Boutons Who et Quit à droite de la fenêtre
 	whoBtn := NewButton("Who", func() {
 		go func() {
 			resp, err := sess.Send("WHO")
@@ -547,8 +539,11 @@ func Run(playerName string, world parsing.WorldFile, sess *Session) {
 
 	body := container.NewBorder(nil, nil, WithMinWidth(roomContainer, 420), rightPanel, nil)
 
-	// NewBorder = conteneur avce header en haut, body au milieu, rightPanel à droite, roomContainer à gauche + bordures personnalisées
-	content := container.NewBorder(buildHeader(quitBtn, whoBtn), nil, nil, nil, body)
+	// Header avec titre au centre et boutons à droite
+	headerContent := container.NewBorder(nil, Fix(0, 40), buildHeader(), container.NewHBox(quitBtn, whoBtn), nil)
+
+	// NewBorder = conteneur avec header en haut, body au milieu
+	content := container.NewBorder(headerContent, nil, nil, nil, body)
 
 	full := container.NewStack(background, container.New(layout.NewCustomPaddedLayout(12, 4, 47, 47), content))
 
