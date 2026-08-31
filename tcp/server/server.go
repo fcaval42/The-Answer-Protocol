@@ -22,7 +22,7 @@ var (
 )
 
 
-func deletePlayerInMap(player string){
+func deletePlayerInMap(player string) map[string]Location {
 	mapsLock.Lock()
 	for _, loc := range maps {
 		loc.Players = DeletePlayer(loc.Players, player)

@@ -10,9 +10,6 @@ import (
 	"strings"
 )
 
-// dropItem traite DROP <item> : itemName peut etre l'ID ou le nom affiche
-// de l'item (recherche dans l'inventaire du joueur), noms multi-mots geres
-// tels quels puisque itemName est tout le reste de la ligne, non redecoupe.
 func dropItem(conn net.Conn, player Player, loc Location, message string) Location {
 	// Récupère le nom de l'objet à déposer à partir du message
 	itemName := strings.TrimSpace(strings.TrimPrefix(message, "DROP"))
@@ -33,24 +30,8 @@ func dropItem(conn net.Conn, player Player, loc Location, message string) Locati
 				}
 			}
 		}
-		// loc.Items contient des ID, jamais le texte tape par le joueur.
-		loc.Items = append(loc.Items, it.ID)
-		// maps est indexee par ID, pas par nom affiche (cf. Move) : ecrire
-		// sous loc.Name créait une entree fantome au lieu de mettre a jour
-		// la vraie salle, ce qui dupliquait/perdait les objets.
-		maps[loc.ID] = loc
-
-		// Une seule ligne de reponse, comme toutes les autres commandes (le
-		// texte d'info "Vous avez depose..." qui precedait en plus faisait de
-		// DROP une reponse a deux lignes - Deliver ne peut pas savoir de
-		// facon fiable laquelle des deux est "la" reponse selon leur ordre
-		// d'arrivee, ce qui causait des timeouts intermittents cote GUI).
-		LogAndFprintf(conn, "%s\n", ToString(loc))
-		return loc
 	}
-	// "ERR ..." comme toutes les autres reponses (cf. le commentaire dans
-	// Move ci-dessous) : sans ca, Send() cote GUI attend le timeout de 5s.
-	LogAndFprintf(conn, "ERR 404 ITEM_NOT_OWNED\n")
+	LogAndFprintf(conn, "[SERVER] ERRNO 404: Vous ne possédez pas l'objet %s.\n", itemName)
 	return loc
 }
 
@@ -112,21 +93,15 @@ func takeItem(conn net.Conn, player Player, loc Location, message string) Locati
 				worldLock.Unlock()
 			}
 		}
-
-		// Une seule ligne de reponse, comme toutes les autres commandes (cf.
-		// le commentaire equivalent dans dropItem).
-		LogAndFprintf(conn, "%s\n", ToString(loc))
-		return loc
 	}
-	// "ERR ..." comme toutes les autres reponses (cf. le commentaire dans
-	// Move ci-dessous) : sans ca, Send() cote GUI attend le timeout de 5s.
-	LogAndFprintf(conn, "ERR 404 ITEM_NOT_FOUND\n")
+	LogAndFprintf(conn, "[SERVER] ERRNO 404: L'objet %s n'est pas disponible dans cet endroit.\n", itemName)
 	return loc
 }
 
 // Dispatch des commandes du client après la connexion,
 // en fonction de la commande reçue.
 func Dispatch(conn net.Conn, player Player, loc Location) {
+	var previous string
 	for {
 		message := Recept(conn)
 		pendingInvitesLock.Lock()
@@ -141,7 +116,6 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 		}
 		previous = message
 
-		// Un switch sans variable permet d'évaluer n'importe quelle condition booléenne
 		switch {
 		case message == "":
 			return
@@ -400,21 +374,6 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 
 		case strings.HasPrefix(message, "DROP"):
 			loc = dropItem(conn, player, loc, message)
-		}
-		if strings.HasPrefix(message, "MOVE") || strings.HasPrefix(message, "TAKE") || strings.HasPrefix(message, "DROP") {
-			// Move/takeItem/dropItem ecrivent la version a jour dans
-			// world.Players, mais chacune ne mute que sa PROPRE copie locale
-			// de player (parametre passe par valeur) : sans cette relecture,
-			// la variable player de Dispatch restait figee sur l'etat du
-			// debut de connexion pour toute la suite de la boucle - un DROP
-			// juste apres un TAKE ne voyait donc jamais l'objet pris, et une
-			// deuxieme prise pouvait ecraser world.Players en perdant la
-			// premiere (elle repartait de cette meme copie obsolete).
-			worldLock.Lock()
-			if p, ok := world.Players[player.Name]; ok {
-				player = p
-			}
-			worldLock.Unlock()
 		}
 	}
 }
