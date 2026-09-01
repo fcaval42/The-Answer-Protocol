@@ -28,6 +28,7 @@ func deletePlayerInMap(player string) map[string]Location {
 		loc.Players = DeletePlayer(loc.Players, player)
 		maps[loc.ID] = loc
 	}
+	mapsLock.Unlock()
 	return maps
 }
 

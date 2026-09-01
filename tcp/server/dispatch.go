@@ -37,19 +37,19 @@ func dropItem(conn net.Conn, player Player, loc Location, message string) Locati
 
 func Move(conn net.Conn, player Player, loc string, message string) (newloc Location, moved bool) {
 	// Récupère la direction du mouvement à partir du message
-	direction := strings.TrimSpace(strings.TrimPrefix(message, "MOVE"))
 	mapsLock.Lock()
+	defer mapsLock.Unlock()
+	direction := strings.TrimSpace(strings.TrimPrefix(message, "MOVE"))
 	locate := maps[loc]
-	mapsLock.Unlock()
 
 	if locate.Exits[direction] != ""{
+		mapsLock.Unlock()
 		deletePlayerInMap(player.Name)
-		direction = locate.Exits[direction]
 		mapsLock.Lock()
+		direction = locate.Exits[direction]
 		locate = maps[direction]
 		locate.Players = append(locate.Players, player)
 		maps[direction] = locate
-		mapsLock.Unlock()
 		LogAndFprintf(conn, "%s\n", ToString(locate))
 		LogAndFprintf(conn, "%s | Vous êtes maintenant dans %s\n", conn.RemoteAddr().String(), locate.Name)
 		return locate, true
@@ -104,6 +104,7 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 	var previous string
 	for {
 		message := Recept(conn)
+		LogAndPrintf(conn, "%s", message)
 		pendingInvitesLock.Lock()
 		ch, hasPendingInvite := pendingInvites[player.Name]
 		pendingInvitesLock.Unlock()
@@ -178,7 +179,7 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 			}
 
 		case message == "LOOK\n":
-			mapsLock.Lock()
+		mapsLock.Lock()
 		mainloop:
 			for _, l := range maps {
 				for _, p := range l.Players {
@@ -191,11 +192,11 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 							continue
 						}
 						LogAndFprintf(conn, "OK room:%s\n", ToString(l))
+						mapsLock.Unlock()
 						break mainloop
 					}
 				}
 			}
-			mapsLock.Unlock()
 
 		case message == "CHAT\n":
 		chat:
