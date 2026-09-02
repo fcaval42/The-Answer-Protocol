@@ -70,11 +70,40 @@ func ReturnQuest(world WorldFile, room Location, player Player, npcName string) 
 		return "ERR 406 NO_QUEST_AVAILABLE", player, nil
 	}
 
-	if pq, known := findPlayerQuest(player, quest.ID); known {
-		if pq.Status == "completed" {
-			return "ERR 406 NO_QUEST_AVAILABLE", player, nil
-		}
-	} else {
+	pq, known := findPlayerQuest(player, quest.ID) // ajout
+	if known && pq.Status == "completed" {         // ajout
+		return "ERR 406 NO_QUEST_AVAILABLE", player, nil
+	}
+
+	if known && questProgress(room, player, quest) == "1/1" { // ajout
+		for i := range player.Quests { // ajout
+			if player.Quests[i].QuestID == quest.ID { // ajout
+				player.Quests[i].Status = "completed" // ajout
+			} // ajout
+		} // ajout
+		rewardName := quest.Reward.Value // ajout
+		if quest.Reward.Type == "item" { // ajout
+			if item, ok := world.Items[quest.Reward.Value]; ok { // ajout
+				player.Inventory = append(player.Inventory, item) // ajout
+				rewardName = item.Name                            // ajout
+			} // ajout
+		} // ajout
+		data, err := json.Marshal(struct { // ajout
+			QuestID string `json:"quest_id"` // ajout
+			Status  string `json:"status"`   // ajout
+			Reward  string `json:"reward"`   // ajout
+		}{ // ajout
+			QuestID: quest.ID,        // ajout
+			Status:  "completed",     // ajout
+			Reward:  quest.Reward.Value, // ajout
+		}) // ajout
+		if err != nil { // ajout
+			return "", player, err // ajout
+		} // ajout
+		return fmt.Sprintf("[SERVER] Quête terminée : %s ! Vous recevez : %s.\\OK %s", quest.Name, rewardName, data), player, nil // ajout
+	}
+
+	if !known { // ajout
 		player.Quests = append(player.Quests, PlayerQuest{QuestID: quest.ID, Status: "active"})
 	}
 
@@ -96,10 +125,55 @@ func ReturnQuest(world WorldFile, room Location, player Player, npcName string) 
 	return fmt.Sprintf("OK %s", data), player, nil
 }
 
+func CompleteDefeatQuest(world WorldFile, player Player, enemyName string) (Player, string) { // ajout
+	for i, pq := range player.Quests { // ajout
+		if pq.Status != "active" { // ajout
+			continue // ajout
+		} // ajout
+		quest, ok := world.Quests[pq.QuestID] // ajout
+		if !ok || quest.Objective.Type != "defeat" || quest.Objective.Enemy != enemyName { // ajout
+			continue // ajout
+		} // ajout
+		player.Quests[i].Status = "completed" // ajout
+		rewardName := quest.Reward.Value      // ajout
+		if quest.Reward.Type == "item" {      // ajout
+			if item, ok := world.Items[quest.Reward.Value]; ok { // ajout
+				player.Inventory = append(player.Inventory, item) // ajout
+				rewardName = item.Name                            // ajout
+			} // ajout
+		} // ajout
+		return player, fmt.Sprintf("[SERVER] Quête terminée : %s ! Vous recevez : %s.", quest.Name, rewardName) // ajout
+	} // ajout
+	return player, "" // ajout
+} // ajout
+
+func CompleteFetchQuest(world WorldFile, player Player, itemID string) (Player, string) { // ajout
+	for i, pq := range player.Quests { // ajout
+		if pq.Status != "active" { // ajout
+			continue // ajout
+		} // ajout
+		quest, ok := world.Quests[pq.QuestID] // ajout
+		if !ok || quest.Objective.Type != "fetch" || quest.Objective.Item != itemID { // ajout
+			continue // ajout
+		} // ajout
+		player.Quests[i].Status = "completed" // ajout
+		rewardName := quest.Reward.Value      // ajout
+		if quest.Reward.Type == "item" {      // ajout
+			if item, ok := world.Items[quest.Reward.Value]; ok { // ajout
+				player.Inventory = append(player.Inventory, item) // ajout
+				rewardName = item.Name                            // ajout
+			} // ajout
+		} // ajout
+		return player, fmt.Sprintf("[SERVER] Quête terminée : %s ! Vous recevez : %s.", quest.Name, rewardName) // ajout
+	} // ajout
+	return player, "" // ajout
+} // ajout
+
 func Quests(room Location, player Player, world WorldFile) (string, error) {
 	type questEntry struct {
 		QuestID  string `json:"quest_id"`
 		Status   string `json:"status"`
+		Description string `json:"description,omitempty"`
 		Progress string `json:"progress,omitempty"`
 	}
 
@@ -122,7 +196,7 @@ func Quests(room Location, player Player, world WorldFile) (string, error) {
 			entries = append(entries, questEntry{QuestID: quest.ID, Status: status})
 			continue
 		}
-		entries = append(entries, questEntry{QuestID: quest.ID, Status: status, Progress: progress})
+		entries = append(entries, questEntry{QuestID: quest.ID, Status: status, Description: quest.Description, Progress: progress})
 	}
 
 	data, err := json.Marshal(entries)

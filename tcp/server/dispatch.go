@@ -6,7 +6,6 @@ import (
 	. "the_answer_protocol/tcp"
 	. "the_answer_protocol/parsing"
 	"net"
-	"encoding/json"
 	"strings"
 )
 
@@ -42,13 +41,20 @@ func Move(conn net.Conn, player Player, loc string, message string) (newloc Loca
 	direction := strings.TrimSpace(strings.TrimPrefix(message, "MOVE"))
 	locate := maps[loc]
 
-	if locate.Exits[direction] != ""{
+	if locate.Exits[direction] != ""{  // ajout
+		current := player  // ajout
+		for _, p := range locate.Players {  // ajout
+			if p.Name == player.Name {  // ajout
+				current = p  // ajout
+				break  // ajout
+			}  // ajout
+		}
 		mapsLock.Unlock()
 		deletePlayerInMap(player.Name)
 		mapsLock.Lock()
 		direction = locate.Exits[direction]
 		locate = maps[direction]
-		locate.Players = append(locate.Players, player)
+		locate.Players = append(locate.Players, current) // ajout
 		maps[direction] = locate
 		LogAndFprintf(conn, "%s\n", ToString(locate))
 		LogAndFprintf(conn, "%s | Vous êtes maintenant dans %s\n", conn.RemoteAddr().String(), locate.Name)
@@ -58,9 +64,6 @@ func Move(conn net.Conn, player Player, loc string, message string) (newloc Loca
 	return locate, false
 }
 
-// takeItem traite TAKE <item> : itemName peut etre l'ID ou le nom affiche
-// de l'item (recherche dans loc.Items), noms multi-mots geres tels quels
-// puisque itemName est tout le reste de la ligne, non redecoupe.
 func takeItem(conn net.Conn, player Player, loc Location, message string) Location {
 	// Récupère le nom de l'objet à prendre à partir du message
 	itemName := strings.TrimSpace(strings.TrimPrefix(message, "TAKE"))
@@ -80,11 +83,16 @@ func takeItem(conn net.Conn, player Player, loc Location, message string) Locati
 						if it.Name == itemName{
 						// Ajoute l'objet à l'inventaire du joueur
 						loc.Players[i].Inventory = append(loc.Players[i].Inventory, it)
+						updatedPlayer, questMsg := CompleteFetchQuest(world, loc.Players[i], it.ID) // ajout
+						loc.Players[i] = updatedPlayer // ajout
 						// Supprime l'objet de la liste des objets de la location
 						loc.Items = append(loc.Items[:j], loc.Items[j+1:]...)
 						maps[loc.ID] = loc
 						worldLock.Unlock()
 						LogAndFprintf(conn, "[SERVER] Vous avez pris l'objet: %s\n", itemName)
+						if questMsg != "" { // ajout
+							LogAndFprintf(conn, "%s\n", questMsg) // ajout
+						} // ajout
 						LogAndFprintf(conn, "%s\n", ToString(loc))
 						return loc
 						}
@@ -179,24 +187,17 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 			}
 
 		case message == "LOOK\n":
-		mapsLock.Lock()
-		mainloop:
-			for _, l := range maps {
-				for _, p := range l.Players {
-					if p.Name == player.Name {
-						data, err := json.MarshalIndent(l, "", "  ")
-						data = []byte(strings.ReplaceAll(string(data), "\n", "\\"))
-						if err != nil {
-							LogAndFprintf(conn, "[SERVER] ERRNO 500: Erreur lors de la conversion de la room en JSON.\n")
-							mapsLock.Unlock()
-							continue
-						}
-						LogAndFprintf(conn, "OK room:%s\n", ToString(l))
-						mapsLock.Unlock()
-						break mainloop
-					}
-				}
+			room, _, ok := FindPlayerByName(player.Name, maps)
+			if !ok {
+				LogAndFprintf(conn, "ERR 404 PLAYER_NOT_FOUND\n")
+				continue
 			}
+			resp, err := Look(room)
+			if err != nil {
+				LogAndFprintf(conn, "ERR 900 CONNECTION_FAILED\n")
+				continue
+			}
+			LogAndFprintf(conn, "%s\n", resp)
 
 		case message == "CHAT\n":
 		chat:
@@ -312,6 +313,7 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 				LogAndFprintf(conn, "[SERVER] Vous êtes mort. Vous allez être téléporté à votre point de respawn.\\%s\n", resp)
 			case "victory":
 				room.Enemies = append(room.Enemies[:enemyI], room.Enemies[enemyI+1:]...)
+				majplayer, questMsg := CompleteDefeatQuest(world, majplayer, enemyName) // ajout
 				room.Players[playerI] = majplayer
 				maps[roomID] = room
 				worldLock.Lock()
@@ -320,7 +322,11 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 				mapsLock.Unlock()
 
 				LogAndFprintf(conn, "%s\n", ToString(room))
-				LogAndFprintf(conn, "[SERVER] Vous avez vaincu l'ennemi %s.\\%s\n", enemyName, resp)
+				if questMsg != "" { // ajout
+					LogAndFprintf(conn, "%s\\[SERVER] Vous avez vaincu l'ennemi %s.\\%s\n", questMsg, enemyName, resp) // ajout
+				} else { // ajout
+					LogAndFprintf(conn, "[SERVER] Vous avez vaincu l'ennemi %s.\\%s\n", enemyName, resp) // ajout
+				} // ajout
 			case "combat":
 				room.Players[playerI] = majplayer
 				room.Enemies[enemyI] = majEnemy.ID
