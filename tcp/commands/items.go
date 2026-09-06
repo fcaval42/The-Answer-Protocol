@@ -3,22 +3,18 @@ package commands
 import (
 	"encoding/json"
 	"fmt"
-	"the_answer_protocol/parsing"
+	. "the_answer_protocol/parsing"
 	// "errors"
 )
 
-func Inventory(world parsing.WorldFile, playerName string) (string, error) {
-	_, player, ok := findPlayerByName(world, playerName)
-	if !ok {
-		return "", fmt.Errorf("player %q is unknown", playerName)
-	}
+func Inventory(player Player) (string, error) {
 
-	ids := make([]string, 0, len(player.Inventory))
+	items := make([]string, 0, len(player.Inventory))
 	for _, item := range player.Inventory {
-		ids = append(ids, item.ID)
+		items = append(items, item.ID)
 	}
 
-	data, err := json.Marshal(ids)
+	data, err := json.Marshal(items)
 	if err != nil {
 		return "", err
 	}

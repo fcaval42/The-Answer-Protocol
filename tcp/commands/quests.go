@@ -5,41 +5,38 @@ package commands
 import (
 	"encoding/json"
 	"fmt"
-	"the_answer_protocol/parsing"
+	. "the_answer_protocol/parsing"
 )
 
-func findNPCInRoom(world parsing.WorldFile, loc parsing.Location, npcName string) (parsing.NPC, bool) {
-	for _, npcID := range loc.NPCs {
-		npc, ok := world.NPCs[npcID]
-		if !ok {
-			continue
-		}
-		if npc.ID == npcName || npc.Name == npcName {
-			return npc, true
+func findNPCInRoom(loc Location, npcName string) (id int, ok bool) {
+	for npcID, npc := range loc.NPCs {
+		if npcName == npc {
+			return npcID, true
 		}
 	}
-	return parsing.NPC{}, false
+	return 0, false
 }
 
-func findQuestForGiver(world parsing.WorldFile, giverID string) (parsing.Quest, bool) {
+
+func findQuestForGiver(world WorldFile, giverID string) (Quest, bool) {
 	for _, q := range world.Quests {
 		if q.Giver == giverID {
 			return q, true
 		}
 	}
-	return parsing.Quest{}, false
+	return Quest{}, false
 }
 
-func findPlayerQuest(player parsing.Player, questID string) (parsing.PlayerQuest, bool) {
+func findPlayerQuest(player Player, questID string) (PlayerQuest, bool) {
 	for _, pq := range player.Quests {
 		if pq.QuestID == questID {
 			return pq, true
 		}
 	}
-	return parsing.PlayerQuest{}, false
+	return PlayerQuest{}, false
 }
 
-func hasItem(player parsing.Player, itemID string) bool {
+func hasItem(player Player, itemID string) bool {
 	for _, item := range player.Inventory {
 		if item.ID == itemID {
 			return true
@@ -48,44 +45,66 @@ func hasItem(player parsing.Player, itemID string) bool {
 	return false
 }
 
-func questProgress(player parsing.Player, q parsing.Quest) string {
+func questProgress(room Location, player Player, q Quest) string {
 	switch q.Objective.Type {
 	case "fetch":
-		if hasItem(player, q.Objective.Item) && (q.Objective.DeliverTo == "" || player.Location.ID == q.Objective.DeliverTo) {
+		if hasItem(player, q.Objective.Item) && (q.Objective.DeliverTo == "" || room.ID == q.Objective.DeliverTo) {
 			return "1/1"
 		}
 	}
 	return "0/1"
 }
 
-func Quest(world parsing.WorldFile, playerName string, npcName string) (string, error) {
-	id, player, ok := findPlayerByName(world, playerName)
-	if !ok || player.Location.ID == "" {
-		return "", fmt.Errorf("player %q has no known location", playerName)
-	}
 
-	loc, ok := world.World.Locations[player.Location.ID]
+
+
+
+func ReturnQuest(world WorldFile, room Location, player Player, npcName string) (string, Player, error) {
+	npcId, ok := findNPCInRoom(room, npcName)
 	if !ok {
-		return "", fmt.Errorf("player %q location %q is unknown", playerName, player.Location.ID)
+		return "ERR 404 NPC_NOT_FOUND", player, nil
 	}
 
-	npc, ok := findNPCInRoom(world, loc, npcName)
+	quest, ok := findQuestForGiver(world, room.NPCs[npcId])
 	if !ok {
-		return "ERR 404 NPC_NOT_FOUND", nil
+		return "ERR 406 NO_QUEST_AVAILABLE", player, nil
 	}
 
-	quest, ok := findQuestForGiver(world, npc.ID)
-	if !ok {
-		return "ERR 406 NO_QUEST_AVAILABLE", nil
+	pq, known := findPlayerQuest(player, quest.ID) // ajout
+	if known && pq.Status == "completed" {         // ajout
+		return "ERR 406 NO_QUEST_AVAILABLE", player, nil
 	}
 
-	if pq, known := findPlayerQuest(player, quest.ID); known {
-		if pq.Status == "completed" {
-			return "ERR 406 NO_QUEST_AVAILABLE", nil
-		}
-	} else {
-		player.Quests = append(player.Quests, parsing.PlayerQuest{QuestID: quest.ID, Status: "active"})
-		world.Players[id] = player
+	if known && questProgress(room, player, quest) == "1/1" { // ajout
+		for i := range player.Quests { // ajout
+			if player.Quests[i].QuestID == quest.ID { // ajout
+				player.Quests[i].Status = "completed" // ajout
+			} // ajout
+		} // ajout
+		rewardName := quest.Reward.Value // ajout
+		if quest.Reward.Type == "item" { // ajout
+			if item, ok := world.Items[quest.Reward.Value]; ok { // ajout
+				player.Inventory = append(player.Inventory, item) // ajout
+				rewardName = item.Name                            // ajout
+			} // ajout
+		} // ajout
+		data, err := json.Marshal(struct { // ajout
+			QuestID string `json:"quest_id"` // ajout
+			Status  string `json:"status"`   // ajout
+			Reward  string `json:"reward"`   // ajout
+		}{ // ajout
+			QuestID: quest.ID,        // ajout
+			Status:  "completed",     // ajout
+			Reward:  quest.Reward.Value, // ajout
+		}) // ajout
+		if err != nil { // ajout
+			return "", player, err // ajout
+		} // ajout
+		return fmt.Sprintf("[SERVER] Quête terminée : %s ! Vous recevez : %s.\\OK %s", quest.Name, rewardName, data), player, nil // ajout
+	}
+
+	if !known { // ajout
+		player.Quests = append(player.Quests, PlayerQuest{QuestID: quest.ID, Status: "active"})
 	}
 
 	data, err := json.Marshal(struct {
@@ -100,21 +119,61 @@ func Quest(world parsing.WorldFile, playerName string, npcName string) (string, 
 		Status:      "available",
 	})
 	if err != nil {
-		return "", err
+		return "", player, err
 	}
 
-	return fmt.Sprintf("OK %s", data), nil
+	return fmt.Sprintf("OK %s", data), player, nil
 }
 
-func Quests(world parsing.WorldFile, playerName string) (string, error) {
-	_, player, ok := findPlayerByName(world, playerName)
-	if !ok {
-		return "", fmt.Errorf("player %q is unknown", playerName)
-	}
+func CompleteDefeatQuest(world WorldFile, player Player, enemyName string) (Player, string) { // ajout
+	for i, pq := range player.Quests { // ajout
+		if pq.Status != "active" { // ajout
+			continue // ajout
+		} // ajout
+		quest, ok := world.Quests[pq.QuestID] // ajout
+		if !ok || quest.Objective.Type != "defeat" || quest.Objective.Enemy != enemyName { // ajout
+			continue // ajout
+		} // ajout
+		player.Quests[i].Status = "completed" // ajout
+		rewardName := quest.Reward.Value      // ajout
+		if quest.Reward.Type == "item" {      // ajout
+			if item, ok := world.Items[quest.Reward.Value]; ok { // ajout
+				player.Inventory = append(player.Inventory, item) // ajout
+				rewardName = item.Name                            // ajout
+			} // ajout
+		} // ajout
+		return player, fmt.Sprintf("[SERVER] Quête terminée : %s ! Vous recevez : %s.", quest.Name, rewardName) // ajout
+	} // ajout
+	return player, "" // ajout
+} // ajout
 
+func CompleteFetchQuest(world WorldFile, player Player, itemID string) (Player, string) { // ajout
+	for i, pq := range player.Quests { // ajout
+		if pq.Status != "active" { // ajout
+			continue // ajout
+		} // ajout
+		quest, ok := world.Quests[pq.QuestID] // ajout
+		if !ok || quest.Objective.Type != "fetch" || quest.Objective.Item != itemID { // ajout
+			continue // ajout
+		} // ajout
+		player.Quests[i].Status = "completed" // ajout
+		rewardName := quest.Reward.Value      // ajout
+		if quest.Reward.Type == "item" {      // ajout
+			if item, ok := world.Items[quest.Reward.Value]; ok { // ajout
+				player.Inventory = append(player.Inventory, item) // ajout
+				rewardName = item.Name                            // ajout
+			} // ajout
+		} // ajout
+		return player, fmt.Sprintf("[SERVER] Quête terminée : %s ! Vous recevez : %s.", quest.Name, rewardName) // ajout
+	} // ajout
+	return player, "" // ajout
+} // ajout
+
+func Quests(room Location, player Player, world WorldFile) (string, error) {
 	type questEntry struct {
 		QuestID  string `json:"quest_id"`
 		Status   string `json:"status"`
+		Description string `json:"description,omitempty"`
 		Progress string `json:"progress,omitempty"`
 	}
 
@@ -130,14 +189,14 @@ func Quests(world parsing.WorldFile, playerName string) (string, error) {
 			continue
 		}
 
-		progress := questProgress(player, quest)
+		progress := questProgress(room, player, quest)
 		status := pq.Status
 		if progress == "1/1" {
 			status = "completed"
 			entries = append(entries, questEntry{QuestID: quest.ID, Status: status})
 			continue
 		}
-		entries = append(entries, questEntry{QuestID: quest.ID, Status: status, Progress: progress})
+		entries = append(entries, questEntry{QuestID: quest.ID, Status: status, Description: quest.Description, Progress: progress})
 	}
 
 	data, err := json.Marshal(entries)

@@ -5,39 +5,22 @@ package commands
 import (
 	"encoding/json"
 	"fmt"
-	"the_answer_protocol/parsing"
+	. "the_answer_protocol/parsing"
 )
 
-func findEnemyInRoom(world parsing.WorldFile, loc parsing.Location, enemyName string) (parsing.Enemy, bool) {
-	for _, enemyID := range loc.Enemies {
-		enemy, ok := world.Enemies[enemyID]
-		if !ok {
-			continue
-		}
-		if enemy.ID == enemyName || enemy.Name == enemyName {
-			return enemy, true
-		}
-	}
-	return parsing.Enemy{}, false
-}
-
-func Talk(world parsing.WorldFile, playerName string, npcName string) (string, error) {
-	_, player, ok := findPlayerByName(world, playerName)
-	if !ok || player.Location.ID == "" {
-		return "", fmt.Errorf("player %q has no known location", playerName)
-	}
-
-	loc, ok := world.World.Locations[player.Location.ID]
+func Talk(room Location, world WorldFile, npcName string) (string) {
+	npcid, ok := findNPCInRoom(room, npcName)
+	npc := room.NPCs[npcid]
 	if !ok {
-		return "", fmt.Errorf("player %q location %q is unknown", playerName, player.Location.ID)
+		return "ERR 404 NPC_NOT_FOUND"
 	}
-
-	npc, ok := findNPCInRoom(world, loc, npcName)
-	if !ok {
-		return "ERR 404 NPC_NOT_FOUND", nil
+	npcChar := world.NPCs[npc]
+	var response string
+	response += fmt.Sprintf("[%s]: ", npcName)
+	for _, speech := range npcChar.Dialogue{
+		response += fmt.Sprintf("%s ", speech)
 	}
-
-	return fmt.Sprintf("OK %s", npc.Dialogue[0]), nil
+	return fmt.Sprintf("%s\n", response)
 }
 
 func statusLabel(hp int, maxHP int) string {
@@ -58,12 +41,7 @@ func statusLabel(hp int, maxHP int) string {
 	}
 }
 
-func Status(world parsing.WorldFile, playerName string) (string, error) {
-	_, player, ok := findPlayerByName(world, playerName)
-	if !ok {
-		return "", fmt.Errorf("player %q is unknown", playerName)
-	}
-
+func Status(room Location, player Player) (string, error) {
 	maxHP := player.MaxHP
 
 	data, err := json.Marshal(struct {
@@ -82,24 +60,8 @@ func Status(world parsing.WorldFile, playerName string) (string, error) {
 	return fmt.Sprintf("OK %s", data), nil
 }
 
-func Attack(world parsing.WorldFile, playerName string, enemyName string) (string, error) {
-	playerID, player, ok := findPlayerByName(world, playerName)
-	if !ok || player.Location.ID == "" {
-		return "", fmt.Errorf("player %q has no known location", playerName)
-	}
-
-	loc, ok := world.World.Locations[player.Location.ID]
-	if !ok {
-		return "", fmt.Errorf("player %q location %q is unknown", playerName, player.Location.ID)
-	}
-
-	enemy, ok := findEnemyInRoom(world, loc, enemyName)
-	if !ok {
-		if _, isNPC := findNPCInRoom(world, loc, enemyName); isNPC {
-			return "ERR 405 NPC_NOT_HOSTILE", nil
-		}
-		return "ERR 404 NPC_NOT_FOUND", nil
-	}
+func Attack(player Player, enemy Enemy) (string, string, Player, Enemy) {
+	var status string
 
 	damage := player.Attack - enemy.Defense
 	if damage < 1 {
@@ -110,7 +72,7 @@ func Attack(world parsing.WorldFile, playerName string, enemyName string) (strin
 		enemy.HP = 0
 	}
 
-	status := "combat"
+	status = "combat"
 	if enemy.HP == 0 {
 		status = "victory"
 	} else {
@@ -122,9 +84,6 @@ func Attack(world parsing.WorldFile, playerName string, enemyName string) (strin
 			status = "defeat"
 		}
 	}
-
-	world.Enemies[enemy.ID] = enemy
-	world.Players[playerID] = player
 
 	data, err := json.Marshal(struct {
 		AttackerHP int    `json:"attacker_hp"`
@@ -138,8 +97,8 @@ func Attack(world parsing.WorldFile, playerName string, enemyName string) (strin
 		Status:     status,
 	})
 	if err != nil {
-		return "", err
+		return "", status, player, enemy
 	}
 
-	return fmt.Sprintf("OK %s", data), nil
+	return fmt.Sprintf("OK %s", data), status, player, enemy
 }

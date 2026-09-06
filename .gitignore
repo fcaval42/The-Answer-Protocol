@@ -3,3 +3,4 @@ doc/*
 /tap-gui
 server
 test.go
+CLAUDE.md

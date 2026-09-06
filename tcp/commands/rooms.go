@@ -5,7 +5,7 @@ package commands
 import (
 	"encoding/json"
 	"fmt"
-	"the_answer_protocol/parsing"
+	. "the_answer_protocol/parsing"
 )
 
 type lookRoom struct {
@@ -18,60 +18,54 @@ type lookRoom struct {
 type lookResponse struct {
 	Room    lookRoom `json:"room"`
 	Players []string `json:"players"`
-	Items   []string `json:"items"`
-	NPCs    []string `json:"npcs"`
+	Items   []string `json:"items,omitempty"`
+	NPCs    []string `json:"npcs,omitempty"`
+	Enemies []string `json:"enemies,omitempty"`
 }
 
-func findPlayerByName(world parsing.WorldFile, name string) (id string, player parsing.Player, ok bool) {
-	for id, p := range world.Players {
-		if p.Name == name {
-			return id, p, true
-		}
-	}
-	return "", parsing.Player{}, false
-}
-
-func Look(world parsing.WorldFile, playerName string) (string, error) {
-	_, player, ok := findPlayerByName(world, playerName)
-	if !ok || player.Location.ID == "" {
-		return "", fmt.Errorf("player %q has no known location", playerName)
-	}
-
-	loc, ok := world.World.Locations[player.Location.ID]
-	if !ok {
-		return "", fmt.Errorf("player %q location %q is unknown", playerName, player.Location.ID)
-	}
-
-	players := make([]string, 0)
-	for _, p := range world.Players {
-		if p.Connected && p.Location.ID == loc.ID {
-			players = append(players, p.Name)
-		}
-	}
-
-	npcs := make([]string, 0, len(loc.NPCs)+len(loc.Enemies))
-	npcs = append(npcs, loc.NPCs...)
-	npcs = append(npcs, loc.Enemies...)
-
-	items := loc.Items
-	if items == nil {
-		items = make([]string, 0)
+func Look(room Location) (string, error) {
+	players := make([]string, 0, len(room.Players))
+	for _, p := range room.Players {
+		players = append(players, p.Name)
 	}
 
 	data, err := json.Marshal(lookResponse{
 		Room: lookRoom{
-			ID:          loc.ID,
-			Name:        loc.Name,
-			Description: loc.Description,
-			Exits:       loc.Exits,
+			ID:          room.ID,
+			Name:        room.Name,
+			Description: room.Description,
+			Exits:       room.Exits,
 		},
 		Players: players,
-		Items:   items,
-		NPCs:    npcs,
+		Items:   room.Items,
+		NPCs:    room.NPCs,
+		Enemies: room.Enemies,
 	})
 	if err != nil {
 		return "", err
 	}
 
 	return fmt.Sprintf("OK %s", data), nil
+}
+
+func FindPlayerByName(name string, maps map[string]Location) (room Location, index int, ok bool) {
+	for _, loc := range maps {
+		for i, p := range loc.Players {
+			if p.Name == name {
+				return loc, i, true
+			}
+		}
+	}
+	return Location{}, 0, false
+}
+
+
+func FindEnemyInRoom(enemyName string, loc Location, world WorldFile) (Enemy, int, bool) {
+	for i, enemy := range loc.Enemies {
+		if enemy == enemyName {
+			enemyStats := world.Enemies[enemy]
+			return enemyStats, i, true
+		}
+	}
+	return Enemy{}, 0, false
 }
