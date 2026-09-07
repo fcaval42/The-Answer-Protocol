@@ -79,11 +79,10 @@ func ReturnQuest(world WorldFile, room Location, player Player, npcName string) 
 		return "ERR 406 NO_QUEST_AVAILABLE", player, nil
 	}
 
-	pq, known := findPlayerQuest(player, quest.ID)
-	if known && pq.Status == "completed" {
+	pq, known := findPlayerQuest(player, quest.ID) // ajout
+	if known && pq.Status == "completed" {         // ajout
 		return "ERR 406 NO_QUEST_AVAILABLE", player, nil
 	}
-
 
 	// un autre joueur a deja termine cette quete : elle n'est plus proposable
 	// a personne tant que le serveur tourne.
@@ -122,34 +121,8 @@ func ReturnQuest(world WorldFile, room Location, player Player, npcName string) 
 		return fmt.Sprintf("OK %s", data), player, nil
 	}
 
-	// Vérifiée même à l'acceptation : si le joueur a déjà l'objet et se trouve
-	// au lieu de livraison, la quête se termine sans second aller-retour.
-	if questProgress(player, pq, quest) == "1/1" {
-		for i := range player.Quests {
-			if player.Quests[i].QuestID == quest.ID {
-				player.Quests[i].Status = "completed"
-			}
-		}
-		rewardName := quest.Reward.Value
-		if quest.Reward.Type == "item" {
-			if item, ok := world.Items[quest.Reward.Value]; ok {
-				player.Inventory = append(player.Inventory, item)
-				rewardName = item.Name
-			}
-		}
-		data, err := json.Marshal(struct {
-			QuestID string `json:"quest_id"`
-			Status  string `json:"status"`
-			Reward  string `json:"reward"`
-		}{
-			QuestID: quest.ID,
-			Status:  "completed",
-			Reward:  quest.Reward.Value,
-		})
-		if err != nil {
-			return "", player, err
-		}
-		return fmt.Sprintf("[SERVER] Quête terminée : %s ! Vous recevez : %s.\\OK %s", quest.Name, rewardName, data), player, nil
+	if !known { // ajout
+		player.Quests = append(player.Quests, PlayerQuest{QuestID: quest.ID, Status: "active"})
 	}
 
 	data, err := json.Marshal(struct {
@@ -184,40 +157,8 @@ func CompleteDefeatQuest(world WorldFile, player Player, enemyName string) (Play
 		if !ok || quest.Objective.Type != "defeat" || quest.Objective.Enemy != enemyName { // ajout
 			continue // ajout
 		} // ajout
-		player.Quests[i].Status = "completed" // ajout
-		rewardName := quest.Reward.Value      // ajout
-		if quest.Reward.Type == "item" {      // ajout
-			if item, ok := world.Items[quest.Reward.Value]; ok { // ajout
-				player.Inventory = append(player.Inventory, item) // ajout
-				rewardName = item.Name                            // ajout
-			} // ajout
-		} // ajout
-		return player, fmt.Sprintf("[SERVER] Quête terminée : %s ! Vous recevez : %s.", quest.Name, rewardName) // ajout
-	} // ajout
-	return player, "" // ajout
-} // ajout
-
-func CompleteFetchQuest(world WorldFile, room Location, player Player, itemID string) (Player, string) { // ajout
-	for i, pq := range player.Quests { // ajout
-		if pq.Status != "active" { // ajout
-			continue // ajout
-		} // ajout
-		quest, ok := world.Quests[pq.QuestID] // ajout
-		if !ok || quest.Objective.Type != "fetch" || quest.Objective.Item != itemID { // ajout
-			continue // ajout
-		} // ajout
-		if quest.Objective.DeliverTo != "" && quest.Objective.DeliverTo != room.ID { // objet ramassé hors du lieu de livraison : la quête reste active
-			continue
-		}
-		player.Quests[i].Status = "completed" // ajout
-		rewardName := quest.Reward.Value      // ajout
-		if quest.Reward.Type == "item" {      // ajout
-			if item, ok := world.Items[quest.Reward.Value]; ok { // ajout
-				player.Inventory = append(player.Inventory, item) // ajout
-				rewardName = item.Name                            // ajout
-			} // ajout
-		} // ajout
-		return player, fmt.Sprintf("[SERVER] Quête terminée : %s ! Vous recevez : %s.", quest.Name, rewardName) // ajout
+		player.Quests[i].Status = "ready" // ajout
+		return player, fmt.Sprintf("[SERVER] Objectif de quête rempli : %s ! Retournez voir %s pour récupérer votre récompense.", quest.Name, quest.Giver) // ajout
 	} // ajout
 	return player, "" // ajout
 } // ajout
@@ -229,8 +170,7 @@ func Quests(room Location, player Player, world WorldFile) (string, error) {
 		Giver       string `json:"giver"`
 		Status      string `json:"status"`
 		Description string `json:"description,omitempty"`
-		Progress string `json:"progress,omitempty"`
-		Objective QuestObjective `json:"objective,omitempty"`
+		Progress    string `json:"progress,omitempty"`
 	}
 
 	entries := make([]questEntry, 0, len(player.Quests))
@@ -263,7 +203,7 @@ func Quests(room Location, player Player, world WorldFile) (string, error) {
 			entries = append(entries, questEntry{QuestID: quest.ID, Name: quest.Name, Giver: quest.Giver, Status: status, Description: quest.Description})
 			continue
 		}
-		entries = append(entries, questEntry{QuestID: quest.ID, Name: quest.Name, Giver: quest.Giver, Status: pq.Status, Description: quest.Description, Objective: quest.Objective, Progress: progress})
+		entries = append(entries, questEntry{QuestID: quest.ID, Name: quest.Name, Giver: quest.Giver, Status: pq.Status, Description: quest.Description, Progress: progress})
 	}
 
 	// quêtes que les PNJ présents dans la salle peuvent proposer, mais que

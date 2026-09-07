@@ -86,16 +86,11 @@ func takeItem(conn net.Conn, player Player, loc Location, message string) Locati
 						// le joueur doit retourner voir le donneur de quete pour
 						// recevoir sa recompense (cf. ReturnQuest / commande QUEST).
 						loc.Players[i].Inventory = append(loc.Players[i].Inventory, it)
-						updatedPlayer, questMsg := CompleteFetchQuest(world, loc, loc.Players[i], it.ID) // ajout
-						loc.Players[i] = updatedPlayer // ajout
 						// Supprime l'objet de la liste des objets de la location
 						loc.Items = append(loc.Items[:j], loc.Items[j+1:]...)
 						maps[loc.ID] = loc
 						worldLock.Unlock()
 						LogAndFprintf(conn, "[SERVER] Vous avez pris l'objet: %s\n", itemName)
-						if questMsg != "" { // ajout
-							LogAndFprintf(conn, "%s\n", questMsg) // ajout
-						} // ajout
 						LogAndFprintf(conn, "%s\n", ToString(loc))
 						return loc
 						}
