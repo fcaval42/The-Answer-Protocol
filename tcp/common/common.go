@@ -10,7 +10,6 @@ import (
 	"os/exec"
 )
 
-
 func ClearScreen() {
     if runtime.GOOS == "windows" {
         cmd := exec.Command("cmd", "/c", "cls")
