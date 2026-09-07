@@ -99,7 +99,10 @@ func main() {
 			}
 			// On affiche le message s'il n'est pas vide
 			if response != "\n" {
-				if strings.HasPrefix(previous, "[SERVER][WARN]") {
+				if strings.HasPrefix(response, "[EVT]") {
+					response = strings.TrimSuffix(response, "\n") 
+				}
+				if strings.HasPrefix(previous, "[EVT]") {
 					fmt.Fprint(rl.Stdout(), response)
 				}else{
 					ClearScreen()
