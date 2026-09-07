@@ -180,6 +180,7 @@ func Quests(room Location, player Player, world WorldFile) (string, error) {
 		Status   string `json:"status"`
 		Description string `json:"description,omitempty"`
 		Progress string `json:"progress,omitempty"`
+		Objective QuestObjective `json:"objective,omitempty"`
 	}
 
 	entries := make([]questEntry, 0, len(player.Quests))
@@ -201,7 +202,7 @@ func Quests(room Location, player Player, world WorldFile) (string, error) {
 			entries = append(entries, questEntry{QuestID: quest.ID, Status: status})
 			continue
 		}
-		entries = append(entries, questEntry{QuestID: quest.ID, Status: status, Description: quest.Description, Progress: progress})
+		entries = append(entries, questEntry{QuestID: quest.ID, Status: status, Description: quest.Description, Objective: quest.Objective, Progress: progress})
 	}
 
 	data, err := json.Marshal(entries)
