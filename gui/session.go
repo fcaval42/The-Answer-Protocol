@@ -28,6 +28,9 @@ type Session struct {
 
 	cooldownMu  sync.Mutex
 	nextAllowed time.Time // prochain instant a partir duquel un nouveau Send() est accepte
+
+	rawMu   sync.Mutex
+	rawChan chan string // non-nil pendant une session brute (chat/groupe), cf. EnterRaw
 }
 
 
@@ -41,6 +44,24 @@ func NewSession(conn net.Conn) *Session {
 // "est-ce que quelqu'un attend cette ligne ?" = awaiting = vrai = pousse dans pending
 // qui réveille le Send qui était bloqué dessus.
 func (s *Session) Deliver(line string) bool {
+	// Le chat et les groupes (CHAT, GROUP JOIN, GROUP INVITE...) ne renvoient
+	// jamais de ligne "OK .../ERR .../{...}" : ce sont des messages "[SERVER]
+	// ..." lus en continu par une boucle bloquante cote serveur (cf.
+	// tcp/server/chat.go). Tant qu'une session brute est active (EnterRaw),
+	// on lui route TOUTES les lignes plutot que de les laisser au filtre
+	// OK/ERR/{ ci-dessous, qui ne les reconnaitrait jamais.
+	s.rawMu.Lock()
+	raw := s.rawChan
+	s.rawMu.Unlock()
+	if raw != nil {
+		select {
+		case raw <- line:
+		default:
+			fmt.Println("[GUI] ligne de chat ignorée (canal plein) :", line)
+		}
+		return true
+	}
+
 	if !s.awaiting.Load() {
 		return false
 	}
@@ -53,6 +74,38 @@ func (s *Session) Deliver(line string) bool {
 		fmt.Println("[GUI] réponse en trop ignorée (pending déjà plein) :", line)
 	}
 	return true
+}
+
+// EnterRaw bascule la session en mode brut : toutes les lignes reçues du
+// serveur sont désormais routées vers le channel retourné au lieu de passer
+// par Send()/Deliver ou d'être affichées dans le terminal texte. Utilisé
+// pour le chat et la gestion de groupe (cf. gui/chat_gui.go), dont le
+// protocole reste celui, séquentiel et bloquant, du client texte.
+func (s *Session) EnterRaw() <-chan string {
+	ch := make(chan string, 64)
+	s.rawMu.Lock()
+	s.rawChan = ch
+	s.rawMu.Unlock()
+	return ch
+}
+
+// ExitRaw restaure le fonctionnement normal de Send()/Deliver. A appeler
+// systematiquement en sortie de chat/groupe (y compris a la fermeture de la
+// fenetre), sous peine de laisser toutes les reponses ulterieures du GUI
+// partir dans le vide.
+func (s *Session) ExitRaw() {
+	s.rawMu.Lock()
+	s.rawChan = nil
+	s.rawMu.Unlock()
+}
+
+// SendRaw écrit directement sur la connexion, sans passer par le mécanisme
+// d'attente d'une unique réponse OK/ERR/{ de Send() (inutilisable ici,
+// cf. EnterRaw). L'appelant est responsable de lire les réponses via le
+// channel renvoyé par EnterRaw.
+func (s *Session) SendRaw(line string) error {
+	_, err := s.conn.Write([]byte(line))
+	return err
 }
 
 
