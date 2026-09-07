@@ -4,10 +4,9 @@ import (
 	"fmt"
 	"net"
 	"strings"
-	"time"
 	. "the_answer_protocol/tcp/common"
+	"time"
 )
-
 
 func GroupCreate(conn net.Conn, player string) {
 	if SearchPlayerGroup(player) != nil {
@@ -15,6 +14,7 @@ func GroupCreate(conn net.Conn, player string) {
 		return
 	}
 	LogAndFprintf(conn, "[SERVER] Création d'un nouveau groupe...\n")
+	groupsLock.Lock()
 	groupID := fmt.Sprintf("%d", len(groups)+1)
 
 	// Creer une nouvelle instance de Group
@@ -27,7 +27,6 @@ func GroupCreate(conn net.Conn, player string) {
 	newGroup.Members[player] = conn
 
 	// Ajouter le groupe a la liste de groupes globale
-	groupsLock.Lock()
 	groups[groupID] = newGroup
 	groupsLock.Unlock()
 
@@ -59,7 +58,6 @@ func GroupJoin(conn net.Conn, player string, groupID string) {
 	LogAndFprintf(conn, "[SERVER] Vous avez rejoint le groupe %s !\n", groupID)
 }
 
-
 func GroupInvite(conn net.Conn, player string) {
 	// Trouver le groupe du joueur actuel
 	var currentGroup *Group
@@ -75,16 +73,16 @@ func GroupInvite(conn net.Conn, player string) {
 	if len(availablePlayers) == 0 {
 		LogAndFprintf(conn, "[SERVER] Aucun joueur disponible pour l'invitation.\n")
 		return
-	}	
+	}
 	LogAndFprintf(conn, "[SERVER] Joueurs disponibles : %s\n", strings.Join(availablePlayers, ", "))
 	var invitee string
 	var inviteeConn net.Conn
 	var exists bool
-	for{
+	for {
 		// Reponse du joueur pour choisir qui inviter
 		invitee = Recept(conn)
 		invitee = strings.TrimSpace(invitee)
-	
+
 		if !IsPlayerAvailable(invitee, availablePlayers) {
 			LogAndFprintf(conn, "[SERVER] Joueur invalide ou déjà dans un groupe.\\Joueurs disponibles : %s\n", strings.Join(availablePlayers, ", "))
 			continue
@@ -98,18 +96,18 @@ func GroupInvite(conn net.Conn, player string) {
 	}
 	replyChan := make(chan string, 1)
 
-    pendingInvitesLock.Lock()
-    pendingInvites[invitee] = replyChan
-    pendingInvitesLock.Unlock()
+	pendingInvitesLock.Lock()
+	pendingInvites[invitee] = replyChan
+	pendingInvitesLock.Unlock()
 
-    // Nettoyage après l'invitation
-    defer func() {
-        pendingInvitesLock.Lock()
-        delete(pendingInvites, invitee)
-        pendingInvitesLock.Unlock()
-    }()
+	// Nettoyage après l'invitation
+	defer func() {
+		pendingInvitesLock.Lock()
+		delete(pendingInvites, invitee)
+		pendingInvitesLock.Unlock()
+	}()
 
-    fmt.Fprintf(inviteeConn, "[INFO] %s vous a invité à rejoindre un groupe. ACCEPT/DECLINE (10s)\n", player)
+	fmt.Fprintf(inviteeConn, "[INFO] %s vous a invité à rejoindre un groupe. ACCEPT/DECLINE (10s)\n", player)
 
 	var response string
 	select {
@@ -119,25 +117,25 @@ func GroupInvite(conn net.Conn, player string) {
 		fmt.Fprintf(inviteeConn, "[INFO] Invitation expirée.\n")
 	}
 
-    if response == "DECLINE\n" {
-        LogAndFprintf(conn, "[SERVER] %s a refusé l'invitation.\n", invitee)
-        return
-    }
-    if response == "ACCEPT\n" {
-        LogAndFprintf(conn, "[SERVER] %s a accepté l'invitation.\n", invitee)
-    } else {
-        LogAndFprintf(inviteeConn, "[INFO] Réponse invalide.\n")
-        return
-    }
+	if response == "DECLINE\n" {
+		LogAndFprintf(conn, "[SERVER] %s a refusé l'invitation.\n", invitee)
+		return
+	}
+	if response == "ACCEPT\n" {
+		LogAndFprintf(conn, "[SERVER] %s a accepté l'invitation.\n", invitee)
+	} else {
+		LogAndFprintf(inviteeConn, "[INFO] Réponse invalide.\n")
+		return
+	}
 
-    groupsLock.Lock()
-    defer groupsLock.Unlock()
-    currentGroup.Members[invitee] = inviteeConn
+	groupsLock.Lock()
+	defer groupsLock.Unlock()
+	currentGroup.Members[invitee] = inviteeConn
 	currentGroup.messages = append(currentGroup.messages, fmt.Sprintf("%s a rejoint le groupe.\n", invitee))
-    LogAndFprintf(conn, "[SERVER] %s a rejoint le groupe %s !\n", invitee, currentGroup.ID)
+	LogAndFprintf(conn, "[SERVER] %s a rejoint le groupe %s !\n", invitee, currentGroup.ID)
 }
 
-func GroupLeave(player string) bool{
+func GroupLeave(player string) bool {
 	if SearchPlayerGroup(player) != nil {
 		currentGroup := SearchPlayerGroup(player)
 		currentGroup.Mu.Lock()
