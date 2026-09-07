@@ -28,7 +28,7 @@ type Quest struct {
 
 type PlayerQuest struct {
 	QuestID string
-	Status  string // "active" ou "completed"
+	Status  string // "active", "ready" (objectif "defeat" rempli, cf. CompleteDefeatQuest) ou "completed"
 }
 
 // Une fois qu'un joueur termine une quête, plus aucun joueur ne doit pouvoir

@@ -124,23 +124,34 @@ func buildRoomPanel(loc parsing.Location, world parsing.WorldFile, player parsin
 		id := npcID
 		npc := npcName
 
-		npcsRow.Add(NewButton(npc+" TALK", func() {
-			go func() {
-				resp, err := sess.Send("TALK " + id)
-				if resp == "" && err == nil {
-					return // ignore silencieusement (cooldown / action deja en cours)
-				}
-				if err != nil {
-					fyne.Do(func() { showMessage("Erreur", err.Error()) })
-					return
-				}
-				if strings.HasPrefix(resp, "ERR") {
-					fyne.Do(func() { showMessage("Erreur", resp) })
-					return
-				}
-				fyne.Do(func() { showMessage(npc, strings.TrimPrefix(resp, "OK ")) })
-			}()
-		}))
+		npcButtons := container.NewHBox(
+			NewButton(npc+" TALK", func() {
+				go func() {
+					resp, err := sess.Send("TALK " + id)
+					if resp == "" && err == nil {
+						return // ignore silencieusement (cooldown / action deja en cours)
+					}
+					if err != nil {
+						fyne.Do(func() { showMessage("Erreur", err.Error()) })
+						return
+					}
+					if strings.HasPrefix(resp, "ERR") {
+						fyne.Do(func() { showMessage("Erreur", resp) })
+						return
+					}
+					fyne.Do(func() { showMessage(npc, strings.TrimPrefix(resp, "OK ")) })
+				}()
+			}),
+		)
+		// le bouton Quest n'apparait que pour les PNJ donneurs de quete
+		// (Sophie, Esquie...) : c'est ici, avec le PNJ present dans la
+		// salle, qu'on peut accepter/decliner ou recuperer sa recompense.
+		if _, ok := questForGiver(world, id); ok {
+			npcButtons.Add(NewButton(npc+" Quest", func() {
+				openNpcQuestDialog(w, sess, world, player, npc, id, refreshCharacter, showMessage)
+			}))
+		}
+		npcsRow.Add(npcButtons)
 	}
 
 	for _, enemyID := range loc.Enemies {
@@ -180,6 +191,14 @@ func buildRoomPanel(loc parsing.Location, world parsing.WorldFile, player parsin
 						return
 					}
 					if strings.HasPrefix(resp, "ERR") {
+						// L'ennemi n'est deja plus dans la salle cote serveur
+						// (deja tue par ce joueur ou un autre) mais le bouton
+						// est reste affiche le temps que le GUI se rafraichisse :
+						// pas une vraie erreur, on l'affiche donc comme une victoire.
+						if strings.Contains(resp, "NPC_NOT_FOUND") {
+							fyne.Do(func() { showMessage("Combat", "VICTOIRE") })
+							return
+						}
 						fyne.Do(func() { showMessage("Erreur", resp) })
 						return
 					}
@@ -199,7 +218,7 @@ func buildRoomPanel(loc parsing.Location, world parsing.WorldFile, player parsin
 						enemyHPText.Text = fmt.Sprintf("%d / %d", result.TargetHP, enemyMaxHP)
 						enemyHPText.Refresh()
 						if result.Status == "victory" {
-							showMessage("Combat", "VICTORY")
+							showMessage("Combat", "VICTOIRE")
 							return
 						}
 						showMessage("Combat", fmt.Sprintf(
@@ -242,8 +261,8 @@ func buildRoomPanel(loc parsing.Location, world parsing.WorldFile, player parsin
 				})
 			}()
 		}),
-		NewButton("Quest", func() {
-			openQuestsDialog(w, sess, world, player, refreshCharacter, showMessage)
+		NewButton("Quests", func() {
+			openQuestsDialog(w, sess, showMessage)
 		}),
 		NewButton("Inventory", func() {
 			go func() {
@@ -259,7 +278,24 @@ func buildRoomPanel(loc parsing.Location, world parsing.WorldFile, player parsin
 					fyne.Do(func() { showMessage("Erreur", resp) })
 					return
 				}
-				fyne.Do(func() { showMessage("Inventaire", strings.TrimPrefix(resp, "OK ")) })
+				var itemIDs []string
+				if err := json.Unmarshal([]byte(strings.TrimPrefix(resp, "OK ")), &itemIDs); err != nil {
+					fyne.Do(func() { showMessage("Erreur", "réponse du serveur illisible : "+err.Error()) })
+					return
+				}
+				names := make([]string, 0, len(itemIDs))
+				for _, id := range itemIDs {
+					if it, ok := world.Items[id]; ok {
+						names = append(names, it.Name)
+					} else {
+						names = append(names, id)
+					}
+				}
+				msg := "Inventaire vide."
+				if len(names) > 0 {
+					msg = strings.Join(names, ", ")
+				}
+				fyne.Do(func() { showMessage("Inventaire", msg) })
 			}()
 		}),
 		NewButton("Look", func() {

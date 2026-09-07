@@ -45,14 +45,19 @@ func hasItem(player Player, itemID string) bool {
 	return false
 }
 
-// questProgress ne dépend que de ce que le joueur possède : atteindre "1/1"
-// signifie que l'objectif est rempli, pas que la quête est terminée. Pour un
-// "fetch", la récompense n'est accordée qu'au retour auprès du donneur de
-// quête (cf. ReturnQuest, qui exige déjà sa présence dans la salle).
-func questProgress(player Player, q Quest) string {
+// questProgress ne dit que si l'objectif est rempli, pas que la quête est
+// terminée : la récompense n'est accordée qu'au retour auprès du donneur de
+// quête (cf. ReturnQuest), aussi bien pour un "fetch" (objectif dérivé de
+// l'inventaire) que pour un "defeat" (objectif dérivé du statut "ready" posé
+// par CompleteDefeatQuest dès que la cible est vaincue).
+func questProgress(player Player, pq PlayerQuest, q Quest) string {
 	switch q.Objective.Type {
 	case "fetch":
 		if hasItem(player, q.Objective.Item) {
+			return "1/1"
+		}
+	case "defeat":
+		if pq.Status == "ready" || pq.Status == "completed" {
 			return "1/1"
 		}
 	}
@@ -85,7 +90,7 @@ func ReturnQuest(world WorldFile, room Location, player Player, npcName string) 
 		return "ERR 406 NO_QUEST_AVAILABLE", player, nil
 	}
 
-	if known && questProgress(player, quest) == "1/1" { // ajout
+	if known && questProgress(player, pq, quest) == "1/1" { // ajout
 		for i := range player.Quests { // ajout
 			if player.Quests[i].QuestID == quest.ID { // ajout
 				player.Quests[i].Status = "completed" // ajout
@@ -138,6 +143,11 @@ func ReturnQuest(world WorldFile, room Location, player Player, npcName string) 
 	return fmt.Sprintf("OK %s", data), player, nil
 }
 
+// CompleteDefeatQuest ne fait que constater que la cible a ete vaincue : elle
+// passe la quete a "ready", exactement comme un "fetch" atteint "1/1" des
+// qu'on possede l'objet. La recompense n'est accordee qu'au retour aupres du
+// donneur de quete (cf. ReturnQuest) - meme fonctionnement, meme parcours que
+// la quete de Sophie, pas d'octroi immediat au moment du kill.
 func CompleteDefeatQuest(world WorldFile, player Player, enemyName string) (Player, string) { // ajout
 	for i, pq := range player.Quests { // ajout
 		if pq.Status != "active" { // ajout
@@ -147,16 +157,8 @@ func CompleteDefeatQuest(world WorldFile, player Player, enemyName string) (Play
 		if !ok || quest.Objective.Type != "defeat" || quest.Objective.Enemy != enemyName { // ajout
 			continue // ajout
 		} // ajout
-		player.Quests[i].Status = "completed" // ajout
-		MarkQuestCompleted(quest.ID)
-		rewardName := quest.Reward.Value      // ajout
-		if quest.Reward.Type == "item" {      // ajout
-			if item, ok := world.Items[quest.Reward.Value]; ok { // ajout
-				player.Inventory = append(player.Inventory, item) // ajout
-				rewardName = item.Name                            // ajout
-			} // ajout
-		} // ajout
-		return player, fmt.Sprintf("[SERVER] Quête terminée : %s ! Vous recevez : %s.", quest.Name, rewardName) // ajout
+		player.Quests[i].Status = "ready" // ajout
+		return player, fmt.Sprintf("[SERVER] Objectif de quête rempli : %s ! Retournez voir %s pour récupérer votre récompense.", quest.Name, quest.Giver) // ajout
 	} // ajout
 	return player, "" // ajout
 } // ajout
@@ -190,7 +192,7 @@ func Quests(room Location, player Player, world WorldFile) (string, error) {
 			continue
 		}
 
-		progress := questProgress(player, quest)
+		progress := questProgress(player, pq, quest)
 		if progress == "1/1" {
 			// objectif rempli mais pas encore rendu au donneur de quête : la
 			// récompense ne peut être récupérée que dans la salle du PNJ.
