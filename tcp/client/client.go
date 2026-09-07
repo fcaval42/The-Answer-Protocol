@@ -64,7 +64,6 @@ func main() {
 		// que plusieurs thread utilisent le meme buffer
 		connRoutine := bufio.NewReader(conn)
 		defer wg.Done()
-		var previous string
 
 		// Boucle infinie
 		for {
@@ -99,16 +98,16 @@ func main() {
 			}
 			// On affiche le message s'il n'est pas vide
 			if response != "\n" {
+				if !strings.HasSuffix(response, "\n") {
+					response += "\n"
+				}
 				if strings.HasPrefix(response, "[EVT]") {
 					response = strings.TrimSuffix(response, "\n") 
-				}
-				if strings.HasPrefix(previous, "[EVT]") {
 					fmt.Fprint(rl.Stdout(), response)
 				}else{
 					ClearScreen()
 					fmt.Fprint(rl.Stdout(), response)
 				}
-				previous = response
 			}
 		}
 	}()

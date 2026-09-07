@@ -1,13 +1,13 @@
 package main
 
 import (
+	"fmt"
+	"net"
+	"strings"
+	. "the_answer_protocol/parsing"
+	. "the_answer_protocol/tcp"
 	. "the_answer_protocol/tcp/commands"
 	. "the_answer_protocol/tcp/common"
-	. "the_answer_protocol/tcp"
-	. "the_answer_protocol/parsing"
-	"net"
-	"fmt"
-	"strings"
 )
 
 func dropItem(conn net.Conn, player Player, loc Location, message string) Location {
@@ -42,7 +42,7 @@ func Move(conn net.Conn, player Player, loc string, message string) (newloc Loca
 	direction := strings.TrimSpace(strings.TrimPrefix(message, "MOVE"))
 	locate := maps[loc]
 
-	if locate.Exits[direction] != ""{
+	if locate.Exits[direction] != "" {
 		current := player
 		for _, p := range locate.Players {
 			if p.Name == player.Name {
@@ -90,21 +90,21 @@ func takeItem(conn net.Conn, player Player, loc Location, message string) Locati
 							worldLock.Unlock()
 							return loc
 						}
-						if it.Name == itemName{
-						// Ajoute l'objet à l'inventaire du joueur
-						loc.Players[i].Inventory = append(loc.Players[i].Inventory, it)
-						updatedPlayer, questMsg := CompleteFetchQuest(world, loc.Players[i], it.ID) // ajout
-						loc.Players[i] = updatedPlayer // ajout
-						// Supprime l'objet de la liste des objets de la location
-						loc.Items = append(loc.Items[:j], loc.Items[j+1:]...)
-						maps[loc.ID] = loc
-						worldLock.Unlock()
-						LogAndFprintf(conn, "[SERVER] Vous avez pris l'objet: %s\n", itemName)
-						if questMsg != "" { // ajout
-							LogAndFprintf(conn, "%s\n", questMsg) // ajout
-						} // ajout
-						LogAndFprintf(conn, "%s\n", ToString(loc))
-						return loc
+						if it.Name == itemName {
+							// Ajoute l'objet à l'inventaire du joueur
+							loc.Players[i].Inventory = append(loc.Players[i].Inventory, it)
+							updatedPlayer, questMsg := CompleteFetchQuest(world, loc.Players[i], it.ID) // ajout
+							loc.Players[i] = updatedPlayer                                              // ajout
+							// Supprime l'objet de la liste des objets de la location
+							loc.Items = append(loc.Items[:j], loc.Items[j+1:]...)
+							maps[loc.ID] = loc
+							worldLock.Unlock()
+							LogAndFprintf(conn, "[SERVER] Vous avez pris l'objet: %s\n", itemName)
+							if questMsg != "" { // ajout
+								LogAndFprintf(conn, "%s\n", questMsg) // ajout
+							} // ajout
+							LogAndFprintf(conn, "%s\n", ToString(loc))
+							return loc
 						}
 					}
 				}
@@ -238,11 +238,10 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 				messages = fmt.Sprintf("[%s]: %s", player.Name, messages)
 				GlobalChatBroadcast(messages)
 			case strings.HasPrefix(chatMessage, "ROOM "):
-				// Envoyer a tous les joueurs qui ne sont pas dans la room
-				// Et ajouter le message à la liste des messages de la room
+				//
 			case strings.HasPrefix(chatMessage, "GROUP "):
-				// Envoyer a tous les joueurs qui ne sont pas dans le groupe
-				// Et ajouter le message à la liste des messages du groupe
+				messages := strings.TrimPrefix(chatMessage, "GROUP ")
+				GroupChatBroadcast(conn, messages, player.Name)
 			default:
 				LogAndFprintf(conn, "[SERVER] ERR 400 INVALID_CHAT_COMMAND: Commande de chat invalide.\n")
 			}

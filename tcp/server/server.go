@@ -96,6 +96,7 @@ func handleConnection(conn net.Conn) {
 	maps[play.Respawn.Location] = location
 	mapsLock.Unlock()
 	var playerInLoc []net.Conn
+	var receivers []net.Conn
 	for _, play := range location.Players {
 		for n, conn := range ConnectedClients {
 			if play.Name == n {
@@ -103,7 +104,12 @@ func handleConnection(conn net.Conn) {
 			}
 		}
 	}
-	BroadcastEVT(playerInLoc, fmt.Sprintf("[EVT] %s a rejoint l'endroit.\n", play.Name))
+	for _, c := range playerInLoc {
+		if c != conn {
+			receivers = append(receivers, c)
+		}
+	}
+	BroadcastEVT(receivers, fmt.Sprintf("[EVT] %s a rejoint l'endroit.\n", play.Name))
 
 	worldLock.Lock()
 	world.Players[player] = play

@@ -3,18 +3,20 @@ package main
 import (
 	"fmt"
 	"net"
+	"slices"
 	"sync"
 	. "the_answer_protocol/tcp/common"
-	"slices"
 )
 
 var (
-	inRoomChat map[string][]net.Conn
+	inRoomChat   map[string][]net.Conn
 	inRoomChatMu sync.Mutex
 )
 
-var (roomMessages = make(map[string][]string)
-	roomMessagesMu sync.Mutex)
+var (
+	roomMessages   = make(map[string][]string)
+	roomMessagesMu sync.Mutex
+)
 
 func RoomChat(conn net.Conn, loc string, player string) {
 	inRoomChatMu.Lock()
@@ -79,12 +81,12 @@ func GroupChat(conn net.Conn, player string) {
 		}
 		inGroupChatLock.Unlock()
 	}()
-	for{
+	for {
 		receivers := make([]net.Conn, 0, len(currentGroup.Members))
 		inGroupChatLock.Lock()
 		for _, memberConn := range inGroupChat[currentGroup.ID] {
 			receivers = append(receivers, memberConn)
-			}
+		}
 		inGroupChatLock.Unlock()
 		Broadcast(receivers, currentGroup.messages)
 		send := Recept(conn)
@@ -101,7 +103,7 @@ func GroupChat(conn net.Conn, player string) {
 			currentGroup.messages = currentGroup.messages[len(currentGroup.messages)-10:]
 		}
 		currentGroup.Mu.Unlock()
-		}
+	}
 }
 
 func GlobalChat(conn net.Conn, player string) {
@@ -153,7 +155,38 @@ func GlobalChatBroadcast(message string) {
 		}
 	}
 	ConnectedLock.Unlock()
-	message = fmt.Sprintf("[EVT] %s", message)
-	Broadcast(receivers, []string{message})
+	Broadcast(inGlobal, globaleMessage)
 	inGlobalLock.Unlock()
+	message = fmt.Sprintf("[EVT] %s", message)
+	BroadcastEVT(receivers, message)
+}
+
+func GroupChatBroadcast(conn net.Conn, message string, player string) {
+	currentGroup := SearchPlayerGroup(player)
+	if currentGroup == nil {
+		LogAndFprintf(conn, "[SERVER] ERR 401 NOT_IN_GROUP: Vous n'êtes pas dans un groupe. Créez-en un d'abord.\n")
+		return
+	}
+	currentGroup.Mu.Lock()
+	message = fmt.Sprintf("[%s]: %s", player, message)
+	currentGroup.messages = append(currentGroup.messages, message)
+	if len(currentGroup.messages) > 10 {
+		currentGroup.messages = currentGroup.messages[len(currentGroup.messages)-10:]
+	}
+	inGroupChatLock.Lock()
+	var receivers []net.Conn
+	for _, c := range currentGroup.Members {
+		if !slices.Contains(inGroupChat[currentGroup.ID], c) && c != conn {
+			receivers = append(receivers, c)
+		}
+	}
+	receiver := make([]net.Conn, 0, len(currentGroup.Members))
+	for _, memberConn := range inGroupChat[currentGroup.ID] {
+		receiver = append(receiver, memberConn)
+	}
+	Broadcast(receiver, currentGroup.messages)
+	currentGroup.Mu.Unlock()
+	inGroupChatLock.Unlock()
+	message = fmt.Sprintf("[EVT] %s", message)
+	BroadcastEVT(receivers, message)
 }
