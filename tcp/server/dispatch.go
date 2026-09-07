@@ -60,7 +60,7 @@ func Move(conn net.Conn, player Player, loc string, message string) (newloc Loca
 		LogAndFprintf(conn, "%s | Vous êtes maintenant dans %s\n", conn.RemoteAddr().String(), locate.Name)
 		return locate, true
 	}
-	LogAndFprintf(conn, "[SERVER] ERRNO 301: Vous ne pouvez pas vous déplacer dans cette direction.\n")
+	LogAndFprintf(conn, "[SERVER] ERRNO 301 NO_EXIT: Vous ne pouvez pas vous déplacer dans cette direction.\n")
 	return locate, false
 }
 
@@ -72,8 +72,8 @@ func takeItem(conn net.Conn, player Player, loc Location, message string) Locati
 	for i, p := range loc.Players {
 		if p.Name == player.Name {
 			for j, item := range loc.Items {
+				worldLock.Lock()
 				if item == itemName {
-					worldLock.Lock()
 					for _, it := range world.Items {
 						if it.Name == itemName && !it.Obtainable {
 							LogAndFprintf(conn, "[SERVER] L'objet %s n'est pas obtenable.\n", itemName)
@@ -256,7 +256,7 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 			if GroupLeave(player.Name) {
 				LogAndFprintf(conn, "[SERVER] Vous avez quitté le groupe.\n")
 			} else {
-				LogAndFprintf(conn, "[SERVER] Vous n'êtes pas dans un groupe.\n")
+				LogAndFprintf(conn, "[SERVER] ERR 401 NOT_IN_GROUP: Vous n'êtes pas dans un groupe.\n")
 			}
 
 		case strings.HasPrefix(message, "ATTACK"):
