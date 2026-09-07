@@ -48,6 +48,25 @@ func Look(room Location) (string, error) {
 	return fmt.Sprintf("OK %s", data), nil
 }
 
+type whoResponse struct {
+	Room   []string `json:"room"`
+	Server int      `json:"server"`
+}
+
+func Who(room Location, serverCount int) (string, error) {
+	players := make([]string, 0, len(room.Players))
+	for _, p := range room.Players {
+		players = append(players, p.Name)
+	}
+
+	data, err := json.Marshal(whoResponse{Room: players, Server: serverCount})
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf("OK %s", data), nil
+}
+
 func FindPlayerByName(name string, maps map[string]Location) (room Location, index int, ok bool) {
 	for _, loc := range maps {
 		for i, p := range loc.Players {

@@ -558,6 +558,7 @@ func Run(playerName string, world parsing.WorldFile, sess *Session) {
 
 	quitBtn := NewSemiTransparentButton("Quit", 140, func() {
 		sess.Quit()
+		w.Close()
 	})
 
 	// Boutons Who et Quit à droite de la fenêtre (même taille que les autres : 180x40)
