@@ -117,7 +117,7 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 		ch, hasPendingInvite := pendingInvites[player.Name]
 		pendingInvitesLock.Unlock()
 
-		if message == previous {
+		if message == previous && strings.HasPrefix(message, "ATTACK") == false {
 			LogAndPrintf(conn, "%s| [WARN] %s", conn.RemoteAddr(), message)
 			LogAndFprintf(conn, "[SERVER][WARN] Attention à ne pas envoyer la même commande: %s\n", message)
 		} else {
@@ -265,13 +265,21 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 				LogAndFprintf(conn, "ERR 404 PLAYER_NOT_FOUND\n")
 				continue
 			}
+			var hasNpc bool
+			if len(maps[roomID].NPCs) > 0 {
+				hasNpc = true
+			}
 			room := maps[roomID]
 			mapsLock.Unlock()
 			worldLock.Lock()
 			enemy, enemyI, ok := FindEnemyInRoom(enemyName, room, world)
 			worldLock.Unlock()
-			if !ok {
+			if !ok && !hasNpc {
 				LogAndFprintf(conn, "ERR 404 NPC_NOT_FOUND\n")
+				continue
+			}
+			if !ok && hasNpc {
+				LogAndFprintf(conn, "ERR 405 NPC_NOT_HOSTILE\n")
 				continue
 			}
 			mapsLock.Lock()
