@@ -24,8 +24,17 @@ var (
 
 func deletePlayerInMap(player string) map[string]Location {
 	mapsLock.Lock()
+	var playerInLoc []net.Conn
 	for _, loc := range maps {
 		loc.Players = DeletePlayer(loc.Players, player)
+		for _, play := range loc.Players {
+			for n, conn := range ConnectedClients {
+				if play.Name == n {
+					playerInLoc = append(playerInLoc, conn)
+				}
+			}
+		}
+		BroadcastEVT(playerInLoc, fmt.Sprintf("[SERVER] %s a quitté l'endroit.\n", player))
 		maps[loc.ID] = loc
 	}
 	mapsLock.Unlock()
@@ -78,6 +87,15 @@ func handleConnection(conn net.Conn) {
 	location.Players = append(location.Players, play)
 	maps[play.Respawn.Location] = location
 	mapsLock.Unlock()
+	var playerInLoc []net.Conn
+	for _, play := range location.Players {
+		for n, conn := range ConnectedClients {
+			if play.Name == n {
+				playerInLoc = append(playerInLoc, conn)
+			}
+		}
+	}
+	BroadcastEVT(playerInLoc, fmt.Sprintf("[SERVER] %s a rejoint l'endroit.\n", play.Name))
 
 	worldLock.Lock()
 	world.Players[player] = play

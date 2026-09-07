@@ -6,6 +6,7 @@ import (
 	. "the_answer_protocol/tcp"
 	. "the_answer_protocol/parsing"
 	"net"
+	"fmt"
 	"strings"
 )
 
@@ -41,20 +42,29 @@ func Move(conn net.Conn, player Player, loc string, message string) (newloc Loca
 	direction := strings.TrimSpace(strings.TrimPrefix(message, "MOVE"))
 	locate := maps[loc]
 
-	if locate.Exits[direction] != ""{  // ajout
-		current := player  // ajout
-		for _, p := range locate.Players {  // ajout
-			if p.Name == player.Name {  // ajout
-				current = p  // ajout
-				break  // ajout
-			}  // ajout
+	if locate.Exits[direction] != ""{
+		current := player
+		for _, p := range locate.Players {
+			if p.Name == player.Name {
+				current = p
+				break
+			}
 		}
 		mapsLock.Unlock()
 		deletePlayerInMap(player.Name)
 		mapsLock.Lock()
 		direction = locate.Exits[direction]
 		locate = maps[direction]
-		locate.Players = append(locate.Players, current) // ajout
+		locate.Players = append(locate.Players, current)
+		var playerInLoc []net.Conn
+		for _, play := range locate.Players {
+			for n, conn := range ConnectedClients {
+				if play.Name == n {
+					playerInLoc = append(playerInLoc, conn)
+				}
+			}
+		}
+		BroadcastEVT(playerInLoc, fmt.Sprintf("[SERVER] %s a rejoint l'endroit.\n", current.Name))
 		maps[direction] = locate
 		LogAndFprintf(conn, "%s\n", ToString(locate))
 		LogAndFprintf(conn, "%s | Vous êtes maintenant dans %s\n", conn.RemoteAddr().String(), locate.Name)
