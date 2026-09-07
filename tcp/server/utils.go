@@ -22,7 +22,7 @@ func DisplayGroup(conn net.Conn) bool{
 	}
 	for _, group := range groups {
 		group.Mu.Lock()
-		result = fmt.Sprintf("Groupe %s :\\", group.ID)
+		result += fmt.Sprintf("Groupe %s :\\", group.ID)
 		for player, connect := range group.Members {
 			if conn == connect {
 				LogAndFprintf(conn, "[SERVER] Vous êtes déjà dans le groupe %s.\n", group.ID)
@@ -34,14 +34,14 @@ func DisplayGroup(conn net.Conn) bool{
 		group.Mu.Unlock()
 	}
 	result += "Entrez l'ID du groupe que vous souhaitez rejoindre :\\"
-	fmt.Fprintf(conn, "[SERVER] %s\n", result)
+	fmt.Fprintf(conn, "[SERVER]\n%s\n", result)
 	return true
 }
 
 // Renvoie la liste des joueurs disponibles pour l'invitation
 func GetAvailablePlayers(self string) []string {
-	ClientsLock.Lock()
-	defer ClientsLock.Unlock()
+	ConnectedLock.Lock()
+	defer ConnectedLock.Unlock()
 	var availablePlayers []string
 	for player := range ConnectedClients {
 		if player != self {
