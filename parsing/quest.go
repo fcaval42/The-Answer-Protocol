@@ -1,6 +1,9 @@
 package parsing
 
-import "fmt"
+import (
+	"fmt"
+	"sync"
+)
 
 type QuestObjective struct {
 	Type      string `yaml:"type"`
@@ -26,6 +29,31 @@ type Quest struct {
 type PlayerQuest struct {
 	QuestID string
 	Status  string // "active" ou "completed"
+}
+
+// Une fois qu'un joueur termine une quête, plus aucun joueur ne doit pouvoir
+// l'accepter tant que le serveur tourne : cet état est global au serveur
+// (partagé entre tous les clients), donc distinct de PlayerQuest qui ne
+// suit que la progression propre à un joueur.
+var (
+	globallyCompletedQuests   = make(map[string]bool)
+	globallyCompletedQuestsMu sync.Mutex
+)
+
+// MarkQuestCompleted enregistre qu'une quête vient d'être terminée par un
+// joueur, la rendant indisponible pour tous les autres joueurs.
+func MarkQuestCompleted(questID string) {
+	globallyCompletedQuestsMu.Lock()
+	defer globallyCompletedQuestsMu.Unlock()
+	globallyCompletedQuests[questID] = true
+}
+
+// IsQuestGloballyCompleted indique si un autre joueur a déjà terminé cette
+// quête (auquel cas elle ne doit plus être proposée).
+func IsQuestGloballyCompleted(questID string) bool {
+	globallyCompletedQuestsMu.Lock()
+	defer globallyCompletedQuestsMu.Unlock()
+	return globallyCompletedQuests[questID]
 }
 
 func validateQuests(wf WorldFile) []error {

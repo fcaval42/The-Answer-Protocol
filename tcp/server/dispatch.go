@@ -81,18 +81,16 @@ func takeItem(conn net.Conn, player Player, loc Location, message string) Locati
 							return loc
 						}
 						if it.Name == itemName{
-						// Ajoute l'objet à l'inventaire du joueur
+						// Ajoute l'objet à l'inventaire du joueur. La quête de type
+						// "fetch" associee (s'il y en a une) ne se termine pas ici :
+						// le joueur doit retourner voir le donneur de quete pour
+						// recevoir sa recompense (cf. ReturnQuest / commande QUEST).
 						loc.Players[i].Inventory = append(loc.Players[i].Inventory, it)
-						updatedPlayer, questMsg := CompleteFetchQuest(world, loc.Players[i], it.ID) // ajout
-						loc.Players[i] = updatedPlayer // ajout
 						// Supprime l'objet de la liste des objets de la location
 						loc.Items = append(loc.Items[:j], loc.Items[j+1:]...)
 						maps[loc.ID] = loc
 						worldLock.Unlock()
 						LogAndFprintf(conn, "[SERVER] Vous avez pris l'objet: %s\n", itemName)
-						if questMsg != "" { // ajout
-							LogAndFprintf(conn, "%s\n", questMsg) // ajout
-						} // ajout
 						LogAndFprintf(conn, "%s\n", ToString(loc))
 						return loc
 						}
@@ -365,9 +363,32 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 				mapsLock.Lock()
 				maps[room.ID] = room
 				mapsLock.Unlock()
-				LogAndFprintf(conn, "%s\n", ToString(room))
+				// resp est envoye avant l'etat de la salle : c'est la seule
+				// ligne "OK .../ERR ..." de cette reponse, elle doit donc
+				// arriver en premier pour que le GUI (qui ne recupere que la
+				// toute premiere ligne OK/ERR/{ d'une reponse, cf. Session.Deliver)
+				// recoive bien le resultat de la commande QUEST et pas l'etat de
+				// la salle.
 				LogAndFprintf(conn, "%s\n", resp)
+				LogAndFprintf(conn, "%s\n", ToString(room))
 			}
+
+		case strings.HasPrefix(message, "EQUIP"):
+			room, index, ok := FindPlayerByName(player.Name, maps)
+			if !ok {
+				LogAndFprintf(conn, "ERR 404 PLAYER_NOT_FOUND\n")
+				continue
+			}
+			resp, updatedPlayer, err := Equip(room.Players[index], strings.TrimSpace(strings.TrimPrefix(message, "EQUIP")))
+			if err != nil {
+				LogAndFprintf(conn, "ERR 900 CONNECTION_FAILED\n")
+				continue
+			}
+			room.Players[index] = updatedPlayer
+			mapsLock.Lock()
+			maps[room.ID] = room
+			mapsLock.Unlock()
+			LogAndFprintf(conn, "%s\n", resp)
 
 		case strings.HasPrefix(message, "MOVE"):
 			var tempLoc Location

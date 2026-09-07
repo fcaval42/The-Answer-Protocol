@@ -26,7 +26,7 @@ func buildHeader() fyne.CanvasObject {
 
 // ----------------- Panneau de salle (gauche) ------------------
 
-func buildRoomPanel(loc parsing.Location, world parsing.WorldFile, player parsing.Player, sess *Session,
+func buildRoomPanel(loc parsing.Location, world parsing.WorldFile, player parsing.Player, sess *Session, w fyne.Window,
 	changeRoom func(parsing.Location), refreshCharacter func(parsing.Player),
 	showMessage func(title, msg string)) fyne.CanvasObject {
 
@@ -243,21 +243,7 @@ func buildRoomPanel(loc parsing.Location, world parsing.WorldFile, player parsin
 			}()
 		}),
 		NewButton("Quest", func() {
-			go func() {
-				resp, err := sess.Send("QUESTS")
-				if resp == "" && err == nil {
-					return // ignore silencieusement (cooldown / action deja en cours)
-				}
-				if err != nil {
-					fyne.Do(func() { showMessage("Erreur", err.Error()) })
-					return
-				}
-				if strings.HasPrefix(resp, "ERR") {
-					fyne.Do(func() { showMessage("Erreur", resp) })
-					return
-				}
-				fyne.Do(func() { showMessage("Quêtes", strings.TrimPrefix(resp, "OK ")) })
-			}()
+			openQuestsDialog(w, sess, world, player, refreshCharacter, showMessage)
 		}),
 		NewButton("Inventory", func() {
 			go func() {
@@ -340,7 +326,7 @@ func statCell(label string, value string) fyne.CanvasObject {
 	return container.NewVBox(l, v)
 }
 
-func buildCharacterPanel(player parsing.Player, showMessage func(title, msg string)) fyne.CanvasObject {
+func buildCharacterPanel(player parsing.Player, sess *Session, w fyne.Window, refreshCharacter func(parsing.Player), showMessage func(title, msg string)) fyne.CanvasObject {
 
 	// ----------------- AVATAR + NOM PERSO --------------------
 	name := NewTitleText(player.Name, 70)
@@ -374,10 +360,14 @@ func buildCharacterPanel(player parsing.Player, showMessage func(title, msg stri
 	invLabel := NewTitleText("Inventaire", 25)
 	invRow := container.NewHBox()
 	for _, i := range player.Inventory {
+		i := i
 		itemLabel := i.Name
-		desc := i.Description
 		invRow.Add(NewButton(itemLabel, func() {
-			showMessage(itemLabel, desc)
+			if i.Critical != nil {
+				openItemDialog(w, sess, i, player, refreshCharacter, showMessage)
+			} else {
+				showMessage(itemLabel, i.Description)
+			}
 		}))
 	}
 
@@ -522,7 +512,7 @@ func Run(playerName string, world parsing.WorldFile, sess *Session) {
 	characterContainer := container.NewStack()
 	refreshCharacter = func(p parsing.Player) {
 		player = p
-		characterContainer.Objects = []fyne.CanvasObject{buildCharacterPanel(p, showMessage)}
+		characterContainer.Objects = []fyne.CanvasObject{buildCharacterPanel(p, sess, w, refreshCharacter, showMessage)}
 		characterContainer.Refresh()
 	}
 	refreshCharacter(player) // affichage initial du panneau perso
@@ -530,7 +520,7 @@ func Run(playerName string, world parsing.WorldFile, sess *Session) {
 	changeRoom = func(newRoom parsing.Location) {
 		currentRoom = newRoom
 		SetRoomBackground(bgImage, newRoom.Background)
-		roomContainer.Objects = []fyne.CanvasObject{buildRoomPanel(newRoom, world, player, sess, changeRoom, refreshCharacter, showMessage)}
+		roomContainer.Objects = []fyne.CanvasObject{buildRoomPanel(newRoom, world, player, sess, w, changeRoom, refreshCharacter, showMessage)}
 		roomContainer.Refresh()
 	}
 	changeRoom(startLoc) // affichage initial

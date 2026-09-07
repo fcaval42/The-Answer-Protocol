@@ -120,7 +120,7 @@ items:
     obtainable: true
 
   Brise_barrière:
-    name: "Brise-barrière"
+    name: "Brise barrière"
     critical: 0.5
     description: "Une arme ancienne, dont le tranchant garde une teinte étrange,
       presque translucide. Elle semble faite pour trancher autre chose que de la chair."
