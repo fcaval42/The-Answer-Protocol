@@ -161,6 +161,31 @@ func GlobalChatBroadcast(message string) {
 	BroadcastEVT(receivers, message)
 }
 
+func RoomChatBroadcast(conn net.Conn, loc string, player string, message string) {
+	roomMessagesMu.Lock()
+	message = fmt.Sprintf("[%s]: %s", player, message)
+	roomMessages[loc] = append(roomMessages[loc], message)
+	if len(roomMessages[loc]) > 10 {
+		roomMessages[loc] = roomMessages[loc][len(roomMessages[loc])-10:]
+	}
+	inRoomChatMu.Lock()
+	Broadcast(inRoomChat[loc], roomMessages[loc])
+	inRoomChatMu.Unlock()
+	var receivers []net.Conn
+	mapsLock.Lock()
+	ConnectedLock.Lock()
+	for _, c := range maps[loc].Players {
+		if c.Name != player{
+			receivers = append(receivers, ConnectedClients[c.Name])
+		}
+	}
+	ConnectedLock.Unlock()
+	mapsLock.Unlock()
+	ConnectedLock.Unlock()
+	roomMessagesMu.Unlock()
+	BroadcastEVT(receivers, fmt.Sprintf("[EVT] %s", message))
+}
+
 func GroupChatBroadcast(conn net.Conn, message string, player string) {
 	currentGroup := SearchPlayerGroup(player)
 	if currentGroup == nil {
