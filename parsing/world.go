@@ -69,6 +69,7 @@ func ParseWorld(worldYAML []byte) (WorldFile, []error) {
 	}
 	for id, player := range wf.Players {
 		player.MaxHP = player.HP
+		player.BaseWeapon = player.Weapon
 		wf.Players[id] = player
 	}
 

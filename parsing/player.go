@@ -23,6 +23,13 @@ type Player struct {
 	Inventory []Item
 	Quests []PlayerQuest
 	Connected bool
+	// BaseWeapon est l'arme de depart du joueur (copiee depuis Weapon au
+	// chargement du monde) : UNEQUIP y revient. EquippedItem est l'ID de
+	// l'objet d'inventaire actuellement equipe ("" = arme de base), ce qui
+	// permet de n'autoriser qu'un seul objet equipe a la fois et d'empecher
+	// de re-equiper un objet deja porte.
+	BaseWeapon   Weapon `yaml:"-"`
+	EquippedItem string `yaml:"-"`
 }
 
 func validatePlayers(wf WorldFile) []error {
