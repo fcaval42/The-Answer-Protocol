@@ -1,4 +1,4 @@
-.PHONY: server stop-server client gui clean
+.PHONY: install server stop-server client gui lint clean
 
 all:
 	@echo "Use the following commands"
@@ -6,7 +6,11 @@ all:
 	@echo "make stop-server"
 	@echo "make client"
 	@echo "make gui"
+	@echo "make lint"
 	@echo "make clean"
+
+install:
+	go mod tidy
 
 server:
 	go run ./tcp/server
@@ -19,6 +23,9 @@ client:
 
 gui:
 	go run . gui
+
+lint:
+	go vet ./...
 
 clean:
 	rm -f server tap-gui

@@ -61,6 +61,11 @@ func FindPlayerByName(name string, maps map[string]Location) (room Location, ind
 
 
 func FindEnemyInRoom(enemyName string, loc Location, world WorldFile) (Enemy, int, bool) {
+	for _, npc := range loc.NPCs {
+		if npc == enemyName {
+			return Enemy{}, 1, false
+		}
+	}
 	for i, enemy := range loc.Enemies {
 		if enemy == enemyName {
 			enemyStats := world.Enemies[enemy]
