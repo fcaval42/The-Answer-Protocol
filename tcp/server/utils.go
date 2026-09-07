@@ -114,3 +114,9 @@ func Broadcast(receiver []net.Conn, messages []string) {
 		PrintChat(client, messages)
 	}
 }
+
+func BroadcastEVT(receiver []net.Conn, messages string) {
+	for _, client := range receiver {
+		PrintChat(client, []string{messages})
+	}
+}

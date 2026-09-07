@@ -54,6 +54,11 @@ func GroupJoin(conn net.Conn, player string, groupID string) {
 	}
 	group.Members[player] = conn
 	group.messages = append(group.messages, fmt.Sprintf("%s a rejoint le groupe.\n", player))
+	var receivers []net.Conn
+	for _, memberConn := range group.Members {
+		receivers = append(receivers, memberConn)
+	}
+	BroadcastEVT(receivers, fmt.Sprintf("[EVT] %s a rejoint le groupe.\n", player))
 	group.Mu.Unlock()
 	LogAndFprintf(conn, "[SERVER] Vous avez rejoint le groupe %s !\n", groupID)
 }
@@ -107,24 +112,24 @@ func GroupInvite(conn net.Conn, player string) {
 		pendingInvitesLock.Unlock()
 	}()
 
-	fmt.Fprintf(inviteeConn, "[INFO] %s vous a invité à rejoindre un groupe. ACCEPT/DECLINE (10s)\n", player)
+	fmt.Fprintf(inviteeConn, "[EVT] %s vous a invité à rejoindre un groupe. ACCEPT/DECLINE (10s)\n", player)
 
 	var response string
 	select {
 	case response = <-replyChan:
 	case <-time.After(10 * time.Second):
 		response = "DECLINE\n"
-		fmt.Fprintf(inviteeConn, "[INFO] Invitation expirée.\n")
+		fmt.Fprintf(inviteeConn, "[EVT] Invitation expirée.\n")
 	}
 
 	if response == "DECLINE\n" {
-		LogAndFprintf(conn, "[SERVER] %s a refusé l'invitation.\n", invitee)
+		LogAndFprintf(conn, "[EVT] %s a refusé l'invitation.\n", invitee)
 		return
 	}
 	if response == "ACCEPT\n" {
-		LogAndFprintf(conn, "[SERVER] %s a accepté l'invitation.\n", invitee)
+		LogAndFprintf(conn, "[EVT] %s a accepté l'invitation.\n", invitee)
 	} else {
-		LogAndFprintf(inviteeConn, "[INFO] Réponse invalide.\n")
+		LogAndFprintf(inviteeConn, "[EVT] Réponse invalide.\n")
 		return
 	}
 
@@ -132,14 +137,14 @@ func GroupInvite(conn net.Conn, player string) {
 	defer groupsLock.Unlock()
 	currentGroup.Members[invitee] = inviteeConn
 	currentGroup.messages = append(currentGroup.messages, fmt.Sprintf("%s a rejoint le groupe.\n", invitee))
-	LogAndFprintf(conn, "[SERVER] %s a rejoint le groupe %s !\n", invitee, currentGroup.ID)
+	LogAndFprintf(conn, "[EVT] %s a rejoint le groupe %s !\n", invitee, currentGroup.ID)
 }
 
 func GroupLeave(player string) bool {
 	if SearchPlayerGroup(player) != nil {
 		currentGroup := SearchPlayerGroup(player)
 		currentGroup.Mu.Lock()
-		currentGroup.messages = append(currentGroup.messages, fmt.Sprintf("%s a quitté le groupe.\n", player))
+		currentGroup.messages = append(currentGroup.messages, fmt.Sprintf("[EVT] %s a quitté le groupe.\n", player))
 		delete(currentGroup.Members, player)
 		currentGroup.Mu.Unlock()
 		return true
