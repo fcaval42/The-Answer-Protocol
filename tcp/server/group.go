@@ -4,11 +4,16 @@ import (
 	"fmt"
 	"net"
 	"strings"
+	"time"
 	. "the_answer_protocol/tcp/common"
 )
 
 
 func GroupCreate(conn net.Conn, player string) {
+	if SearchPlayerGroup(player) != nil {
+		LogAndFprintf(conn, "[SERVER] ERR 402 ALREADY_IN_GROUP: Vous êtes déjà dans un groupe. Quittez-le avant d'en créer un nouveau.\n")
+		return
+	}
 	LogAndFprintf(conn, "[SERVER] Création d'un nouveau groupe...\n")
 	groupID := fmt.Sprintf("%d", len(groups)+1)
 
@@ -30,9 +35,13 @@ func GroupCreate(conn net.Conn, player string) {
 }
 
 func GroupJoin(conn net.Conn, player string, groupID string) {
+	if SearchPlayerGroup(player) != nil {
+		LogAndFprintf(conn, "[SERVER] ERR 402 ALREADY_IN_GROUP: Vous êtes déjà dans un groupe. Quittez-le avant d'en rejoindre un autre.\n")
+		return
+	}
+
 	groupsLock.Lock()
 	defer groupsLock.Unlock()
-
 	group, exists := groups[groupID]
 	if !exists {
 		LogAndFprintf(conn, "[SERVER] Groupe introuvable.\n")
@@ -56,7 +65,7 @@ func GroupInvite(conn net.Conn, player string) {
 	var currentGroup *Group
 	currentGroup = SearchPlayerGroup(player)
 	if currentGroup == nil {
-		LogAndFprintf(conn, "[SERVER] Vous n'êtes pas dans un groupe. Créez-en un d'abord.\n")
+		LogAndFprintf(conn, "[SERVER] ERR 401 NOT_IN_GROUP: Vous n'êtes pas dans un groupe. Créez-en un d'abord.\n")
 		return
 	}
 
@@ -85,10 +94,9 @@ func GroupInvite(conn net.Conn, player string) {
 			LogAndFprintf(conn, "[SERVER] Joueur non connecté.\n")
 			continue
 		}
-		LogAndFprintf(inviteeConn, "[INFO] %s vous a invité à rejoindre un groupe. ACCEPT/DECLINE\n", player)
 		break
 	}
-	replyChan := make(chan string)
+	replyChan := make(chan string, 1)
 
     pendingInvitesLock.Lock()
     pendingInvites[invitee] = replyChan
@@ -101,9 +109,15 @@ func GroupInvite(conn net.Conn, player string) {
         pendingInvitesLock.Unlock()
     }()
 
-    fmt.Fprintf(inviteeConn, "[INFO] %s vous a invité à rejoindre un groupe. ACCEPT/DECLINE\n", player)
+    fmt.Fprintf(inviteeConn, "[INFO] %s vous a invité à rejoindre un groupe. ACCEPT/DECLINE (10s)\n", player)
 
-    response := <-replyChan
+	var response string
+	select {
+	case response = <-replyChan:
+	case <-time.After(10 * time.Second):
+		response = "DECLINE\n"
+		fmt.Fprintf(inviteeConn, "[INFO] Invitation expirée.\n")
+	}
 
     if response == "DECLINE\n" {
         LogAndFprintf(conn, "[SERVER] %s a refusé l'invitation.\n", invitee)
