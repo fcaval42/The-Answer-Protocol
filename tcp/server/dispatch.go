@@ -390,6 +390,23 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 			mapsLock.Unlock()
 			LogAndFprintf(conn, "%s\n", resp)
 
+		case message == "UNEQUIP\n":
+			room, index, ok := FindPlayerByName(player.Name, maps)
+			if !ok {
+				LogAndFprintf(conn, "ERR 404 PLAYER_NOT_FOUND\n")
+				continue
+			}
+			resp, updatedPlayer, err := Unequip(room.Players[index])
+			if err != nil {
+				LogAndFprintf(conn, "ERR 900 CONNECTION_FAILED\n")
+				continue
+			}
+			room.Players[index] = updatedPlayer
+			mapsLock.Lock()
+			maps[room.ID] = room
+			mapsLock.Unlock()
+			LogAndFprintf(conn, "%s\n", resp)
+
 		case strings.HasPrefix(message, "MOVE"):
 			var tempLoc Location
 			tempLoc, moved := Move(conn, player, loc.ID, message)
