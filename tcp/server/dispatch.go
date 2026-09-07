@@ -231,11 +231,12 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 				}
 			}
 		case strings.HasPrefix(message, "CHAT "):
-			chatMessage := strings.TrimSpace(strings.TrimPrefix(message, "CHAT "))
+			chatMessage := strings.TrimPrefix(message, "CHAT ")
 			switch {
 			case strings.HasPrefix(chatMessage, "GLOBAL "):
-				// Envoyer a tous les joueurs qui ne sont pas dans ChatGlobal
-				// Et ajouter le message à la liste des messages du Global
+				messages := strings.TrimPrefix(chatMessage, "GLOBAL ")
+				messages = fmt.Sprintf("[%s]: %s", player.Name, messages)
+				GlobalChatBroadcast(messages)
 			case strings.HasPrefix(chatMessage, "ROOM "):
 				// Envoyer a tous les joueurs qui ne sont pas dans la room
 				// Et ajouter le message à la liste des messages de la room

@@ -153,6 +153,7 @@ func GlobalChatBroadcast(message string) {
 		}
 	}
 	ConnectedLock.Unlock()
+	message = fmt.Sprintf("[EVT] %s", message)
 	Broadcast(receivers, []string{message})
 	inGlobalLock.Unlock()
 }
