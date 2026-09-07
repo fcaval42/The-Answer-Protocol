@@ -17,7 +17,6 @@ import (
 	"the_answer_protocol/parsing"
 )
 
-
 // ----------------- Header (titre) ------------------
 
 func buildHeader() fyne.CanvasObject {
@@ -27,7 +26,7 @@ func buildHeader() fyne.CanvasObject {
 
 // ----------------- Panneau de salle (gauche) ------------------
 
-func buildRoomPanel(loc parsing.Location, world parsing.WorldFile, player parsing.Player, sess *Session,
+func buildRoomPanel(loc parsing.Location, world parsing.WorldFile, player parsing.Player, sess *Session, w fyne.Window,
 	changeRoom func(parsing.Location), refreshCharacter func(parsing.Player),
 	showMessage func(title, msg string)) fyne.CanvasObject {
 
@@ -125,23 +124,34 @@ func buildRoomPanel(loc parsing.Location, world parsing.WorldFile, player parsin
 		id := npcID
 		npc := npcName
 
-		npcsRow.Add(NewButton(npc+" TALK", func() {
-			go func() {
-				resp, err := sess.Send("TALK " + id)
-				if resp == "" && err == nil {
-					return // ignore silencieusement (cooldown / action deja en cours)
-				}
-				if err != nil {
-					fyne.Do(func() { showMessage("Erreur", err.Error()) })
-					return
-				}
-				if strings.HasPrefix(resp, "ERR") {
-					fyne.Do(func() { showMessage("Erreur", resp) })
-					return
-				}
-				fyne.Do(func() { showMessage(npc, strings.TrimPrefix(resp, "OK ")) })
-			}()
-		}))
+		npcButtons := container.NewHBox(
+			NewButton(npc+" TALK", func() {
+				go func() {
+					resp, err := sess.Send("TALK " + id)
+					if resp == "" && err == nil {
+						return // ignore silencieusement (cooldown / action deja en cours)
+					}
+					if err != nil {
+						fyne.Do(func() { showMessage("Erreur", err.Error()) })
+						return
+					}
+					if strings.HasPrefix(resp, "ERR") {
+						fyne.Do(func() { showMessage("Erreur", resp) })
+						return
+					}
+					fyne.Do(func() { showMessage(npc, strings.TrimPrefix(resp, "OK ")) })
+				}()
+			}),
+		)
+		// le bouton Quest n'apparait que pour les PNJ donneurs de quete
+		// (Sophie, Esquie...) : c'est ici, avec le PNJ present dans la
+		// salle, qu'on peut accepter/decliner ou recuperer sa recompense.
+		if _, ok := questForGiver(world, id); ok {
+			npcButtons.Add(NewButton(npc+" Quest", func() {
+				openNpcQuestDialog(w, sess, world, player, npc, id, refreshCharacter, showMessage)
+			}))
+		}
+		npcsRow.Add(npcButtons)
 	}
 
 	for _, enemyID := range loc.Enemies {
@@ -159,38 +169,66 @@ func buildRoomPanel(loc parsing.Location, world parsing.WorldFile, player parsin
 			enemyMaxHP = e.HP
 		}
 
-		npcsRow.Add(NewButton(enemy+" ATTACK", func() {
-			go func() {
-				resp, err := sess.Send("ATTACK " + id)
-				if resp == "" && err == nil {
-					return // ignore silencieusement (cooldown / action deja en cours)
-				}
-				if err != nil {
-					fyne.Do(func() { showMessage("Erreur", err.Error()) })
-					return
-				}
-				if strings.HasPrefix(resp, "ERR") {
-					fyne.Do(func() { showMessage("Erreur", resp) })
-					return
-				}
-				var result struct {
-					AttackerHP int    `json:"attacker_hp"`
-					TargetHP   int    `json:"target_hp"`
-					Damage     int    `json:"damage"`
-					Status     string `json:"status"`
-				}
-				json.Unmarshal([]byte(strings.TrimPrefix(resp, "OK ")), &result)
-				updated := player
-				updated.HP = result.AttackerHP
-				fyne.Do(func() {
-					refreshCharacter(updated)
-					showMessage("Combat", fmt.Sprintf(
-						"Dégâts infligés : %d\nPV de %s : %d / %d (%s)",
-						result.Damage, enemy, result.TargetHP, enemyMaxHP, result.Status,
-					))
-				})
-			}()
-		}))
+		enemyBar, enemyBarThemed := NewColoredProgressBar(HPColor)
+		enemyBar.Min = 0
+		enemyBar.Max = float64(enemyMaxHP)
+		enemyBar.Value = float64(enemyMaxHP)
+		enemyBar.TextFormatter = func() string { return "" }
+		enemyHPText := NewTitleText(fmt.Sprintf("%d / %d", enemyMaxHP, enemyMaxHP), 14)
+		enemyHPStack := container.NewStack(enemyBarThemed, container.NewCenter(enemyHPText))
+		enemyHPFixed := container.New(layout.NewGridWrapLayout(fyne.NewSize(160, 22)), enemyHPStack)
+
+		npcsRow.Add(container.NewVBox(
+			enemyHPFixed,
+			NewButton(enemy+" ATTACK", func() {
+				go func() {
+					resp, err := sess.Send("ATTACK " + id)
+					if resp == "" && err == nil {
+						return // ignore silencieusement (cooldown / action deja en cours)
+					}
+					if err != nil {
+						fyne.Do(func() { showMessage("Erreur", err.Error()) })
+						return
+					}
+					if strings.HasPrefix(resp, "ERR") {
+						// L'ennemi n'est deja plus dans la salle cote serveur
+						// (deja tue par ce joueur ou un autre) mais le bouton
+						// est reste affiche le temps que le GUI se rafraichisse :
+						// pas une vraie erreur, on l'affiche donc comme une victoire.
+						if strings.Contains(resp, "NPC_NOT_FOUND") {
+							fyne.Do(func() { showMessage("Combat", "VICTOIRE") })
+							return
+						}
+						fyne.Do(func() { showMessage("Erreur", resp) })
+						return
+					}
+					var result struct {
+						AttackerHP int    `json:"attacker_hp"`
+						TargetHP   int    `json:"target_hp"`
+						Damage     int    `json:"damage"`
+						Status     string `json:"status"`
+					}
+					json.Unmarshal([]byte(strings.TrimPrefix(resp, "OK ")), &result)
+					updated := player
+					updated.HP = result.AttackerHP
+					fyne.Do(func() {
+						refreshCharacter(updated)
+						enemyBar.Value = float64(result.TargetHP)
+						enemyBar.Refresh()
+						enemyHPText.Text = fmt.Sprintf("%d / %d", result.TargetHP, enemyMaxHP)
+						enemyHPText.Refresh()
+						if result.Status == "victory" {
+							showMessage("Combat", "VICTOIRE")
+							return
+						}
+						showMessage("Combat", fmt.Sprintf(
+							"Dégâts infligés : %d\nPV de %s : %d / %d (%s)",
+							result.Damage, enemy, result.TargetHP, enemyMaxHP, result.Status,
+						))
+					})
+				}()
+			}),
+		))
 	}
 
 	// ----------------- ACTIONS --------------------
@@ -223,22 +261,8 @@ func buildRoomPanel(loc parsing.Location, world parsing.WorldFile, player parsin
 				})
 			}()
 		}),
-		NewButton("Quest", func() {
-			go func() {
-				resp, err := sess.Send("QUESTS")
-				if resp == "" && err == nil {
-					return // ignore silencieusement (cooldown / action deja en cours)
-				}
-				if err != nil {
-					fyne.Do(func() { showMessage("Erreur", err.Error()) })
-					return
-				}
-				if strings.HasPrefix(resp, "ERR") {
-					fyne.Do(func() { showMessage("Erreur", resp) })
-					return
-				}
-				fyne.Do(func() { showMessage("Quêtes", strings.TrimPrefix(resp, "OK ")) })
-			}()
+		NewButton("Quests", func() {
+			openQuestsDialog(w, sess, showMessage)
 		}),
 		NewButton("Inventory", func() {
 			go func() {
@@ -254,7 +278,24 @@ func buildRoomPanel(loc parsing.Location, world parsing.WorldFile, player parsin
 					fyne.Do(func() { showMessage("Erreur", resp) })
 					return
 				}
-				fyne.Do(func() { showMessage("Inventaire", strings.TrimPrefix(resp, "OK ")) })
+				var itemIDs []string
+				if err := json.Unmarshal([]byte(strings.TrimPrefix(resp, "OK ")), &itemIDs); err != nil {
+					fyne.Do(func() { showMessage("Erreur", "réponse du serveur illisible : "+err.Error()) })
+					return
+				}
+				names := make([]string, 0, len(itemIDs))
+				for _, id := range itemIDs {
+					if it, ok := world.Items[id]; ok {
+						names = append(names, it.Name)
+					} else {
+						names = append(names, id)
+					}
+				}
+				msg := "Inventaire vide."
+				if len(names) > 0 {
+					msg = strings.Join(names, ", ")
+				}
+				fyne.Do(func() { showMessage("Inventaire", msg) })
 			}()
 		}),
 		NewButton("Look", func() {
@@ -321,7 +362,7 @@ func statCell(label string, value string) fyne.CanvasObject {
 	return container.NewVBox(l, v)
 }
 
-func buildCharacterPanel(player parsing.Player, showMessage func(title, msg string)) fyne.CanvasObject {
+func buildCharacterPanel(player parsing.Player, sess *Session, w fyne.Window, refreshCharacter func(parsing.Player), showMessage func(title, msg string)) fyne.CanvasObject {
 
 	// ----------------- AVATAR + NOM PERSO --------------------
 	name := NewTitleText(player.Name, 70)
@@ -355,10 +396,14 @@ func buildCharacterPanel(player parsing.Player, showMessage func(title, msg stri
 	invLabel := NewTitleText("Inventaire", 25)
 	invRow := container.NewHBox()
 	for _, i := range player.Inventory {
+		i := i
 		itemLabel := i.Name
-		desc := i.Description
 		invRow.Add(NewButton(itemLabel, func() {
-			showMessage(itemLabel, desc)
+			if i.Critical != nil {
+				openItemDialog(w, sess, i, player, refreshCharacter, showMessage)
+			} else {
+				showMessage(itemLabel, i.Description)
+			}
 		}))
 	}
 
@@ -451,7 +496,6 @@ func findPlayer(world parsing.WorldFile, name string) (parsing.Player, bool) {
 	return parsing.Player{}, false
 }
 
-
 func Run(playerName string, world parsing.WorldFile, sess *Session) {
 
 	player, ok := findPlayer(world, playerName)
@@ -462,6 +506,7 @@ func Run(playerName string, world parsing.WorldFile, sess *Session) {
 	startLoc := world.World.Locations[player.Respawn.Location]
 
 	a := app.New()
+	a.Settings().SetTheme(NewCustomTheme())
 	w := a.NewWindow("The Answer Protocol")
 	w.Resize(fyne.NewSize(1400, 850))
 	w.SetFixedSize(true) // empêche utilisateur de redimensionner fenêtre
@@ -473,16 +518,29 @@ func Run(playerName string, world parsing.WorldFile, sess *Session) {
 	roomContainer := container.NewStack()
 	currentRoom := startLoc // salle actuellement affichée, suivie pour la carte
 
-
 	showMessage := func(title, msg string) {
 		defer func() {
 			if r := recover(); r != nil {
 				fmt.Println("[GUI] échec d'affichage de la popup", title, ":", msg, "(", r, ")")
 			}
 		}()
-		dialog.NewInformation(title, msg, w).Show()
+		body := container.NewVBox()
+		lines := strings.Split(msg, "\n")
+		for i, line := range lines {
+			body.Add(NewWrappingBodyText(line))
+			if i < len(lines)-1 {
+				body.Add(Fix(10, 6))
+			}
+		}
+		content := container.NewVBox(
+			container.NewCenter(NewTitleText(title, 28)),
+			Fix(0, 25),
+			body,
+		)
+		d := dialog.NewCustom("", "Fermer", content, w)
+		d.Resize(fyne.NewSize(480, 320))
+		d.Show()
 	}
-
 
 	var changeRoom func(newRoom parsing.Location)
 	var refreshCharacter func(p parsing.Player)
@@ -490,7 +548,7 @@ func Run(playerName string, world parsing.WorldFile, sess *Session) {
 	characterContainer := container.NewStack()
 	refreshCharacter = func(p parsing.Player) {
 		player = p
-		characterContainer.Objects = []fyne.CanvasObject{buildCharacterPanel(p, showMessage)}
+		characterContainer.Objects = []fyne.CanvasObject{buildCharacterPanel(p, sess, w, refreshCharacter, showMessage)}
 		characterContainer.Refresh()
 	}
 	refreshCharacter(player) // affichage initial du panneau perso
@@ -498,7 +556,7 @@ func Run(playerName string, world parsing.WorldFile, sess *Session) {
 	changeRoom = func(newRoom parsing.Location) {
 		currentRoom = newRoom
 		SetRoomBackground(bgImage, newRoom.Background)
-		roomContainer.Objects = []fyne.CanvasObject{buildRoomPanel(newRoom, world, player, sess, changeRoom, refreshCharacter, showMessage)}
+		roomContainer.Objects = []fyne.CanvasObject{buildRoomPanel(newRoom, world, player, sess, w, changeRoom, refreshCharacter, showMessage)}
 		roomContainer.Refresh()
 	}
 	changeRoom(startLoc) // affichage initial

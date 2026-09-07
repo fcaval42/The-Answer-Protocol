@@ -146,11 +146,42 @@ func NewSemiTransparentButton(label string, alpha uint8, tapped func()) fyne.Can
 	return container.NewThemeOverride(btn, th)
 }
 
-
 // ------------------------- TEXTES WRAPPING ----------------------------
 func NewWrappingBodyText(text string) fyne.CanvasObject {
 	l := widget.NewLabel(text)
 	l.Wrapping = fyne.TextWrapWord
 	l.Alignment = fyne.TextAlignCenter
 	return container.NewThemeOverride(l, newFontTheme(bodyFont, BodyColor, DescSize))
+}
+
+// ---------------- CUSTOM THEME POUR LES POPUPS ----------------
+
+// CustomTheme implémente fyne.Theme avec une palette personnalisée pour les popups
+// On embed fyne.Theme comme base pour hériter toutes les méthodes non redéfinies
+type CustomTheme struct {
+	fyne.Theme
+}
+
+func NewCustomTheme() *CustomTheme {
+	return &CustomTheme{Theme: theme.DarkTheme()}
+}
+
+// Color retourne la couleur du thème pour le nom donné
+func (t *CustomTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) color.Color {
+	switch name {
+	case theme.ColorNameBackground:
+		return color.NRGBA{R: 0x2b, G: 0x1e, B: 0x0c, A: 0xff}
+	case theme.ColorNameForeground:
+		return color.NRGBA{R: 0xf5, G: 0xec, B: 0xd8, A: 0xff}
+	case theme.ColorNameHover:
+		return color.NRGBA{R: 0xe6, G: 0xc8, B: 0x6e, A: 0xff}
+	case theme.ColorNameButton:
+		return HPColor
+	case theme.ColorNamePressed:
+		return color.NRGBA{R: 0x5c, G: 0x3d, B: 0x05, A: 0xff}
+	case theme.ColorNameOverlayBackground:
+		return color.NRGBA{R: 0x1a, G: 0x12, B: 0x08, A: 0xcc}
+	default:
+		return t.Theme.Color(name, variant)
+	}
 }

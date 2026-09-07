@@ -81,7 +81,10 @@ func takeItem(conn net.Conn, player Player, loc Location, message string) Locati
 							return loc
 						}
 						if it.Name == itemName{
-						// Ajoute l'objet à l'inventaire du joueur
+						// Ajoute l'objet à l'inventaire du joueur. La quête de type
+						// "fetch" associee (s'il y en a une) ne se termine pas ici :
+						// le joueur doit retourner voir le donneur de quete pour
+						// recevoir sa recompense (cf. ReturnQuest / commande QUEST).
 						loc.Players[i].Inventory = append(loc.Players[i].Inventory, it)
 						updatedPlayer, questMsg := CompleteFetchQuest(world, loc, loc.Players[i], it.ID) // ajout
 						loc.Players[i] = updatedPlayer // ajout
@@ -165,8 +168,12 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 				LogAndFprintf(conn, "ERR COMMAND FAILED\n")
 				continue
 			} else {
-				LogAndFprintf(conn, "%s\n", ToString(room))
+				// resp ("OK [...]") doit arriver avant l'etat de la salle : le
+				// GUI ne recupere que la toute premiere ligne OK/ERR/{ d'une
+				// reponse (cf. Session.Deliver), sinon il recupere l'etat de
+				// la salle a la place de l'inventaire.
 				LogAndFprintf(conn, "%s\n", resp)
+				LogAndFprintf(conn, "%s\n", ToString(room))
 			}
 
 		case message == "QUESTS\n":
@@ -284,7 +291,6 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 				continue
 			}
 			room := maps[roomID]
-			mapsLock.Unlock()
 			worldLock.Lock()
 			enemy, enemyI, ok := FindEnemyInRoom(enemyName, room, world)
 			worldLock.Unlock()
@@ -293,21 +299,8 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 				continue
 			}
 			if !ok {
-				LogAndFprintf(conn, "ERR 404 NPC_NOT_FOUND\n")
-				continue
-			}
-			mapsLock.Lock()
-			room = maps[roomID]
-			playerI = -1
-			for i, p := range room.Players {
-				if p.Name == player.Name {
-					playerI = i
-					break
-				}
-			}
-			if playerI == -1 {
 				mapsLock.Unlock()
-				LogAndFprintf(conn, "ERR 404 PLAYER_NOT_FOUND\n")
+				LogAndFprintf(conn, "ERR 404 NPC_NOT_FOUND\n")
 				continue
 			}
 			resp, critMsg, status, majplayer, majEnemy := Attack(room.Players[playerI], enemy)
@@ -334,6 +327,15 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 				worldLock.Unlock()
 				mapsLock.Unlock()
 
+				// resp doit etre envoye comme sa propre ligne commencant par
+				// "OK " : le GUI ne recupere que la toute premiere ligne
+				// OK/ERR/{ d'une reponse (cf. Session.Deliver). Avant, resp
+				// etait fusionne dans le message [SERVER] via un "\" litteral,
+				// donc la ligne entiere commencait par "[SERVER]" et n'etait
+				// jamais reconnue : c'est l'etat de la salle (qui commence par
+				// "{") qui etait capte a la place du resultat du combat.
+				LogAndFprintf(conn, "%s\n", resp)
+				LogAndFprintf(conn, "[SERVER] Vous êtes mort. Vous allez être téléporté à votre point de respawn.\n")
 				LogAndFprintf(conn, "%s\n", ToString(respawnLoc))
 				LogAndFprintf(conn, "[SERVER] Vous êtes mort. Vous allez être téléporté à votre point de respawn.\\%s\n", resp)
 				broadcastRoomExcept(room, player.Name, "%s\n", ToString(room))                                                          // modif
@@ -348,14 +350,17 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 				worldLock.Unlock()
 				mapsLock.Unlock()
 
-				LogAndFprintf(conn, "%s\n", ToString(room))
+				// resp doit etre sa propre ligne "OK ...", meme raison que
+				// pour le cas "defeat" ci-dessus.
+				LogAndFprintf(conn, "%s\n", resp)
 				if questMsg != "" { // ajout
-					LogAndFprintf(conn, "%s\\[SERVER] Vous avez vaincu l'ennemi %s.\\%s\n", questMsg, enemyName, resp) // ajout
+					LogAndFprintf(conn, "%s\n[SERVER] Vous avez vaincu l'ennemi %s.\n", questMsg, enemyName) // ajout
 				} else { // ajout
-					LogAndFprintf(conn, "[SERVER] Vous avez vaincu l'ennemi %s.\\%s\n", enemyName, resp) // ajout
+					LogAndFprintf(conn, "[SERVER] Vous avez vaincu l'ennemi %s.\n", enemyName) // ajout
 				} // ajout
 				broadcastRoomExcept(room, player.Name, "%s\n", ToString(room))                                        // modif
 				broadcastRoomExcept(room, player.Name, "[SERVER] %s a vaincu l'ennemi %s.\n", player.Name, enemyName) // modif
+				LogAndFprintf(conn, "%s\n", ToString(room))
 			case "combat":
 				room.Players[playerI] = majplayer
 				room.Enemies[enemyI] = majEnemy.ID
@@ -365,6 +370,10 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 				worldLock.Unlock()
 				mapsLock.Unlock()
 
+				// resp doit etre sa propre ligne "OK ...", meme raison que
+				// pour le cas "defeat" ci-dessus.
+				LogAndFprintf(conn, "%s\n", resp)
+				LogAndFprintf(conn, "[SERVER] Vous êtes en combat avec %s.\n", enemyName)
 				LogAndFprintf(conn, "%s\n", ToString(room))
 				LogAndFprintf(conn, "[SERVER] Vous êtes en combat avec %s.\\%s\n", enemyName, resp)
 				broadcastRoomExcept(room, player.Name, "%s\n", ToString(room))                             // modif
@@ -378,8 +387,11 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 				continue
 			}
 			resp := Talk(room, world, strings.TrimSpace(strings.TrimPrefix(message, "TALK")))
-			LogAndFprintf(conn, "%s\n", ToString(room))
+			// resp ("OK [npc]: ...") doit arriver avant l'etat de la salle,
+			// meme raison que pour INVENTORY/QUEST : sinon le GUI recupere
+			// l'etat de la salle au lieu du dialogue.
 			LogAndFprintf(conn, "%s\n", resp)
+			LogAndFprintf(conn, "%s\n", ToString(room))
 
 		case strings.HasPrefix(message, "QUEST"):
 			room, index, ok := FindPlayerByName(player.Name, maps)
@@ -396,9 +408,49 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 				mapsLock.Lock()
 				maps[room.ID] = room
 				mapsLock.Unlock()
-				LogAndFprintf(conn, "%s\n", ToString(room))
+				// resp est envoye avant l'etat de la salle : c'est la seule
+				// ligne "OK .../ERR ..." de cette reponse, elle doit donc
+				// arriver en premier pour que le GUI (qui ne recupere que la
+				// toute premiere ligne OK/ERR/{ d'une reponse, cf. Session.Deliver)
+				// recoive bien le resultat de la commande QUEST et pas l'etat de
+				// la salle.
 				LogAndFprintf(conn, "%s\n", resp)
+				LogAndFprintf(conn, "%s\n", ToString(room))
 			}
+
+		case strings.HasPrefix(message, "EQUIP"):
+			room, index, ok := FindPlayerByName(player.Name, maps)
+			if !ok {
+				LogAndFprintf(conn, "ERR 404 PLAYER_NOT_FOUND\n")
+				continue
+			}
+			resp, updatedPlayer, err := Equip(room.Players[index], strings.TrimSpace(strings.TrimPrefix(message, "EQUIP")))
+			if err != nil {
+				LogAndFprintf(conn, "ERR 900 CONNECTION_FAILED\n")
+				continue
+			}
+			room.Players[index] = updatedPlayer
+			mapsLock.Lock()
+			maps[room.ID] = room
+			mapsLock.Unlock()
+			LogAndFprintf(conn, "%s\n", resp)
+
+		case message == "UNEQUIP\n":
+			room, index, ok := FindPlayerByName(player.Name, maps)
+			if !ok {
+				LogAndFprintf(conn, "ERR 404 PLAYER_NOT_FOUND\n")
+				continue
+			}
+			resp, updatedPlayer, err := Unequip(room.Players[index])
+			if err != nil {
+				LogAndFprintf(conn, "ERR 900 CONNECTION_FAILED\n")
+				continue
+			}
+			room.Players[index] = updatedPlayer
+			mapsLock.Lock()
+			maps[room.ID] = room
+			mapsLock.Unlock()
+			LogAndFprintf(conn, "%s\n", resp)
 
 		case strings.HasPrefix(message, "MOVE"):
 			var tempLoc Location

@@ -21,7 +21,10 @@ func Talk(room Location, world WorldFile, npcName string) (string) {
 	for _, speech := range npcChar.Dialogue{
 		response += fmt.Sprintf("%s ", speech)
 	}
-	return fmt.Sprintf("%s\n", response)
+	// prefixe "OK " : c'est la seule ligne "OK .../ERR .../{..." de cette
+	// reponse, elle doit donc pouvoir etre reconnue par le GUI (cf.
+	// Session.Deliver, qui n'accepte que ces prefixes).
+	return fmt.Sprintf("OK %s", response)
 }
 
 func statusLabel(hp int, maxHP int) string {
