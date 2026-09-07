@@ -170,18 +170,17 @@ func RoomChatBroadcast(conn net.Conn, loc string, player string, message string)
 	}
 	inRoomChatMu.Lock()
 	Broadcast(inRoomChat[loc], roomMessages[loc])
-	inRoomChatMu.Unlock()
 	var receivers []net.Conn
 	mapsLock.Lock()
 	ConnectedLock.Lock()
 	for _, c := range maps[loc].Players {
-		if c.Name != player{
+		if c.Name != player && !slices.Contains(inRoomChat[loc], ConnectedClients[c.Name]) {
 			receivers = append(receivers, ConnectedClients[c.Name])
 		}
 	}
+	inRoomChatMu.Unlock()
 	ConnectedLock.Unlock()
 	mapsLock.Unlock()
-	ConnectedLock.Unlock()
 	roomMessagesMu.Unlock()
 	BroadcastEVT(receivers, fmt.Sprintf("[EVT] %s", message))
 }
