@@ -67,9 +67,17 @@ func handleConnection(conn net.Conn) {
 
 	// Gestion de la fin de connexion
 	defer func() {
+		var playerConn []net.Conn
+		CloseSession(conn, player)
+		ConnectedLock.Lock()
+		for _, conn := range ConnectedClients {
+			playerConn = append(playerConn, conn)
+		}
+		nb:= len(playerConn)
+		ConnectedLock.Unlock()
+		BroadcastEVT(playerConn, fmt.Sprintf("[SERVER] %s a quitté le jeu (%d joueurs connectés).\n", player, nb))
 		deletePlayerInMap(player)
 		disconnectPlayer(player)
-		CloseSession(conn, player)
 	}()
 	player = Connexion(conn, player)
 	if player == "" {
