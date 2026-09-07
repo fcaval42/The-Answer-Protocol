@@ -230,7 +230,21 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 					break chat
 				}
 			}
-
+		case strings.HasPrefix(message, "CHAT "):
+			chatMessage := strings.TrimSpace(strings.TrimPrefix(message, "CHAT "))
+			switch {
+			case strings.HasPrefix(chatMessage, "GLOBAL "):
+				// Envoyer a tous les joueurs qui ne sont pas dans ChatGlobal
+				// Et ajouter le message à la liste des messages du Global
+			case strings.HasPrefix(chatMessage, "ROOM "):
+				// Envoyer a tous les joueurs qui ne sont pas dans la room
+				// Et ajouter le message à la liste des messages de la room
+			case strings.HasPrefix(chatMessage, "GROUP "):
+				// Envoyer a tous les joueurs qui ne sont pas dans le groupe
+				// Et ajouter le message à la liste des messages du groupe
+			default:
+				LogAndFprintf(conn, "[SERVER] ERR 400 INVALID_CHAT_COMMAND: Commande de chat invalide.\n")
+			}
 		case message == "GROUP CREATE\n":
 			GroupCreate(conn, player.Name)
 

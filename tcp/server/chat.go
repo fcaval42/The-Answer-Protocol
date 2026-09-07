@@ -136,3 +136,23 @@ func GlobalChat(conn net.Conn, player string) {
 		globaleMessageLock.Unlock()
 	}
 }
+
+func GlobalChatBroadcast(message string) {
+	globaleMessageLock.Lock()
+	globaleMessage = append(globaleMessage, message)
+	if len(globaleMessage) > 10 {
+		globaleMessage = globaleMessage[len(globaleMessage)-10:]
+	}
+	globaleMessageLock.Unlock()
+	inGlobalLock.Lock()
+	ConnectedLock.Lock()
+	var receivers []net.Conn
+	for _, conn := range ConnectedClients {
+		if !slices.Contains(inGlobal, conn) {
+			receivers = append(receivers, conn)
+		}
+	}
+	ConnectedLock.Unlock()
+	Broadcast(receivers, []string{message})
+	inGlobalLock.Unlock()
+}
