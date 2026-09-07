@@ -104,6 +104,24 @@ func takeItem(conn net.Conn, player Player, loc Location, message string) Locati
 	return loc
 }
 
+// broadcastRoomExcept envoie un message a tous les joueurs de la salle demander dans le sujet. // modif
+func broadcastRoomExcept(room Location, exclude string, format string, args ...interface{}) { // modif
+	ConnectedLock.Lock()                                // modif
+	receivers := make([]net.Conn, 0, len(room.Players)) // modif
+	for _, p := range room.Players {                    // modif
+		if p.Name == exclude {                          // modif
+			continue                                    // modif
+		}                                                // modif
+		if c, ok := ConnectedClients[p.Name]; ok {       // modif
+			receivers = append(receivers, c)             // modif
+		}                                                // modif
+	}                                                    // modif
+	ConnectedLock.Unlock()                               // modif
+	for _, c := range receivers {                        // modif
+		LogAndFprintf(c, format, args...)                // modif
+	}                                                    // modif
+}                                                        // modif
+
 // Dispatch des commandes du client après la connexion,
 // en fonction de la commande reçue.
 func Dispatch(conn net.Conn, player Player, loc Location) {
@@ -171,7 +189,7 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 			room, index, ok := FindPlayerByName(player.Name, maps)
 			if !ok {
 				LogAndFprintf(conn, "ERR 404 PLAYER_NOT_FOUND\n")
-				return
+				continue
 			}
 			resp, err := Status(room, room.Players[index])
 			if err != nil {
@@ -271,16 +289,23 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 			worldLock.Lock()
 			enemy, enemyI, ok := FindEnemyInRoom(enemyName, room, world)
 			worldLock.Unlock()
+			if !ok && enemyI == 1 {
+				LogAndFprintf(conn, "ERR 405 NPC_NOT_HOSTILE\n")
+				continue
+			}
 			if !ok {
 				mapsLock.Unlock()
 				LogAndFprintf(conn, "ERR 404 NPC_NOT_FOUND\n")
 				continue
 			}
-			resp, status, majplayer, majEnemy := Attack(room.Players[playerI], enemy)
+			resp, critMsg, status, majplayer, majEnemy := Attack(room.Players[playerI], enemy)
 			if resp == "" {
 				mapsLock.Unlock()
 				LogAndFprintf(conn, "ERR 900 CONNECTION_FAILED\n")
 				continue
+			}
+			if critMsg != "" {
+				resp = critMsg + "\\" + resp
 			}
 			switch status {
 			case "defeat":
@@ -307,6 +332,9 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 				LogAndFprintf(conn, "%s\n", resp)
 				LogAndFprintf(conn, "[SERVER] Vous êtes mort. Vous allez être téléporté à votre point de respawn.\n")
 				LogAndFprintf(conn, "%s\n", ToString(respawnLoc))
+				LogAndFprintf(conn, "[SERVER] Vous êtes mort. Vous allez être téléporté à votre point de respawn.\\%s\n", resp)
+				broadcastRoomExcept(room, player.Name, "%s\n", ToString(room))                                                          // modif
+				broadcastRoomExcept(room, player.Name, "[SERVER] %s a été vaincu par %s et respawn ailleurs.\n", player.Name, enemyName) // modif
 			case "victory":
 				room.Enemies = append(room.Enemies[:enemyI], room.Enemies[enemyI+1:]...)
 				majplayer, questMsg := CompleteDefeatQuest(world, majplayer, enemyName) // ajout
@@ -325,6 +353,8 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 				} else { // ajout
 					LogAndFprintf(conn, "[SERVER] Vous avez vaincu l'ennemi %s.\n", enemyName) // ajout
 				} // ajout
+				broadcastRoomExcept(room, player.Name, "%s\n", ToString(room))                                        // modif
+				broadcastRoomExcept(room, player.Name, "[SERVER] %s a vaincu l'ennemi %s.\n", player.Name, enemyName) // modif
 				LogAndFprintf(conn, "%s\n", ToString(room))
 			case "combat":
 				room.Players[playerI] = majplayer
@@ -340,6 +370,9 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 				LogAndFprintf(conn, "%s\n", resp)
 				LogAndFprintf(conn, "[SERVER] Vous êtes en combat avec %s.\n", enemyName)
 				LogAndFprintf(conn, "%s\n", ToString(room))
+				LogAndFprintf(conn, "[SERVER] Vous êtes en combat avec %s.\\%s\n", enemyName, resp)
+				broadcastRoomExcept(room, player.Name, "%s\n", ToString(room))                             // modif
+				broadcastRoomExcept(room, player.Name, "[SERVER] %s combat %s.\n", player.Name, enemyName) // modif
 			}
 
 		case strings.HasPrefix(message, "TALK"):
@@ -426,6 +459,8 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 
 		case strings.HasPrefix(message, "DROP"):
 			loc = dropItem(conn, player, loc, message)
+		default: // modif
+			LogAndFprintf(conn, "ERR 400 UNKNOWN_COMMAND\n") // modif
 		}
 	}
 }
