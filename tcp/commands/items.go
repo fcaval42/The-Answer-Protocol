@@ -11,7 +11,7 @@ func Inventory(player Player) (string, error) {
 
 	items := make([]string, 0, len(player.Inventory))
 	for _, item := range player.Inventory {
-		items = append(items, item.ID)
+		items = append(items, item.Name)
 	}
 
 	data, err := json.Marshal(items)
