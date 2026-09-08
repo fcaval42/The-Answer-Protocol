@@ -21,6 +21,11 @@ func dropItem(conn net.Conn, player Player, loc Location, message string) Locati
 				if item.Name == itemName {
 					// Supprime l'objet de l'inventaire du joueur
 					loc.Players[i].Inventory = append(loc.Players[i].Inventory[:j], loc.Players[i].Inventory[j+1:]...)
+					// Si l'objet depose est celui actuellement equipe, on le desequipe
+					if loc.Players[i].EquippedItem == item.ID {
+						loc.Players[i].Weapon = loc.Players[i].BaseWeapon
+						loc.Players[i].EquippedItem = ""
+					}
 					// Ajoute l'objet à la liste des objets de la location
 					loc.Items = append(loc.Items, itemName)
 					maps[loc.ID] = loc
