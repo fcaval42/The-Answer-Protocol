@@ -77,8 +77,6 @@ func Move(conn net.Conn, player Player, loc string, message string) (newloc Loca
 func takeItem(conn net.Conn, player Player, loc Location, message string) Location {
 	// Récupère le nom de l'objet à prendre à partir du message
 	itemName := strings.TrimSpace(strings.TrimPrefix(message, "TAKE"))
-	mapsLock.Lock()
-	defer mapsLock.Unlock()
 	for i, p := range loc.Players {
 		if p.Name == player.Name {
 			for j, item := range loc.Items {
@@ -478,7 +476,9 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 			}
 
 		case strings.HasPrefix(message, "TAKE"):
+			mapsLock.Lock()
 			loc = takeItem(conn, player, loc, message)
+			mapsLock.Unlock()
 
 		case strings.HasPrefix(message, "DROP"):
 			loc = dropItem(conn, player, loc, message)
