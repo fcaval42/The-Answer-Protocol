@@ -73,6 +73,7 @@ func openItemDialog(w fyne.Window, sess *Session, item parsing.Item, player pars
 			updated.Inventory = newInv
 			if updated.EquippedItem == item.ID {
 				updated.EquippedItem = ""
+				updated.Weapon = updated.BaseWeapon
 			}
 			fyne.Do(func() {
 				refreshCharacter(updated)
