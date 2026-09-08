@@ -60,7 +60,7 @@ func RoomChat(conn net.Conn, loc string, player string) {
 		}
 		ConnectedLock.Unlock()
 		inRoomChatMu.Unlock()
-		BroadcastEVT(otherMembers, fmt.Sprintf("[EVT] %s", send))
+		BroadcastEVT(otherMembers, fmt.Sprintf("[EVT ROOM] %s", send))
 		roomMessagesMu.Lock()
 		roomMessages[loc] = append(roomMessages[loc], send)
 		if len(roomMessages[loc]) > 10 {
@@ -119,7 +119,7 @@ func GroupChat(conn net.Conn, player string) {
 			}
 		LogAndPrintf(conn, "%s| %s", conn.RemoteAddr().String(), send)
 		currentGroup.Mu.Lock()
-		BroadcastEVT(otherMembers, fmt.Sprintf("[EVT] %s", send))
+		BroadcastEVT(otherMembers, fmt.Sprintf("[EVT GROUP] %s", send))
 		currentGroup.messages = append(currentGroup.messages, send)
 		if len(currentGroup.messages) > 10 {
 			currentGroup.messages = currentGroup.messages[len(currentGroup.messages)-10:]
@@ -159,7 +159,7 @@ func GlobalChat(conn net.Conn, player string) {
 			}
 		}
 		ConnectedLock.Unlock()
-		BroadcastEVT(otherMembers, fmt.Sprintf("[EVT] %s", send))
+		BroadcastEVT(otherMembers, fmt.Sprintf("[EVT GLOBAL] %s", send))
 		LogAndPrintf(conn, "%s| %s", conn.RemoteAddr().String(), send)
 		globaleMessageLock.Lock()
 		globaleMessage = append(globaleMessage, send)
@@ -188,7 +188,7 @@ func GlobalChatBroadcast(conn net.Conn, message string) {
 	ConnectedLock.Unlock()
 	Broadcast(inGlobal, globaleMessage)
 	inGlobalLock.Unlock()
-	message = fmt.Sprintf("[EVT] %s", message)
+	message = fmt.Sprintf("[EVT GLOBAL] %s", message)
 	BroadcastEVT(receivers, message)
 }
 
@@ -213,7 +213,7 @@ func RoomChatBroadcast(conn net.Conn, loc string, player string, message string)
 	ConnectedLock.Unlock()
 	mapsLock.Unlock()
 	roomMessagesMu.Unlock()
-	BroadcastEVT(receivers, fmt.Sprintf("[EVT] %s", message))
+	BroadcastEVT(receivers, fmt.Sprintf("[EVT ROOM] %s", message))
 }
 
 func GroupChatBroadcast(conn net.Conn, message string, player string) {
@@ -242,6 +242,6 @@ func GroupChatBroadcast(conn net.Conn, message string, player string) {
 	Broadcast(receiver, currentGroup.messages)
 	currentGroup.Mu.Unlock()
 	inGroupChatLock.Unlock()
-	message = fmt.Sprintf("[EVT] %s", message)
+	message = fmt.Sprintf("[EVT GROUP] %s", message)
 	BroadcastEVT(receivers, message)
 }
