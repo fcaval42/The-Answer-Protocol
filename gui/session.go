@@ -29,14 +29,44 @@ type Session struct {
 	cooldownMu  sync.Mutex
 	nextAllowed time.Time // prochain instant a partir duquel un nouveau Send() est accepte
 
-	rawMu   sync.Mutex
-	rawChan chan string // non-nil pendant une session brute (chat/groupe), cf. EnterRaw
+	rawMu    sync.Mutex
+	rawChan  chan string // non-nil pendant une session brute (chat/groupe), cf. EnterRaw
+	rawLock  sync.Mutex  // mutex pour sérialiser EnterRaw (évite chevauchements)
+
+	inviteMu sync.Mutex
+	onInvite func(from string) // cf. OnInvite
+}
+
+
+const inviteMarker = " vous a invité à rejoindre un groupe. ACCEPT/DECLINE"
+
+func parseInvite(line string) (string, bool) {
+	const prefix = "[EVT] "
+	if !strings.HasPrefix(line, prefix) {
+		return "", false
+	}
+	rest := strings.TrimPrefix(line, prefix)
+	idx := strings.Index(rest, inviteMarker)
+	if idx <= 0 {
+		return "", false
+	}
+	return rest[:idx], true
+}
+
+
+func (s *Session) OnInvite(f func(from string)) {
+	s.inviteMu.Lock()
+	s.onInvite = f
+	s.inviteMu.Unlock()
 }
 
 
 // initialiser nouvelle session
 func NewSession(conn net.Conn) *Session {
-	return &Session{conn: conn, pending: make(chan string, 1)}
+	return &Session{
+		conn: conn,
+		pending: make(chan string, 1),
+	}
 }
 
 
@@ -44,12 +74,6 @@ func NewSession(conn net.Conn) *Session {
 // "est-ce que quelqu'un attend cette ligne ?" = awaiting = vrai = pousse dans pending
 // qui réveille le Send qui était bloqué dessus.
 func (s *Session) Deliver(line string) bool {
-	// Le chat et les groupes (CHAT, GROUP JOIN, GROUP INVITE...) ne renvoient
-	// jamais de ligne "OK .../ERR .../{...}" : ce sont des messages "[SERVER]
-	// ..." lus en continu par une boucle bloquante cote serveur (cf.
-	// tcp/server/chat.go). Tant qu'une session brute est active (EnterRaw),
-	// on lui route TOUTES les lignes plutot que de les laisser au filtre
-	// OK/ERR/{ ci-dessous, qui ne les reconnaitrait jamais.
 	s.rawMu.Lock()
 	raw := s.rawChan
 	s.rawMu.Unlock()
@@ -57,9 +81,28 @@ func (s *Session) Deliver(line string) bool {
 		select {
 		case raw <- line:
 		default:
-			fmt.Println("[GUI] ligne de chat ignorée (canal plein) :", line)
+			if from, ok := parseInvite(line); ok {
+				s.inviteMu.Lock()
+				h := s.onInvite
+				s.inviteMu.Unlock()
+				if h != nil {
+					h(from)
+					return true
+				}
+			}
+			fmt.Println("[GUI] ligne de chat ignorée (canal plein ou fermé) :", line)
 		}
 		return true
+	}
+
+	if from, ok := parseInvite(line); ok {
+		s.inviteMu.Lock()
+		h := s.onInvite
+		s.inviteMu.Unlock()
+		if h != nil {
+			h(from)
+			return true
+		}
 	}
 
 	if !s.awaiting.Load() {
@@ -76,64 +119,45 @@ func (s *Session) Deliver(line string) bool {
 	return true
 }
 
-// EnterRaw bascule la session en mode brut : toutes les lignes reçues du
-// serveur sont désormais routées vers le channel retourné au lieu de passer
-// par Send()/Deliver ou d'être affichées dans le terminal texte. Utilisé
-// pour le chat et la gestion de groupe (cf. gui/chat_gui.go), dont le
-// protocole reste celui, séquentiel et bloquant, du client texte.
 func (s *Session) EnterRaw() <-chan string {
-	ch := make(chan string, 64)
+	s.rawLock.Lock()
+
 	s.rawMu.Lock()
+	if s.rawChan != nil {
+		close(s.rawChan)
+	}
+	ch := make(chan string, 64)
 	s.rawChan = ch
 	s.rawMu.Unlock()
+
 	return ch
 }
 
-// ExitRaw restaure le fonctionnement normal de Send()/Deliver. A appeler
-// systematiquement en sortie de chat/groupe (y compris a la fermeture de la
-// fenetre), sous peine de laisser toutes les reponses ulterieures du GUI
-// partir dans le vide.
+
 func (s *Session) ExitRaw() {
 	s.rawMu.Lock()
-	s.rawChan = nil
+	if s.rawChan != nil {
+		close(s.rawChan)
+		s.rawChan = nil
+	}
 	s.rawMu.Unlock()
+
+	s.rawLock.Unlock()
 }
 
-// SendRaw écrit directement sur la connexion, sans passer par le mécanisme
-// d'attente d'une unique réponse OK/ERR/{ de Send() (inutilisable ici,
-// cf. EnterRaw). L'appelant est responsable de lire les réponses via le
-// channel renvoyé par EnterRaw.
+
 func (s *Session) SendRaw(line string) error {
 	_, err := s.conn.Write([]byte(line))
 	return err
 }
 
 
-// Send retourne ("", nil) - une reponse vide sans erreur - quand l'appel est
-// ignore (action deja en cours, ou trop rapprochee de la precedente). C'est
-// le signal que les appelants (boutons du GUI) doivent verifier en premier
-// pour ne rien afficher plutot que de traiter "" comme une vraie reponse.
-//
-// déroulé normal : on verrouille -> on lui dit qu'on attend une réponse
-// (awaiting true) -> écris la commande sur le socket -> bloque jusqu'à ce
-// qu'une ligne arrive dans pending, soit 5 secs s'écoulent sans réponse
-// (serveur a planté, co morte...).
 func (s *Session) Send(cmd string) (string, error) {
-	// Refuse tout Send() concurrent au lieu de le mettre en attente : avec un
-	// simple mutex, un double-clic pendant qu'une commande est deja en vol
-	// attendait juste son tour puis renvoyait quand meme la MEME commande
-	// une deuxieme fois une fois la premiere terminee - le serveur recevait
-	// alors deux "MOVE east" d'affilee et declenchait sa detection de
-	// commande repetee (cf. tcp/server/dispatch.go, previous/WARN). Ici, le
-	// deuxieme clic est ignore silencieusement, sans jamais toucher le reseau.
 	if !s.busy.CompareAndSwap(false, true) {
 		return "", nil
 	}
 	defer s.busy.Store(false)
 
-	// Cooldown : meme une fois le Send() precedent termine, un nouveau clic
-	// trop rapproche (double-clic, ou un tap Fyne qui se declenche deux fois
-	// pour un seul clic) est lui aussi ignore silencieusement.
 	s.cooldownMu.Lock()
 	now := time.Now()
 	if now.Before(s.nextAllowed) {
@@ -143,10 +167,6 @@ func (s *Session) Send(cmd string) (string, error) {
 	s.nextAllowed = now.Add(sendCooldown)
 	s.cooldownMu.Unlock()
 
-	// Vide toute valeur perimee laissee par un envoi precedent (protection
-	// defensive : ne devrait plus arriver depuis que le serveur ne renvoie
-	// plus qu'une seule ligne par commande, mais evite qu'un reliquat ne
-	// pollue la reponse de CE Send()).
 	select {
 	case <-s.pending:
 	default:
@@ -155,11 +175,10 @@ func (s *Session) Send(cmd string) (string, error) {
 	s.awaiting.Store(true)
 	defer s.awaiting.Store(false)
 
-	if _, err := s.conn.Write([]byte(cmd + "\n")); err != nil { // on envoie la commande sur conn
+	if _, err := s.conn.Write([]byte(cmd + "\n")); err != nil {
 		return "", err
 	}
 
-	// attente = si deliver envoie une ligne dans pending, on la retourne
 	select {
 	case line := <-s.pending:
 		return line, nil

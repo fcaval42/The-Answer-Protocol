@@ -23,21 +23,13 @@ func questForGiver(world parsing.WorldFile, giverID string) (parsing.Quest, bool
 	return parsing.Quest{}, false
 }
 
-// openNpcQuestDialog affiche la quête proposée par ce PNJ précis. Comme ce
-// bouton n'existe que lorsque le PNJ est dans la salle courante, c'est ici
-// (et seulement ici, contrairement au popup Quêtes global en lecture seule)
-// qu'on peut accepter une quête disponible, ou récupérer sa
-// récompense une fois l'objectif rempli.
+// openNpcQuestDialog affiche la quête proposée par ce PNJ précis.
 func openNpcQuestDialog(w fyne.Window, sess *Session, world parsing.WorldFile, player parsing.Player, npcName, giverID string, refreshCharacter func(parsing.Player), showMessage func(title, msg string)) {
 	body := container.NewVBox()
 	var d dialog.Dialog
 	var render func(q *questEntry)
 	sending := false
 
-	// sendQuestCmd envoie "QUEST <giverID>" (utilisé pour Accepter comme
-	// pour Récupérer, ReturnQuest gère les deux selon l'état de la quête).
-	// Le bouton disparait pendant l'attente pour empêcher de spammer la
-	// même action.
 	sendQuestCmd := func(q questEntry, onSuccess func(resp string)) {
 		if sending {
 			return
