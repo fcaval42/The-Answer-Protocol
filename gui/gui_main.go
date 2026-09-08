@@ -439,7 +439,7 @@ func openChatEntryDialog(w fyne.Window, sess *Session, player parsing.Player, sh
 			openGroupDialog(w, sess, showMessage)
 		}),
 	)
-	d = dialog.NewCustom("", "Fermer", body, w)
+	d = dialog.NewCustom("Chat", " Fermer", body, w)
 	d.Resize(fyne.NewSize(320, 220))
 	d.Show()
 }
