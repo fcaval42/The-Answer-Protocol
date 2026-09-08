@@ -250,7 +250,7 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 			case strings.HasPrefix(chatMessage, "GLOBAL "):
 				messages := strings.TrimPrefix(chatMessage, "GLOBAL ")
 				messages = fmt.Sprintf("[%s]: %s", player.Name, messages)
-				GlobalChatBroadcast(messages)
+				GlobalChatBroadcast(conn, messages)
 			case strings.HasPrefix(chatMessage, "ROOM "):
 				messages := strings.TrimPrefix(chatMessage, "ROOM ")
 				RoomChatBroadcast(conn, loc.Name, player.Name, messages)

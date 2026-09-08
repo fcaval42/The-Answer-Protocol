@@ -136,6 +136,15 @@ func GlobalChat(conn net.Conn, player string) {
 		} else {
 			send = fmt.Sprintf("[%s]: %s", player, send)
 		}
+		ConnectedLock.Lock()
+		var otherMembers []net.Conn
+		for _, c := range ConnectedClients{
+			if !slices.Contains(inGlobal, c) && c != conn{
+				otherMembers = append(otherMembers, c)
+			}
+		}
+		ConnectedLock.Unlock()
+		BroadcastEVT(otherMembers, fmt.Sprintf("[EVT] %s", send))
 		LogAndPrintf(conn, "%s| %s", conn.RemoteAddr().String(), send)
 		globaleMessageLock.Lock()
 		globaleMessage = append(globaleMessage, send)
@@ -146,7 +155,7 @@ func GlobalChat(conn net.Conn, player string) {
 	}
 }
 
-func GlobalChatBroadcast(message string) {
+func GlobalChatBroadcast(conn net.Conn, message string) {
 	globaleMessageLock.Lock()
 	globaleMessage = append(globaleMessage, message)
 	if len(globaleMessage) > 10 {
@@ -156,9 +165,9 @@ func GlobalChatBroadcast(message string) {
 	inGlobalLock.Lock()
 	ConnectedLock.Lock()
 	var receivers []net.Conn
-	for _, conn := range ConnectedClients {
-		if !slices.Contains(inGlobal, conn) {
-			receivers = append(receivers, conn)
+	for _, c := range ConnectedClients {
+		if !slices.Contains(inGlobal, c) && c != conn{
+			receivers = append(receivers, c)
 		}
 	}
 	ConnectedLock.Unlock()
