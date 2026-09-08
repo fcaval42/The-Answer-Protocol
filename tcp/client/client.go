@@ -98,15 +98,15 @@ func main() {
 			}
 			// On affiche le message s'il n'est pas vide
 			if response != "\n" {
-				if !strings.HasSuffix(response, "\n") {
-					response += "\n"
+				response = strings.TrimRight(response, "\r\n")
+				if response == "" {
+					continue
 				}
-				if strings.HasPrefix(response, "[EVT]") {
-					response = strings.TrimSuffix(response, "\n") 
-					fmt.Fprint(rl.Stdout(), response)
-				}else{
+				if strings.HasPrefix(response, "[EVT") {
+					fmt.Fprint(rl.Stdout(), response+"\n")
+				} else {
 					ClearScreen()
-					fmt.Fprint(rl.Stdout(), response)
+					fmt.Fprint(rl.Stdout(), response+"\n")
 				}
 			}
 		}
