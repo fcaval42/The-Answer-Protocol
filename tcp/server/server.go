@@ -47,7 +47,7 @@ func deletePlayerInMap(player string) map[string]Location {
 		}
 	}
 	ConnectedLock.Unlock()
-	BroadcastEVT(playerInLoc, fmt.Sprintf("[EVT] %s a quitté l'endroit.\n", player))
+	BroadcastEVT(playerInLoc, fmt.Sprintf("[EVT] %s a quitté l'endroit.", player))
 	mapsLock.Unlock()
 	return maps
 }
@@ -87,7 +87,7 @@ func handleConnection(conn net.Conn) {
 		nb:= len(playerConn)
 		ConnectedLock.Unlock()
 		deletePlayerInMap(player)
-		BroadcastEVT(playerConn, fmt.Sprintf("[EVT] %s a quitté le jeu (%d joueurs connectés).\n", player, nb))
+		BroadcastEVT(playerConn, fmt.Sprintf("[EVT] %s a quitté le jeu (%d joueurs connectés).", player, nb))
 		disconnectPlayer(player)
 	}()
 	player = Connexion(conn, player)
@@ -120,7 +120,7 @@ func handleConnection(conn net.Conn) {
 			receivers = append(receivers, c)
 		}
 	}
-	BroadcastEVT(receivers, fmt.Sprintf("[EVT] %s a rejoint l'endroit.\n", play.Name))
+	BroadcastEVT(receivers, fmt.Sprintf("[EVT] %s a rejoint l'endroit.", play.Name))
 
 	worldLock.Lock()
 	world.Players[player] = play
