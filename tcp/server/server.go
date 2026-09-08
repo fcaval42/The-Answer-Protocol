@@ -5,6 +5,7 @@ import (
 	"log"
 	"net"
 	"os"
+	"slices"
 	"sync"
 	. "the_answer_protocol/parsing"
 	. "the_answer_protocol/tcp"
@@ -39,7 +40,9 @@ func deletePlayerInMap(player string) map[string]Location {
 	for _, play := range temp{
 		for n, c := range ConnectedClients{
 			if play.Name == n{
-				playerInLoc = append(playerInLoc, c)
+				if !slices.Contains(playerInLoc, c){
+					playerInLoc = append(playerInLoc, c)
+				}
 			}
 		}
 	}
