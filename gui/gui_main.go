@@ -186,7 +186,7 @@ func buildRoomPanel(loc parsing.Location, world parsing.WorldFile, player parsin
 					}
 					if strings.HasPrefix(resp, "ERR") {
 						if strings.Contains(resp, "NPC_NOT_FOUND") {
-							fyne.Do(func() { showMessage("Combat", "VICTOIRE ") })
+							fyne.Do(func() { showMessage("Combat", "Victory") })
 							return
 						}
 						fyne.Do(func() { showMessage("Erreur", resp) })
@@ -208,7 +208,7 @@ func buildRoomPanel(loc parsing.Location, world parsing.WorldFile, player parsin
 						enemyHPText.Refresh()
 						if result.Status == "victory" {
 							refreshCharacter(updated)
-							showMessage("Combat", "VICTOIRE")
+							showMessage("Combat", "Victoire")
 							return
 						}
 						if result.Status == "defeat" {

@@ -282,7 +282,10 @@ func openChatDialog(w fyne.Window, sess *Session, player parsing.Player, showMes
 	var renderActive func()
 	var chooseScope func(cmd, label string)
 
-	enterChatPrompt := func() { sess.SendRaw("CHAT\n") }
+	enterChatPrompt := func() {
+		inChatLoop = true
+		sess.SendRaw("CHAT\n")
+	}
 
 	leave := func() {
 		if closed {
