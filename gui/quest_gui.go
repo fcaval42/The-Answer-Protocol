@@ -10,9 +10,7 @@ import (
 	"fyne.io/fyne/v2/dialog"
 )
 
-// questEntry reflète une entrée JSON renvoyée par la commande QUESTS :
-// quêtes disponibles auprès des PNJ de la salle courante (non encore
-// acceptées), quêtes en cours, prêtes à être rendues, ou déjà terminées.
+
 type questEntry struct {
 	QuestID     string `json:"quest_id"`
 	Name        string `json:"name"`
@@ -22,9 +20,7 @@ type questEntry struct {
 	Progress    string `json:"progress"`
 }
 
-// questStatusLabel traduit le statut d'une quête en texte lisible pour le
-// popup Quêtes global (lecture seule : aucune action possible ici, cf.
-// openNpcQuestDialog pour Accepter/Récupérer).
+
 func questStatusLabel(q questEntry) string {
 	switch q.Status {
 	case "available":
@@ -41,11 +37,6 @@ func questStatusLabel(q questEntry) string {
 	}
 }
 
-// openQuestsDialog affiche la popup du bouton Quests : liste en lecture
-// seule les quêtes disponibles (proposées par les PNJ de la salle), en
-// cours, prêtes à être rendues, ou terminées. Pour accepter une quête ou
-// récupérer une récompense, il faut passer par le bouton Quest à côté du
-// PNJ concerné (openNpcQuestDialog).
 func openQuestsDialog(w fyne.Window, sess *Session, showMessage func(title, msg string)) {
 	list := container.NewVBox()
 	scroll := container.NewVScroll(list)
@@ -75,7 +66,7 @@ func openQuestsDialog(w fyne.Window, sess *Session, showMessage func(title, msg 
 		go func() {
 			resp, err := sess.Send("QUESTS")
 			if resp == "" && err == nil {
-				return // ignore silencieusement (cooldown / action deja en cours)
+				return
 			}
 			if err != nil {
 				fyne.Do(func() { showMessage("Erreur", err.Error()) })

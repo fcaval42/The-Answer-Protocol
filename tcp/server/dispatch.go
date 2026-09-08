@@ -334,20 +334,6 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 			}
 			if playerI == -1 {
 				mapsLock.Unlock()
-				LogAndFprintf(conn, "ERR 404 NPC_NOT_FOUND\n")
-				continue
-			}
-			mapsLock.Lock()
-			room = maps[roomID]
-			playerI = -1
-			for i, p := range room.Players {
-				if p.Name == player.Name {
-					playerI = i
-					break
-				}
-			}
-			if playerI == -1 {
-				mapsLock.Unlock()
 				LogAndFprintf(conn, "ERR 404 PLAYER_NOT_FOUND\n")
 				continue
 			}
@@ -372,8 +358,13 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 				worldLock.Unlock()
 				mapsLock.Unlock()
 
+				// resp ("OK {...}") doit arriver avant l'etat de la salle,
+				// meme raison que pour TALK/QUEST : sinon le GUI recupere
+				// l'etat de la salle (qui commence aussi par "{") au lieu
+				// du resultat du combat.
+				LogAndFprintf(conn, "%s\n", resp)
 				LogAndFprintf(conn, "%s\n", ToString(respawnLoc))
-				LogAndFprintf(conn, "[SERVER] Vous êtes mort. Vous allez être téléporté à votre point de respawn.\\%s\n", resp)
+				LogAndFprintf(conn, "[SERVER] Vous êtes mort. Vous allez être téléporté à votre point de respawn.\n")
 			case "victory":
 				room.Enemies = append(room.Enemies[:enemyI], room.Enemies[enemyI+1:]...)
 				majplayer, questMsg := CompleteDefeatQuest(world, majplayer, enemyName) // ajout
@@ -384,11 +375,12 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 				worldLock.Unlock()
 				mapsLock.Unlock()
 
+				LogAndFprintf(conn, "%s\n", resp)
 				LogAndFprintf(conn, "%s\n", ToString(room))
 				if questMsg != "" { // ajout
-					LogAndFprintf(conn, "%s\\[SERVER] Vous avez vaincu l'ennemi %s.\\%s\n", questMsg, enemyName, resp) // ajout
+					LogAndFprintf(conn, "%s\\[SERVER] Vous avez vaincu l'ennemi %s.\n", questMsg, enemyName) // ajout
 				} else { // ajout
-					LogAndFprintf(conn, "[SERVER] Vous avez vaincu l'ennemi %s.\\%s\n", enemyName, resp) // ajout
+					LogAndFprintf(conn, "[SERVER] Vous avez vaincu l'ennemi %s.\n", enemyName) // ajout
 				} // ajout
 			case "combat":
 				room.Players[playerI] = majplayer
@@ -399,8 +391,9 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 				worldLock.Unlock()
 				mapsLock.Unlock()
 
+				LogAndFprintf(conn, "%s\n", resp)
 				LogAndFprintf(conn, "%s\n", ToString(room))
-				LogAndFprintf(conn, "[SERVER] Vous êtes en combat avec %s.\\%s\n", enemyName, resp)
+				LogAndFprintf(conn, "[SERVER] Vous êtes en combat avec %s.\n", enemyName)
 			}
 
 		case strings.HasPrefix(message, "TALK"):
