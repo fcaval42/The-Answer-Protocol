@@ -242,6 +242,8 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 				case "GROUP\n":
 					GroupChat(conn, player.Name)
 					break chat
+				case "EXIT\n":
+					break chat
 				}
 			}
 		case strings.HasPrefix(message, "CHAT "):

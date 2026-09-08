@@ -46,6 +46,21 @@ func RoomChat(conn net.Conn, loc string, player string) {
 		} else {
 			send = fmt.Sprintf("[%s]: %s", player, send)
 		}
+		var otherMembers []net.Conn
+		mapsLock.Lock()
+		locate := maps[loc]
+		mapsLock.Unlock()
+		ConnectedLock.Lock()
+		inRoomChatMu.Lock()
+		for _, play := range locate.Players{
+			c := ConnectedClients[play.Name]
+			if !slices.Contains(inRoomChat[loc], c) && c != conn{
+				otherMembers = append(otherMembers, c)
+			}
+		}
+		ConnectedLock.Unlock()
+		inRoomChatMu.Unlock()
+		BroadcastEVT(otherMembers, fmt.Sprintf("[EVT] %s", send))
 		roomMessagesMu.Lock()
 		roomMessages[loc] = append(roomMessages[loc], send)
 		if len(roomMessages[loc]) > 10 {
