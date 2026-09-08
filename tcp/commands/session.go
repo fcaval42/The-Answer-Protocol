@@ -28,7 +28,7 @@ func ConnectCom(conn net.Conn) string{
 	reader := bufio.NewReader(conn)
 
 	if len(PersoChoice) == 0{
-		LogAndFprintf(conn, "%s| [ERROR] Errno 900: Nombre de joueurs limite atteint (CONNECTION_FAILED)\n", conn.RemoteAddr())
+		LogServFprintf(conn, "%s| [ERROR] Errno 900: Nombre de joueurs limite atteint (CONNECTION_FAILED)\n", conn.RemoteAddr())
 		return "900"
 	}
 
@@ -38,13 +38,13 @@ func ConnectCom(conn net.Conn) string{
 		charactere[i] = fmt.Sprintf("%d. %s", i+1, perso)
 	}
 	msg := fmt.Sprintf("[INFO] Choisissez votre joueur parmi la liste en entrant le numéro correspondant: %s\n", strings.Join(charactere, ", "))
-	LogAndFprintf(conn, "%s", msg)
+	LogServFprintf(conn, "%s", msg)
 
 	// Boucle infinie tant que le joueur n'a pas effectué un bon choix
 	for {
 		// Recois le choix du joueur par le client
 		player, err := reader.ReadString('\n')
-		LogAndPrintf(conn, "%s| %s", conn.RemoteAddr().String(), player)
+		LogServFprintf(conn, "%s| %s", conn.RemoteAddr().String(), player)
 		if player != "\n" {
 			if err != nil {
 				log.Println(conn.RemoteAddr().String() + "| [ERROR] " + err.Error())
@@ -63,12 +63,12 @@ func ConnectCom(conn net.Conn) string{
 					player = PersoChoice[indextest-1]
 					// On supprime le choix fait par le joueur des choix pour les prochains joueurs
 					PersoChoice = slices.Delete(PersoChoice, indextest-1, indextest)
-					LogAndFprintf(conn, "%s| Connection réussie ! Bienvenue %s !\n", conn.RemoteAddr().String(), player)
+					LogAndFprintf(player, conn, "%s| Connection réussie ! Bienvenue %s !\n", conn.RemoteAddr().String(), player)
 					// On retourne le personnage choisi
 					return player
 				}
 			}
 		}
-		LogAndFprintf(conn, "%s", msg)
+		LogAndFprintf(player, conn, "%s", msg)
 	}
 }

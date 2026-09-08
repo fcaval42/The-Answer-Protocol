@@ -16,10 +16,10 @@ func Connexion(conn net.Conn, player string) string{
 			return ""
 		}
 		if message == previous {
-			LogAndPrintf(conn, "%s| [WARN] %s", conn.RemoteAddr().String(), message)
-			LogAndFprintf(conn, "[SERVER][WARN] Attention à ne pas envoyer la même commande: %s\n", message)
+			LogServPrintf(conn, "%s| [WARN] %s", conn.RemoteAddr().String(), message)
+			LogServFprintf(conn, "[SERVER][WARN] Attention à ne pas envoyer la même commande: %s\n", message)
 			} else {
-			LogAndPrintf(conn, "%s| %s", conn.RemoteAddr().String(), message)
+			LogServPrintf(conn, "%s| %s", conn.RemoteAddr().String(), message)
 		}
 		previous = message
 		if message == "CONNECT\n" {

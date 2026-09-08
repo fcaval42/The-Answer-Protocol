@@ -4,26 +4,26 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"sync"
 	"os"
-	"runtime"
 	"os/exec"
+	"runtime"
+	"sync"
 )
 
 func ClearScreen() {
-    if runtime.GOOS == "windows" {
-        cmd := exec.Command("cmd", "/c", "cls")
-        cmd.Stdout = os.Stdout
-        cmd.Run()
-    } else {
-        cmd := exec.Command("clear")
-        cmd.Stdout = os.Stdout
-        cmd.Run()
-    }
+	if runtime.GOOS == "windows" {
+		cmd := exec.Command("cmd", "/c", "cls")
+		cmd.Stdout = os.Stdout
+		cmd.Run()
+	} else {
+		cmd := exec.Command("clear")
+		cmd.Stdout = os.Stdout
+		cmd.Run()
+	}
 }
 
 var (
-	logMutex  sync.Mutex
+	logMutex   sync.Mutex
 	fileLogger *log.Logger
 )
 
@@ -43,12 +43,26 @@ func LogInFile(format string, args ...interface{}) {
 	fileLogger.Printf(format, args...)
 }
 
-func LogAndPrintf(conn net.Conn, format string, args ...interface{}) {
-	LogInFile(format, args...)
-	log.Printf(format, args...)
+func LogAndPrintf(player string, conn net.Conn, format string, args ...interface{}) {
+	msg := fmt.Sprintf(format, args...)
+	log.Printf("[SERVER] %s", msg)
+	LogInFile("[%s] %s", player, msg)
 }
 
-func LogAndFprintf(conn net.Conn, format string, args ...interface{}) {
-	LogInFile(format, args...)
+func LogAndFprintf(player string, conn net.Conn, format string, args ...interface{}) {
+	msg := fmt.Sprintf(format, args...)
 	fmt.Fprintf(conn, format, args...)
+	LogInFile("[%s] %s", player, msg)
+}
+
+func LogServFprintf(conn net.Conn, format string, args ...interface{}) {
+	msg := fmt.Sprintf(format, args...)
+	LogInFile("%s", msg)
+	fmt.Fprintf(conn, format, args...)
+}
+
+func LogServPrintf(conn net.Conn, format string, args ...interface{}) {
+	msg := fmt.Sprintf(format, args...)
+	LogInFile("%s", msg)
+	log.Printf("[SERVER] %s", msg)
 }
