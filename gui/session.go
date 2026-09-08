@@ -29,14 +29,53 @@ type Session struct {
 	cooldownMu  sync.Mutex
 	nextAllowed time.Time // prochain instant a partir duquel un nouveau Send() est accepte
 
-	rawMu   sync.Mutex
-	rawChan chan string // non-nil pendant une session brute (chat/groupe), cf. EnterRaw
+	rawMu    sync.Mutex
+	rawChan  chan string // non-nil pendant une session brute (chat/groupe), cf. EnterRaw
+	rawLock  sync.Mutex  // mutex pour sérialiser EnterRaw (évite chevauchements)
+
+	inviteMu sync.Mutex
+	onInvite func(from string) // cf. OnInvite
+}
+
+// inviteMarker : suffixe du message que le serveur pousse sur la connexion
+// de l'invité, hors de toute requete GUI, quand un joueur l'invite dans son
+// groupe (cf. GroupInvite, tcp/server/group.go). Servait jusqu'ici a rien :
+// Deliver ne reconnait ni OK/ERR/{ ni un canal brut pour cette ligne, qui
+// finissait donc juste imprimee dans le terminal - invisible depuis le GUI.
+const inviteMarker = " vous a invité à rejoindre un groupe. ACCEPT/DECLINE"
+
+// parseInvite reconnait une ligne "[EVT] <joueur> vous a invité à rejoindre
+// un groupe. ACCEPT/DECLINE (10s)" et en extrait le nom de l'invitant.
+func parseInvite(line string) (string, bool) {
+	const prefix = "[EVT] "
+	if !strings.HasPrefix(line, prefix) {
+		return "", false
+	}
+	rest := strings.TrimPrefix(line, prefix)
+	idx := strings.Index(rest, inviteMarker)
+	if idx <= 0 {
+		return "", false
+	}
+	return rest[:idx], true
+}
+
+// OnInvite enregistre le callback appelé quand une invitation de groupe
+// arrive alors que la session n'est pas en mode brut (cf. EnterRaw) - il est
+// appelé depuis la goroutine de lecture réseau (readServerMessages), donc
+// l'appelant doit lui-même repasser par fyne.Do pour toucher l'UI.
+func (s *Session) OnInvite(f func(from string)) {
+	s.inviteMu.Lock()
+	s.onInvite = f
+	s.inviteMu.Unlock()
 }
 
 
 // initialiser nouvelle session
 func NewSession(conn net.Conn) *Session {
-	return &Session{conn: conn, pending: make(chan string, 1)}
+	return &Session{
+		conn: conn,
+		pending: make(chan string, 1),
+	}
 }
 
 
@@ -57,9 +96,30 @@ func (s *Session) Deliver(line string) bool {
 		select {
 		case raw <- line:
 		default:
-			fmt.Println("[GUI] ligne de chat ignorée (canal plein) :", line)
+			// Le canal est peut-être fermé (session brute terminée) ou plein
+			// Vérifier si c'est une invitation qui doit être traitée même hors session brute
+			if from, ok := parseInvite(line); ok {
+				s.inviteMu.Lock()
+				h := s.onInvite
+				s.inviteMu.Unlock()
+				if h != nil {
+					h(from)
+					return true
+				}
+			}
+			fmt.Println("[GUI] ligne de chat ignorée (canal plein ou fermé) :", line)
 		}
 		return true
+	}
+
+	if from, ok := parseInvite(line); ok {
+		s.inviteMu.Lock()
+		h := s.onInvite
+		s.inviteMu.Unlock()
+		if h != nil {
+			h(from)
+			return true
+		}
 	}
 
 	if !s.awaiting.Load() {
@@ -81,11 +141,21 @@ func (s *Session) Deliver(line string) bool {
 // par Send()/Deliver ou d'être affichées dans le terminal texte. Utilisé
 // pour le chat et la gestion de groupe (cf. gui/chat_gui.go), dont le
 // protocole reste celui, séquentiel et bloquant, du client texte.
+// Cette fonction est thread-safe et garantit qu'une seule session brute
+// peut être active à la fois en utilisant rawLock.
 func (s *Session) EnterRaw() <-chan string {
-	ch := make(chan string, 64)
+	// Verrouiller pour sérialiser l'accès (évite les chevauchements)
+	s.rawLock.Lock()
+
 	s.rawMu.Lock()
+	// Fermer l'ancien channel s'il existe pour éviter les fuites
+	if s.rawChan != nil {
+		close(s.rawChan)
+	}
+	ch := make(chan string, 64)
 	s.rawChan = ch
 	s.rawMu.Unlock()
+
 	return ch
 }
 
@@ -95,8 +165,14 @@ func (s *Session) EnterRaw() <-chan string {
 // partir dans le vide.
 func (s *Session) ExitRaw() {
 	s.rawMu.Lock()
-	s.rawChan = nil
+	if s.rawChan != nil {
+		close(s.rawChan)
+		s.rawChan = nil
+	}
 	s.rawMu.Unlock()
+
+	// Déverrouiller pour permettre une nouvelle session brute
+	s.rawLock.Unlock()
 }
 
 // SendRaw écrit directement sur la connexion, sans passer par le mécanisme

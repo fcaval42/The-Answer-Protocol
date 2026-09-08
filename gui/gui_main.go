@@ -537,6 +537,12 @@ func Run(playerName string, world parsing.WorldFile, sess *Session) {
 		d.Show()
 	}
 
+	// Invitation de groupe reçue d'un autre joueur : cf. Session.OnInvite,
+	// qui l'intercepte avant qu'elle ne finisse imprimée dans le terminal.
+	sess.OnInvite(func(from string) {
+		fyne.Do(func() { showInviteDialog(w, sess, from) })
+	})
+
 	var changeRoom func(newRoom parsing.Location)
 	var refreshCharacter func(p parsing.Player)
 
