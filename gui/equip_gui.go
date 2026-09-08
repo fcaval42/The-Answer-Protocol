@@ -11,13 +11,77 @@ import (
 	"the_answer_protocol/parsing"
 )
 
-// openItemDialog affiche la description d'un objet équipable de
-// l'inventaire + Un seul objet peut être équipé à la fois
-func openItemDialog(w fyne.Window, sess *Session, item parsing.Item, player parsing.Player, refreshCharacter func(parsing.Player), showMessage func(title, msg string)) {
+// openItemDialog affiche la description d'un objet de l'inventaire, avec la
+// possibilité de le déposer (Drop) et, s'il est équipable, de l'équiper /
+// déséquiper + Un seul objet peut être équipé à la fois
+func openItemDialog(w fyne.Window, sess *Session, item parsing.Item, player parsing.Player, refreshCharacter func(parsing.Player), changeRoom func(parsing.Location), showMessage func(title, msg string)) {
 	body := container.NewVBox()
 	var d dialog.Dialog
 	var render func()
 	sending := false
+
+	dropItem := func() {
+		if sending {
+			return
+		}
+		sending = true
+		render()
+		go func() {
+			resp, err := sess.Send("DROP " + item.Name)
+			if resp == "" && err == nil {
+				fyne.Do(func() {
+					sending = false
+					render()
+				})
+				return
+			}
+			if err != nil {
+				fyne.Do(func() {
+					sending = false
+					showMessage("Erreur", err.Error())
+					render()
+				})
+				return
+			}
+			if strings.HasPrefix(resp, "ERR") {
+				fyne.Do(func() {
+					sending = false
+					showMessage("Erreur", resp)
+					render()
+				})
+				return
+			}
+			var newRoom parsing.Location
+			if err := json.Unmarshal([]byte(resp), &newRoom); err != nil {
+				fyne.Do(func() {
+					sending = false
+					showMessage("Erreur", "réponse du serveur illisible : "+err.Error())
+					render()
+				})
+				return
+			}
+			updated := player
+			newInv := make([]parsing.Item, 0, len(updated.Inventory))
+			removed := false
+			for _, invItem := range updated.Inventory {
+				if !removed && invItem.Name == item.Name {
+					removed = true
+					continue
+				}
+				newInv = append(newInv, invItem)
+			}
+			updated.Inventory = newInv
+			if updated.EquippedItem == item.ID {
+				updated.EquippedItem = ""
+			}
+			fyne.Do(func() {
+				refreshCharacter(updated)
+				changeRoom(newRoom)
+				d.Hide()
+				showMessage("Objet déposé", item.Name+" a été déposé.")
+			})
+		}()
+	}
 
 	sendCommand := func(cmd string, onSuccess func(weapon string, critical float64)) {
 		if sending {
@@ -66,10 +130,14 @@ func openItemDialog(w fyne.Window, sess *Session, item parsing.Item, player pars
 		body.Add(NewWrappingBodyText(item.Description))
 		body.Add(Fix(0, 15))
 
-		switch {
-		case sending:
+		if sending {
 			body.Add(NewWrappingBodyText("Action en cours..."))
-		case player.EquippedItem == item.ID:
+			body.Refresh()
+			return
+		}
+
+		switch {
+		case item.Critical != nil && player.EquippedItem == item.ID:
 			body.Add(NewWrappingBodyText("Déjà équipé."))
 			body.Add(NewButton("Déséquiper", func() {
 				sendCommand("UNEQUIP", func(weapon string, critical float64) {
@@ -82,7 +150,7 @@ func openItemDialog(w fyne.Window, sess *Session, item parsing.Item, player pars
 					showMessage("Équipement", item.Name+" a été retiré.")
 				})
 			}))
-		default:
+		case item.Critical != nil:
 			body.Add(NewButton("Équiper", func() {
 				sendCommand("EQUIP "+item.ID, func(weapon string, critical float64) {
 					updated := player
@@ -95,6 +163,7 @@ func openItemDialog(w fyne.Window, sess *Session, item parsing.Item, player pars
 				})
 			}))
 		}
+		body.Add(NewButton("Drop", dropItem))
 		body.Refresh()
 	}
 

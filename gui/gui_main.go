@@ -362,7 +362,7 @@ func statCell(label string, value string) fyne.CanvasObject {
 	return container.NewVBox(l, v)
 }
 
-func buildCharacterPanel(player parsing.Player, sess *Session, w fyne.Window, refreshCharacter func(parsing.Player), showMessage func(title, msg string)) fyne.CanvasObject {
+func buildCharacterPanel(player parsing.Player, sess *Session, w fyne.Window, refreshCharacter func(parsing.Player), changeRoom func(parsing.Location), showMessage func(title, msg string)) fyne.CanvasObject {
 
 	// ----------------- AVATAR + NOM PERSO --------------------
 	name := NewTitleText(player.Name, 70)
@@ -399,11 +399,7 @@ func buildCharacterPanel(player parsing.Player, sess *Session, w fyne.Window, re
 		i := i
 		itemLabel := i.Name
 		invRow.Add(NewButton(itemLabel, func() {
-			if i.Critical != nil {
-				openItemDialog(w, sess, i, player, refreshCharacter, showMessage)
-			} else {
-				showMessage(itemLabel, i.Description)
-			}
+			openItemDialog(w, sess, i, player, refreshCharacter, changeRoom, showMessage)
 		}))
 	}
 
@@ -545,13 +541,20 @@ func Run(playerName string, world parsing.WorldFile, sess *Session) {
 		fyne.Do(func() { showInviteDialog(w, sess, from) })
 	})
 
+	// Notification de quête terminée par un autre joueur
+	sess.OnQuestComplete(func(questName, completer string) {
+		fyne.Do(func() {
+			showMessage("Quête terminée", fmt.Sprintf("%s a terminé la quête : %s\n\nCette quête est maintenant marquée comme terminée pour vous.", completer, questName))
+		})
+	})
+
 	var changeRoom func(newRoom parsing.Location)
 	var refreshCharacter func(p parsing.Player)
 
 	characterContainer := container.NewStack()
 	refreshCharacter = func(p parsing.Player) {
 		player = p
-		characterContainer.Objects = []fyne.CanvasObject{buildCharacterPanel(p, sess, w, refreshCharacter, showMessage)}
+		characterContainer.Objects = []fyne.CanvasObject{buildCharacterPanel(p, sess, w, refreshCharacter, func(newRoom parsing.Location) { changeRoom(newRoom) }, showMessage)}
 		characterContainer.Refresh()
 	}
 	refreshCharacter(player) // affichage initial du panneau perso

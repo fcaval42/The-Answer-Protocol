@@ -68,26 +68,26 @@ func questProgress(player Player, pq PlayerQuest, q Quest) string {
 
 
 
-func ReturnQuest(world WorldFile, room Location, player Player, npcName string) (string, Player, error) {
+func ReturnQuest(world WorldFile, room Location, player Player, npcName string) (string, Player, string, error) {
 	npcId, ok := findNPCInRoom(room, npcName)
 	if !ok {
-		return "ERR 404 NPC_NOT_FOUND", player, nil
+		return "ERR 404 NPC_NOT_FOUND", player, "", nil
 	}
 
 	quest, ok := findQuestForGiver(world, room.NPCs[npcId])
 	if !ok {
-		return "ERR 406 NO_QUEST_AVAILABLE", player, nil
+		return "ERR 406 NO_QUEST_AVAILABLE", player, "", nil
 	}
 
 	pq, known := findPlayerQuest(player, quest.ID) // ajout
 	if known && pq.Status == "completed" {         // ajout
-		return "ERR 406 NO_QUEST_AVAILABLE", player, nil
+		return "ERR 406 NO_QUEST_AVAILABLE", player, "", nil
 	}
 
 	// un autre joueur a deja termine cette quete : elle n'est plus proposable
 	// a personne tant que le serveur tourne.
 	if !known && IsQuestGloballyCompleted(quest.ID) {
-		return "ERR 406 NO_QUEST_AVAILABLE", player, nil
+		return "ERR 406 NO_QUEST_AVAILABLE", player, "", nil
 	}
 
 	if known && questProgress(player, pq, quest) == "1/1" { // ajout
@@ -116,9 +116,9 @@ func ReturnQuest(world WorldFile, room Location, player Player, npcName string) 
 			Message: fmt.Sprintf("Quête terminée : %s ! Vous recevez : %s.", quest.Name, rewardName),
 		})
 		if err != nil {
-			return "", player, err
+			return "", player, "", err
 		}
-		return fmt.Sprintf("OK %s", data), player, nil
+		return fmt.Sprintf("OK %s", data), player, quest.ID, nil
 	}
 
 	if !known { // ajout
@@ -137,10 +137,10 @@ func ReturnQuest(world WorldFile, room Location, player Player, npcName string) 
 		Status:      "available",
 	})
 	if err != nil {
-		return "", player, err
+		return "", player, "", err
 	}
 
-	return fmt.Sprintf("OK %s", data), player, nil
+	return fmt.Sprintf("OK %s", data), player, "", nil
 }
 
 // CompleteDefeatQuest ne fait que constater que la cible a ete vaincue : elle
@@ -186,6 +186,11 @@ func Quests(room Location, player Player, world WorldFile) (string, error) {
 			continue
 		}
 		known[quest.ID] = true
+
+		// Si un autre joueur a terminé cette quête globalement, la marquer comme terminée pour ce joueur aussi
+		if IsQuestGloballyCompleted(pq.QuestID) && pq.Status != "completed" {
+			pq.Status = "completed"
+		}
 
 		if pq.Status == "completed" {
 			entries = append(entries, questEntry{QuestID: quest.ID, Name: quest.Name, Giver: quest.Giver, Status: "completed"})
