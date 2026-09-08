@@ -70,7 +70,7 @@ func Move(conn net.Conn, player Player, loc string, message string) (newloc Loca
 		LogAndFprintf(conn, "%s | Vous êtes maintenant dans %s\n", conn.RemoteAddr().String(), locate.Name)
 		return locate, true
 	}
-	LogAndFprintf(conn, "ERR 400 INVALID_DIRECTION: Vous ne pouvez pas vous déplacer dans cette direction.\n")
+	LogAndFprintf(conn, "ERR 301 NO_EXIT: Vous ne pouvez pas vous déplacer dans cette direction.\n")
 	return locate, false
 }
 
@@ -132,7 +132,7 @@ func broadcastRoomExcept(room Location, exclude string, format string, args ...i
 	for _, c := range receivers {                        // modif
 		LogAndFprintf(c, format, args...)                // modif
 	}                                                    // modif
-}    
+}
 
 func Dispatch(conn net.Conn, player Player, loc Location) {
 	var previous string
@@ -211,7 +211,7 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 			maps[room.ID] = room
 			mapsLock.Unlock()
 			worldLock.Unlock()
-			
+
 			resp, err := Quests(room, room.Players[index], world)
 			if err != nil {
 				LogAndFprintf(conn, "ERR 900 CONNECTION_FAILED\n")
@@ -473,12 +473,12 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 				mapsLock.Lock()
 				maps[room.ID] = room
 				mapsLock.Unlock()
-				
+
 				// Si une quête a été terminée, marquer la quête comme terminée pour tous les joueurs qui l'ont en cours
 				if completedQuestID != "" {
 					worldLock.Lock()
 					world.Players[player.Name] = updatedPlayer
-					
+
 					// Trouver le nom de la quête
 					questName := ""
 					for _, q := range world.Quests {
@@ -487,7 +487,7 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 							break
 						}
 					}
-					
+
 					// Notifier tous les joueurs connectés
 					ConnectedLock.Lock()
 					for otherPlayerName, otherConn := range ConnectedClients {
@@ -501,7 +501,7 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 								// Envoyer une notification
 								if questName != "" {
 									msg := fmt.Sprintf("[EVT] %s a terminé la quête %s.\n", player.Name, questName)
-									LogAndFprintf(otherConn, msg)
+									LogAndFprintf(otherConn, "%s" ,msg)
 								}
 								break
 							}
@@ -510,7 +510,7 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 					ConnectedLock.Unlock()
 					worldLock.Unlock()
 				}
-				
+
 				// resp est envoye avant l'etat de la salle : c'est la seule
 				// ligne "OK .../ERR ..." de cette reponse, elle doit donc
 				// arriver en premier pour que le GUI (qui ne recupere que la

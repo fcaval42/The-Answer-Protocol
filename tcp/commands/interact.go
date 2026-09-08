@@ -11,10 +11,10 @@ import (
 
 func Talk(room Location, world WorldFile, npcName string) (string) {
 	npcid, ok := findNPCInRoom(room, npcName)
-	npc := room.NPCs[npcid]
 	if !ok {
 		return "ERR 404 NPC_NOT_FOUND"
 	}
+	npc := room.NPCs[npcid]
 	npcChar := world.NPCs[npc]
 	var response string
 	response += fmt.Sprintf("[%s]: ", npcName)
