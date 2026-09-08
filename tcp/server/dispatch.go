@@ -64,7 +64,7 @@ func Move(conn net.Conn, player Player, loc string, message string) (newloc Loca
 				}
 			}
 		}
-		BroadcastEVT(playerInLoc, fmt.Sprintf("[EVT] %s a rejoint l'endroit.\n", current.Name))
+		BroadcastEVT(playerInLoc, fmt.Sprintf("[EVT] %s a rejoint l'endroit.", current.Name))
 		maps[direction] = locate
 		LogAndFprintf(conn, "%s\n", ToString(locate))
 		LogAndFprintf(conn, "%s | Vous êtes maintenant dans %s\n", conn.RemoteAddr().String(), locate.Name)

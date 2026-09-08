@@ -58,7 +58,7 @@ func GroupJoin(conn net.Conn, player string, groupID string) {
 	for _, memberConn := range group.Members {
 		receivers = append(receivers, memberConn)
 	}
-	BroadcastEVT(receivers, fmt.Sprintf("[EVT] %s a rejoint le groupe.\n", player))
+	BroadcastEVT(receivers, fmt.Sprintf("[EVT] %s a rejoint le groupe.", player))
 	group.Mu.Unlock()
 	LogAndFprintf(conn, "[SERVER] Vous avez rejoint le groupe %s !\n", groupID)
 }
