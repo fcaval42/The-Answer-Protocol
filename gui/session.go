@@ -35,10 +35,15 @@ type Session struct {
 
 	inviteMu sync.Mutex
 	onInvite func(from string) // cf. OnInvite
+
+	questMu     sync.Mutex
+	onQuestComplete func(questName, completer string) // cf. OnQuestComplete
 }
 
 
 const inviteMarker = " vous a invité à rejoindre un groupe. ACCEPT/DECLINE"
+
+const questCompleteMarker = " a terminé la quête "
 
 func parseInvite(line string) (string, bool) {
 	const prefix = "[EVT] "
@@ -53,11 +58,34 @@ func parseInvite(line string) (string, bool) {
 	return rest[:idx], true
 }
 
+func parseQuestComplete(line string) (questName, completer string, ok bool) {
+	const prefix = "[EVT] "
+	if !strings.HasPrefix(line, prefix) {
+		return "", "", false
+	}
+	rest := strings.TrimPrefix(line, prefix)
+	idx := strings.Index(rest, questCompleteMarker)
+	if idx <= 0 {
+		return "", "", false
+	}
+	completer = strings.TrimSpace(rest[:idx])
+	questName = strings.TrimSpace(rest[idx+len(questCompleteMarker):])
+	questName = strings.TrimSuffix(questName, ".")
+	questName = strings.TrimSpace(questName)
+	return completer, questName, true
+}
+
 
 func (s *Session) OnInvite(f func(from string)) {
 	s.inviteMu.Lock()
 	s.onInvite = f
 	s.inviteMu.Unlock()
+}
+
+func (s *Session) OnQuestComplete(f func(questName, completer string)) {
+	s.questMu.Lock()
+	s.onQuestComplete = f
+	s.questMu.Unlock()
 }
 
 
@@ -90,6 +118,16 @@ func (s *Session) Deliver(line string) bool {
 					return true
 				}
 			}
+			// Check for quest completion notification
+			if completer, questName, ok := parseQuestComplete(line); ok {
+				s.questMu.Lock()
+				h := s.onQuestComplete
+				s.questMu.Unlock()
+				if h != nil {
+					h(questName, completer)
+					return true
+				}
+			}
 			fmt.Println("[GUI] ligne de chat ignorée (canal plein ou fermé) :", line)
 		}
 		return true
@@ -101,6 +139,17 @@ func (s *Session) Deliver(line string) bool {
 		s.inviteMu.Unlock()
 		if h != nil {
 			h(from)
+			return true
+		}
+	}
+
+	// Check for quest completion notification
+	if completer, questName, ok := parseQuestComplete(line); ok {
+		s.questMu.Lock()
+		h := s.onQuestComplete
+		s.questMu.Unlock()
+		if h != nil {
+			h(questName, completer)
 			return true
 		}
 	}
