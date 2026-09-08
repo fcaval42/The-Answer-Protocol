@@ -41,7 +41,7 @@ func RoomChat(conn net.Conn, loc string, player string) {
 		inRoomChatMu.Unlock()
 		send := Recept(conn)
 		if send == "EXIT\n" || send == "" || send == "QUIT\n" {
-			LogAndFprintf(conn, "[SERVER] Vous avez quitté le chat de la salle.\n")
+			LogAndFprintf(player, conn, "[SERVER] Vous avez quitté le chat de la salle.\n")
 			return
 		} else {
 			send = fmt.Sprintf("[%s]: %s", player, send)
@@ -78,7 +78,7 @@ func GroupChat(conn net.Conn, player string) {
 	var currentGroup *Group
 	currentGroup = SearchPlayerGroup(player)
 	if currentGroup == nil {
-		LogAndFprintf(conn, "[SERVER] Vous n'êtes pas dans un groupe. Créez-en un d'abord.\n")
+		LogAndFprintf(player, conn, "[SERVER] Vous n'êtes pas dans un groupe. Créez-en un d'abord.\n")
 		inGroupChatLock.Unlock()
 		return
 	}
@@ -112,12 +112,12 @@ func GroupChat(conn net.Conn, player string) {
 		Broadcast(receivers, currentGroup.messages)
 		send := Recept(conn)
 		if send == "EXIT\n" || send == "" || send == "QUIT\n" {
-			LogAndFprintf(conn, "[SERVER] Vous avez quitté le chat de groupe.\n")
+			LogAndFprintf(player, conn, "[SERVER] Vous avez quitté le chat de groupe.\n")
 			return
 			} else {
 				send = fmt.Sprintf("[%s]: %s", player, send)
 			}
-		LogAndPrintf(conn, "%s| %s", conn.RemoteAddr().String(), send)
+		LogAndPrintf(player, conn, "%s| %s", conn.RemoteAddr().String(), send)
 		currentGroup.Mu.Lock()
 		BroadcastEVT(otherMembers, fmt.Sprintf("[EVT GROUP] %s", send))
 		currentGroup.messages = append(currentGroup.messages, send)
@@ -146,7 +146,7 @@ func GlobalChat(conn net.Conn, player string) {
 		Broadcast(inGlobal, globaleMessage)
 		send := Recept(conn)
 		if send == "EXIT\n" || send == "" || send == "QUIT\n" {
-			LogAndFprintf(conn, "[SERVER] Vous avez quitté le chat global.\n")
+			LogAndFprintf(player, conn, "[SERVER] Vous avez quitté le chat global.\n")
 			return
 		} else {
 			send = fmt.Sprintf("[%s]: %s", player, send)
@@ -160,7 +160,7 @@ func GlobalChat(conn net.Conn, player string) {
 		}
 		ConnectedLock.Unlock()
 		BroadcastEVT(otherMembers, fmt.Sprintf("[EVT GLOBAL] %s", send))
-		LogAndPrintf(conn, "%s| %s", conn.RemoteAddr().String(), send)
+		LogAndPrintf(player, conn, "%s| %s", conn.RemoteAddr().String(), send)
 		globaleMessageLock.Lock()
 		globaleMessage = append(globaleMessage, send)
 		if len(globaleMessage) > 10 {
@@ -219,7 +219,7 @@ func RoomChatBroadcast(conn net.Conn, loc string, player string, message string)
 func GroupChatBroadcast(conn net.Conn, message string, player string) {
 	currentGroup := SearchPlayerGroup(player)
 	if currentGroup == nil {
-		LogAndFprintf(conn, "[SERVER] ERR 401 NOT_IN_GROUP: Vous n'êtes pas dans un groupe. Créez-en un d'abord.\n")
+		LogAndFprintf(player, conn, "[SERVER] ERR 401 NOT_IN_GROUP: Vous n'êtes pas dans un groupe. Créez-en un d'abord.\n")
 		return
 	}
 	currentGroup.Mu.Lock()

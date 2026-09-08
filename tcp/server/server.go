@@ -165,7 +165,7 @@ func main() {
 		Clients[conn] = true
 		ClientsLock.Unlock()
 
-		LogAndPrintf(conn, "%s| [INFO] Nouveau client connecté\n", conn.RemoteAddr())
+		LogServPrintf(conn, "%s| [INFO] Nouveau client connecté\n", conn.RemoteAddr())
 
 		// Gestion individuelle (Thread) du client
 		go handleConnection(conn)
