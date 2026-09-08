@@ -145,7 +145,7 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 
 		if message == previous && strings.HasPrefix(message, "ATTACK") == false {
 			LogAndPrintf(conn, "%s| [WARN] %s", conn.RemoteAddr(), message)
-			LogAndFprintf(conn, "[SERVER][WARN] Attention à ne pas envoyer la même commande: %s\n", message)
+			LogAndFprintf(conn, "[SERVER][WARN] Attention à ne pas envoyer la même commande: %s", message)
 		} else {
 			LogAndPrintf(conn, "%s| %s", conn.RemoteAddr().String(), message)
 		}
@@ -260,6 +260,8 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 				case "GROUP\n":
 					GroupChat(conn, player.Name)
 					break chat
+				case "EXIT\n":
+					break chat
 				}
 			}
 		case strings.HasPrefix(message, "CHAT "):
@@ -268,7 +270,7 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 			case strings.HasPrefix(chatMessage, "GLOBAL "):
 				messages := strings.TrimPrefix(chatMessage, "GLOBAL ")
 				messages = fmt.Sprintf("[%s]: %s", player.Name, messages)
-				GlobalChatBroadcast(messages)
+				GlobalChatBroadcast(conn, messages)
 			case strings.HasPrefix(chatMessage, "ROOM "):
 				messages := strings.TrimPrefix(chatMessage, "ROOM ")
 				RoomChatBroadcast(conn, loc.Name, player.Name, messages)
