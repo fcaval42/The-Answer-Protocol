@@ -31,7 +31,7 @@ func dropItem(conn net.Conn, player Player, loc Location, message string) Locati
 			}
 		}
 	}
-	LogAndFprintf(conn, "[SERVER] ERRNO 404: Vous ne possédez pas l'objet %s.\n", itemName)
+	LogAndFprintf(conn, "ERR 404 ITEM_NOT_OWNED: Vous ne possédez pas l'objet %s.\n", itemName)
 	return loc
 }
 
@@ -70,7 +70,7 @@ func Move(conn net.Conn, player Player, loc string, message string) (newloc Loca
 		LogAndFprintf(conn, "%s | Vous êtes maintenant dans %s\n", conn.RemoteAddr().String(), locate.Name)
 		return locate, true
 	}
-	LogAndFprintf(conn, "[SERVER] ERRNO 301: Vous ne pouvez pas vous déplacer dans cette direction.\n")
+	LogAndFprintf(conn, "ERR 400 INVALID_DIRECTION: Vous ne pouvez pas vous déplacer dans cette direction.\n")
 	return locate, false
 }
 
@@ -81,7 +81,7 @@ func takeItem(conn net.Conn, player Player, loc Location, message string) Locati
 	itemName := strings.TrimSpace(strings.TrimPrefix(message, "TAKE"))
 	loc, _, ok := FindPlayerByName(player.Name, maps)
 	if !ok{
-		LogAndFprintf(conn, "[SERVER] ERRNO 404: L'objet %s n'est pas disponible dans cet endroit.\n", itemName)
+		LogAndFprintf(conn, "ERR 404 ITEM_NOT_FOUND: L'objet %s n'est pas disponible dans cet endroit.\n", itemName)
 		return loc
 	}
 	for i, p := range loc.Players {
@@ -91,7 +91,7 @@ func takeItem(conn net.Conn, player Player, loc Location, message string) Locati
 				if item == itemName {
 					for _, it := range world.Items {
 						if it.Name == itemName && !it.Obtainable {
-							LogAndFprintf(conn, "[SERVER] L'objet %s n'est pas obtenable.\n", itemName)
+							LogAndFprintf(conn, "ERR 406 ITEM_NOT_OBTAINABLE: L'objet %s n'est pas obtenable.\n", itemName)
 							worldLock.Unlock()
 							return loc
 						}
@@ -112,7 +112,7 @@ func takeItem(conn net.Conn, player Player, loc Location, message string) Locati
 			}
 		}
 	}
-	LogAndFprintf(conn, "[SERVER] ERRNO 404: L'objet %s n'est pas disponible dans cet endroit.\n", itemName)
+	LogAndFprintf(conn, "ERR 404 ITEM_NOT_FOUND: L'objet %s n'est pas disponible dans cet endroit.\n", itemName)
 	return loc
 }
 
@@ -199,6 +199,19 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 				LogAndFprintf(conn, "ERR 404 PLAYER_NOT_FOUND\n")
 				continue
 			}
+			// Vérifier si des quêtes ont été terminées globalement et marquer celles du joueur comme completed
+			worldLock.Lock()
+			for i := range room.Players[index].Quests {
+				if IsQuestGloballyCompleted(room.Players[index].Quests[i].QuestID) && room.Players[index].Quests[i].Status != "completed" {
+					room.Players[index].Quests[i].Status = "completed"
+				}
+			}
+			world.Players[player.Name] = room.Players[index]
+			mapsLock.Lock()
+			maps[room.ID] = room
+			mapsLock.Unlock()
+			worldLock.Unlock()
+			
 			resp, err := Quests(room, room.Players[index], world)
 			if err != nil {
 				LogAndFprintf(conn, "ERR 900 CONNECTION_FAILED\n")
@@ -449,15 +462,53 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 				LogAndFprintf(conn, "ERR 404 PLAYER_NOT_FOUND\n")
 				continue
 			}
-			resp, player, err := ReturnQuest(world, room, room.Players[index], strings.TrimSpace(strings.TrimPrefix(message, "QUEST")))
+			resp, updatedPlayer, completedQuestID, err := ReturnQuest(world, room, room.Players[index], strings.TrimSpace(strings.TrimPrefix(message, "QUEST")))
 			if err != nil {
 				LogAndFprintf(conn, "ERR 900 CONNECTION_FAILED\n")
 				continue
 			} else {
-				room.Players[index] = player
+				room.Players[index] = updatedPlayer
 				mapsLock.Lock()
 				maps[room.ID] = room
 				mapsLock.Unlock()
+				
+				// Si une quête a été terminée, marquer la quête comme terminée pour tous les joueurs qui l'ont en cours
+				if completedQuestID != "" {
+					worldLock.Lock()
+					world.Players[player.Name] = updatedPlayer
+					
+					// Trouver le nom de la quête
+					questName := ""
+					for _, q := range world.Quests {
+						if q.ID == completedQuestID {
+							questName = q.Name
+							break
+						}
+					}
+					
+					// Notifier tous les joueurs connectés
+					ConnectedLock.Lock()
+					for otherPlayerName, otherConn := range ConnectedClients {
+						if otherPlayerName == player.Name {
+							continue
+						}
+						// Marquer la quête comme terminée pour ce joueur si il l'a en cours
+						for i := range world.Players[otherPlayerName].Quests {
+							if world.Players[otherPlayerName].Quests[i].QuestID == completedQuestID {
+								world.Players[otherPlayerName].Quests[i].Status = "completed"
+								// Envoyer une notification
+								if questName != "" {
+									msg := fmt.Sprintf("[EVT] %s a terminé la quête %s.\n", player.Name, questName)
+									LogAndFprintf(otherConn, msg)
+								}
+								break
+							}
+						}
+					}
+					ConnectedLock.Unlock()
+					worldLock.Unlock()
+				}
+				
 				// resp est envoye avant l'etat de la salle : c'est la seule
 				// ligne "OK .../ERR ..." de cette reponse, elle doit donc
 				// arriver en premier pour que le GUI (qui ne recupere que la

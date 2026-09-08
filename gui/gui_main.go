@@ -545,6 +545,13 @@ func Run(playerName string, world parsing.WorldFile, sess *Session) {
 		fyne.Do(func() { showInviteDialog(w, sess, from) })
 	})
 
+	// Notification de quête terminée par un autre joueur
+	sess.OnQuestComplete(func(questName, completer string) {
+		fyne.Do(func() {
+			showMessage("Quête terminée", fmt.Sprintf("%s a terminé la quête : %s\n\nCette quête est maintenant marquée comme terminée pour vous.", completer, questName))
+		})
+	})
+
 	var changeRoom func(newRoom parsing.Location)
 	var refreshCharacter func(p parsing.Player)
 
