@@ -93,16 +93,11 @@ func takeItem(conn net.Conn, player Player, loc Location, message string) Locati
 						if it.Name == itemName {
 							// Ajoute l'objet à l'inventaire du joueur
 							loc.Players[i].Inventory = append(loc.Players[i].Inventory, it)
-							updatedPlayer, questMsg := CompleteFetchQuest(world, loc.Players[i], it.ID)
-							loc.Players[i] = updatedPlayer
 							// Supprime l'objet de la liste des objets de la location
 							loc.Items = append(loc.Items[:j], loc.Items[j+1:]...)
 							maps[loc.ID] = loc
 							worldLock.Unlock()
 							LogAndFprintf(conn, "[SERVER] Vous avez pris l'objet: %s\n", itemName)
-							if questMsg != "" { // ajout
-								LogAndFprintf(conn, "%s\n", questMsg) // ajout
-							} // ajout
 							LogAndFprintf(conn, "%s\n", ToString(loc))
 							return loc
 						}
