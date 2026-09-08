@@ -127,7 +127,7 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 
 		if message == previous && strings.HasPrefix(message, "ATTACK") == false {
 			LogAndPrintf(conn, "%s| [WARN] %s", conn.RemoteAddr(), message)
-			LogAndFprintf(conn, "[SERVER][WARN] Attention à ne pas envoyer la même commande: %s\n", message)
+			LogAndFprintf(conn, "[SERVER][WARN] Attention à ne pas envoyer la même commande: %s", message)
 		} else {
 			LogAndPrintf(conn, "%s| %s", conn.RemoteAddr().String(), message)
 		}

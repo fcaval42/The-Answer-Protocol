@@ -88,16 +88,23 @@ func GroupChat(conn net.Conn, player string) {
 			receivers = append(receivers, memberConn)
 		}
 		inGroupChatLock.Unlock()
+		var otherMembers []net.Conn
+		for _, c := range currentGroup.Members{
+			if !slices.Contains(receivers, c) && c != conn{
+				otherMembers = append(otherMembers, c)
+			}
+		}
 		Broadcast(receivers, currentGroup.messages)
 		send := Recept(conn)
 		if send == "EXIT\n" || send == "" || send == "QUIT\n" {
 			LogAndFprintf(conn, "[SERVER] Vous avez quitté le chat de groupe.\n")
 			return
-		} else {
-			send = fmt.Sprintf("[%s]: %s", player, send)
-		}
+			} else {
+				send = fmt.Sprintf("[%s]: %s", player, send)
+			}
 		LogAndPrintf(conn, "%s| %s", conn.RemoteAddr().String(), send)
 		currentGroup.Mu.Lock()
+		BroadcastEVT(otherMembers, fmt.Sprintf("[EVT] %s", send))
 		currentGroup.messages = append(currentGroup.messages, send)
 		if len(currentGroup.messages) > 10 {
 			currentGroup.messages = currentGroup.messages[len(currentGroup.messages)-10:]
