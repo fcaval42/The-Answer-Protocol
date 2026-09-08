@@ -82,8 +82,8 @@ func takeItem(conn net.Conn, player Player, loc Location, message string) Locati
 	for i, p := range loc.Players {
 		if p.Name == player.Name {
 			for j, item := range loc.Items {
+				worldLock.Lock()
 				if item == itemName {
-					worldLock.Lock()
 					for _, it := range world.Items {
 						if it.Name == itemName && !it.Obtainable {
 							LogAndFprintf(conn, "[SERVER] L'objet %s n'est pas obtenable.\n", itemName)
