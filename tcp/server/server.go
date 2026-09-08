@@ -25,17 +25,25 @@ var (
 func deletePlayerInMap(player string) map[string]Location {
 	mapsLock.Lock()
 	var playerInLoc []net.Conn
+	var temp []Player
 	for _, loc := range maps {
-		loc.Players = DeletePlayer(loc.Players, player)
 		for _, play := range loc.Players {
-			for n, conn := range ConnectedClients {
-				if play.Name == n {
-					playerInLoc = append(playerInLoc, conn)
-				}
+			if play.Name == player{
+				temp = loc.Players
 			}
 		}
+		loc.Players = DeletePlayer(loc.Players, player)
 		maps[loc.ID] = loc
 	}
+	ConnectedLock.Lock()
+	for _, play := range temp{
+		for n, c := range ConnectedClients{
+			if play.Name == n{
+				playerInLoc = append(playerInLoc, c)
+			}
+		}
+	}
+	ConnectedLock.Unlock()
 	BroadcastEVT(playerInLoc, fmt.Sprintf("[EVT] %s a quitté l'endroit.\n", player))
 	mapsLock.Unlock()
 	return maps

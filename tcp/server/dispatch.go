@@ -76,14 +76,19 @@ func Move(conn net.Conn, player Player, loc string, message string) (newloc Loca
 
 func takeItem(conn net.Conn, player Player, loc Location, message string) Location {
 	// Récupère le nom de l'objet à prendre à partir du message
-	itemName := strings.TrimSpace(strings.TrimPrefix(message, "TAKE"))
 	mapsLock.Lock()
 	defer mapsLock.Unlock()
+	itemName := strings.TrimSpace(strings.TrimPrefix(message, "TAKE"))
+	loc, _, ok := FindPlayerByName(player.Name, maps)
+	if !ok{
+		LogAndFprintf(conn, "[SERVER] ERRNO 404: L'objet %s n'est pas disponible dans cet endroit.\n", itemName)
+		return loc
+	} 
 	for i, p := range loc.Players {
 		if p.Name == player.Name {
 			for j, item := range loc.Items {
+				worldLock.Lock()
 				if item == itemName {
-					worldLock.Lock()
 					for _, it := range world.Items {
 						if it.Name == itemName && !it.Obtainable {
 							LogAndFprintf(conn, "[SERVER] L'objet %s n'est pas obtenable.\n", itemName)
@@ -111,8 +116,6 @@ func takeItem(conn net.Conn, player Player, loc Location, message string) Locati
 	return loc
 }
 
-// Dispatch des commandes du client après la connexion,
-// en fonction de la commande reçue.
 func Dispatch(conn net.Conn, player Player, loc Location) {
 	var previous string
 	for {
