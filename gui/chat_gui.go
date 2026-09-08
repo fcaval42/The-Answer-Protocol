@@ -12,21 +12,7 @@ import (
 	"the_answer_protocol/parsing"
 )
 
-// Le chat et les groupes (CHAT, GROUP CREATE/JOIN/LEAVE...) sont gérés côté
-// serveur par des boucles bloquantes qui monopolisent la connexion (Recept
-// en boucle, cf. tcp/server/chat.go et group.go) et répondent en texte libre
-// "[SERVER] ..." — jamais par une ligne OK/ERR/{ comme le reste du jeu. Ça
-// ne passe donc pas par Session.Send() : ce fichier pilote la connexion en
-// mode brut (Session.EnterRaw/SendRaw) le temps de l'échange, exactement
-// comme le ferait le client texte. Conséquence assumée : pendant qu'une
-// session de chat est active dans son popup, les autres actions du GUI
-// (Attack, Move...) sont bloquées par la modalité du popup — il faut
-// explicitement Quitter le chat pour rendre la main.
 
-// collectQuiet lit ch jusqu'à un silence de `quiet`, ou au plus `maxWait`,
-// et renvoie les lignes reçues entre-temps (une entrée par ligne logique,
-// les messages multi-lignes du serveur étant déjà rejoints par de vrais
-// "\n" à ce stade, cf. client_main.go).
 func collectQuiet(ch <-chan string, quiet, maxWait time.Duration) []string {
 	var lines []string
 	deadline := time.After(maxWait)
@@ -60,12 +46,6 @@ func collectQuiet(ch <-chan string, quiet, maxWait time.Duration) []string {
 
 // waitFirst attend jusqu'à maxWait la première ligne reçue sur ch, puis
 // regroupe les éventuelles lignes suivantes rapprochées comme collectQuiet.
-// Contrairement à collectQuiet - qui abandonne dès que `quiet` s'écoule sans
-// qu'aucune ligne ne soit jamais arrivée, ce qui convient à un aller-retour
-// synchrone - il faut ici bloquer jusqu'à la première ligne : le serveur
-// reste volontairement silencieux sur cette connexion tant que l'invité n'a
-// pas répondu, ou que son délai n'a pas expiré (cf. GroupInvite côté
-// serveur, tcp/server/group.go, qui attend jusqu'à 10s).
 func waitFirst(ch <-chan string, maxWait time.Duration) []string {
 	select {
 	case l, ok := <-ch:
@@ -84,8 +64,7 @@ func waitFirst(ch <-chan string, maxWait time.Duration) []string {
 	}
 }
 
-// sendRawCollect ouvre une session brute le temps d'un aller-retour ponctuel
-// (GROUP CREATE / GROUP LEAVE...), sans conversation qui suit.
+
 func sendRawCollect(sess *Session, cmd string) ([]string, error) {
 	ch := sess.EnterRaw()
 	defer sess.ExitRaw()
@@ -95,10 +74,7 @@ func sendRawCollect(sess *Session, cmd string) ([]string, error) {
 	return collectQuiet(ch, 200*time.Millisecond, 2*time.Second), nil
 }
 
-// availablePlayersFrom extrait la liste des joueurs invitables du message
-// serveur "[SERVER] Joueurs disponibles : a, b, c\n" (cf. GroupInvite côté
-// serveur, tcp/server/group.go). Renvoie (nil, false) si le texte ne contient
-// pas ce marqueur (autre message : erreur, aucun joueur dispo...).
+
 func availablePlayersFrom(text string) ([]string, bool) {
 	const marker = "Joueurs disponibles : "
 	idx := strings.Index(text, marker)
@@ -119,13 +95,7 @@ func availablePlayersFrom(text string) ([]string, bool) {
 	return names, len(names) > 0
 }
 
-// openInvitePicker affiche la liste des joueurs invitables et envoie le choix
-// de l'utilisateur sur ch/sess. Une fois "GROUP INVITE" envoyé, le serveur
-// reste bloqué (Recept en boucle côté GroupInvite) tant qu'un nom valide ne
-// lui est pas fourni sur CETTE connexion : contrairement à GROUP JOIN, il n'y
-// a donc pas moyen d'annuler proprement ici, d'où l'absence de bouton
-// Fermer/Annuler (NewCustomWithoutButtons) - annuler laisserait la connexion
-// bloquée pour le reste de la session.
+
 func openInvitePicker(w fyne.Window, sess *Session, ch <-chan string, names []string, showMessage func(title, msg string)) {
 	body := container.NewVBox(NewWrappingBodyText("Qui voulez-vous inviter ?"), Fix(0, 8))
 	var d dialog.Dialog
@@ -140,20 +110,11 @@ func openInvitePicker(w fyne.Window, sess *Session, ch <-chan string, names []st
 					fyne.Do(func() { showMessage("Erreur", err.Error()) })
 					return
 				}
-				// Nom invalide (joueur parti entre-temps...) : le serveur
-				// reprint aussitôt la liste et attend un nouveau choix sur
-				// cette même connexion, sans jamais revenir à Dispatch.
 				first := collectQuiet(ch, 300*time.Millisecond, 2*time.Second)
 				if retryNames, ok := availablePlayersFrom(strings.Join(first, "\n")); ok {
 					fyne.Do(func() { openInvitePicker(w, sess, ch, retryNames, showMessage) })
 					return
 				}
-				// Nom valide : le serveur reste maintenant silencieux sur
-				// cette connexion jusqu'à ce que l'invité réponde (jusqu'à
-				// 10s), pendant lesquelles toute autre action GUI (Attack,
-				// Move...) resterait sans réponse - d'où cette popup
-				// d'attente bloquante, cohérente avec la modalité déjà
-				// acceptée pour le chat (cf. commentaire de package).
 				var waiting dialog.Dialog
 				fyne.Do(func() {
 					waiting = dialog.NewCustomWithoutButtons("Invitation envoyée",
@@ -181,11 +142,7 @@ func openInvitePicker(w fyne.Window, sess *Session, ch <-chan string, names []st
 }
 
 // showInviteDialog affiche par-dessus tout le reste (parent = fenêtre
-// principale) l'invitation de groupe reçue d'un autre joueur, cf.
-// Session.OnInvite. ACCEPT/DECLINE part directement sur la connexion via
-// SendRaw plutôt que Send() : la confirmation renvoyée par le serveur est un
-// texte libre "[SERVER] ..." (cf. dispatch.go), pas une ligne OK/ERR/{ que
-// Send() saurait reconnaître.
+// principale) l'invitation de groupe reçue d'un autre joueur.
 func showInviteDialog(w fyne.Window, sess *Session, from string) {
 	var d dialog.Dialog
 	answered := false
@@ -210,9 +167,8 @@ func showInviteDialog(w fyne.Window, sess *Session, from string) {
 	d.Resize(fyne.NewSize(380, 180))
 	d.Show()
 
-	// Le serveur abandonne l'invitation après 10s sans réponse (cf.
-	// GroupInvite) : la popup se referme d'elle-même pour ne pas laisser un
-	// choix devenu sans effet affiché à l'écran.
+	// Le serveur abandonne l'invitation après 10s sans réponse: la popup se 
+	// referme d'elle-même 
 	go func() {
 		time.Sleep(10 * time.Second)
 		fyne.Do(func() {
@@ -285,12 +241,6 @@ func openGroupDialog(w fyne.Window, sess *Session, showMessage func(title, msg s
 						go func() {
 							defer sess.ExitRaw()
 							if !ok || id == "" {
-								// Le serveur attend toujours un ID sur cette
-								// connexion (Recept bloquant) : sans réponse,
-								// le prochain Send() du GUI recevrait ce
-								// texte au lieu de sa vraie réponse. Une
-								// ligne vide le débloque proprement (ID
-								// invalide côté serveur, sans effet de bord).
 								sess.SendRaw("\n")
 								return
 							}
@@ -308,9 +258,6 @@ func openGroupDialog(w fyne.Window, sess *Session, showMessage func(title, msg s
 	d.Show()
 }
 
-// openChatDialog reproduit le déroulé du chat texte (CHAT -> GLOBAL/ROOM/
-// GROUP -> conversation -> EXIT) dans une fenêtre GUI. cf. le commentaire de
-// package en tête de fichier pour le pourquoi du mode brut.
 func openChatDialog(w fyne.Window, sess *Session, player parsing.Player, showMessage func(title, msg string)) {
 	body := container.NewVBox()
 	var d dialog.Dialog
@@ -324,10 +271,6 @@ func openChatDialog(w fyne.Window, sess *Session, player parsing.Player, showMes
 	entry.SetPlaceHolder("Votre message...")
 
 	done := make(chan struct{})
-	// inChatLoop : vrai des l'envoi d'un canal (GLOBAL/ROOM/GROUP) tant qu'on
-	// n'a pas la certitude que le serveur en est deja ressorti tout seul
-	// (cas "GROUP" hors groupe, cf. plus bas) - c'est ce qui determine si
-	// quitter la fenetre doit envoyer EXIT pour debloquer la connexion.
 	inChatLoop := false
 	active := false
 	closed := false
@@ -417,22 +360,11 @@ func openChatDialog(w fyne.Window, sess *Session, player parsing.Player, showMes
 				if !ok {
 					return
 				}
-				// La reception d'une ligne (meme vide : un salon/groupe sans
-				// historique se traduit par un broadcast vide, cf. Broadcast
-				// / PrintChat cote serveur) est notre seul signal que le
-				// canal a bien ete rejoint - il ne faut donc pas filtrer les
-				// lignes vides ici avant de decider de passer en mode actif,
-				// seulement pour l'affichage.
 				text := strings.TrimRight(line, "\n")
 				fyne.Do(func() {
 					switch {
 					case !inChatLoop:
-						// prompt initial ("GLOBAL, ROOM, GROUP ?") : on
-						// affiche deja nos propres boutons, on l'ignore.
 					case !active && strings.Contains(text, "Vous n'êtes pas dans un groupe"):
-						// GroupChat n'est jamais entree en boucle : le
-						// serveur est deja revenu au Dispatch principal,
-						// il faut renvoyer CHAT pour recommencer.
 						inChatLoop = false
 						showMessage("Chat", text)
 						renderPicker()

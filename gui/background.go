@@ -52,7 +52,7 @@ func BuildBackground(imagePath string) (fyne.CanvasObject, *canvas.Image) {
 		R: 0,
 		G: 0,
 		B: 0,
-		A: 60, // 50% de transparent pour l'image background
+		A: 60, // % de transparent pour l'image background
 	})
 	bgStack := container.NewStack(bg, overlay)
 	return bgStack, bg

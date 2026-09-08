@@ -142,8 +142,7 @@ func buildRoomPanel(loc parsing.Location, world parsing.WorldFile, player parsin
 			}),
 		)
 		// le bouton Quest n'apparait que pour les PNJ donneurs de quete
-		// (Sophie, Esquie...) : c'est ici, avec le PNJ present dans la
-		// salle, qu'on peut accepter/decliner ou recuperer sa recompense.
+		// (Sophie, Esquie...)
 		if _, ok := questForGiver(world, id); ok {
 			npcButtons.Add(NewButton(npc+" Quest", func() {
 				openNpcQuestDialog(w, sess, world, player, npc, id, refreshCharacter, showMessage)
@@ -159,9 +158,6 @@ func buildRoomPanel(loc parsing.Location, world parsing.WorldFile, player parsin
 		}
 		id := enemyID
 		enemy := enemyName
-		// PV de depart de l'ennemi, tels que charges au demarrage du client :
-		// world cote GUI n'est jamais resynchronise pendant le combat, donc
-		// ca reste un plafond correct pour l'affichage "restant / max".
 		enemyMaxHP := 0
 		if e, ok := world.Enemies[id]; ok {
 			enemyMaxHP = e.HP
@@ -189,12 +185,8 @@ func buildRoomPanel(loc parsing.Location, world parsing.WorldFile, player parsin
 						return
 					}
 					if strings.HasPrefix(resp, "ERR") {
-						// L'ennemi n'est deja plus dans la salle cote serveur
-						// (deja tue par ce joueur ou un autre) mais le bouton
-						// est reste affiche le temps que le GUI se rafraichisse :
-						// pas une vraie erreur, on l'affiche donc comme une victoire.
 						if strings.Contains(resp, "NPC_NOT_FOUND") {
-							fyne.Do(func() { showMessage("Combat", "VICTOIRE") })
+							fyne.Do(func() { showMessage("Combat", "VICTOIRE ") })
 							return
 						}
 						fyne.Do(func() { showMessage("Erreur", resp) })

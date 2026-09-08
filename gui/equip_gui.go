@@ -12,11 +12,7 @@ import (
 )
 
 // openItemDialog affiche la description d'un objet équipable de
-// l'inventaire (Critical non nil : une arme). Un seul objet peut être
-// équipé à la fois : si celui-ci l'est déjà, seul un bouton Déséquiper est
-// proposé (impossible de le rééquiper) ; sinon, un bouton Équiper (qui
-// remplace l'objet éventuellement porté). Le bouton disparaît pendant
-// l'attente de la réponse serveur pour empêcher de spammer la même action.
+// l'inventaire + Un seul objet peut être équipé à la fois
 func openItemDialog(w fyne.Window, sess *Session, item parsing.Item, player parsing.Player, refreshCharacter func(parsing.Player), showMessage func(title, msg string)) {
 	body := container.NewVBox()
 	var d dialog.Dialog
