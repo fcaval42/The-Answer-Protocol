@@ -202,15 +202,25 @@ func buildRoomPanel(loc parsing.Location, world parsing.WorldFile, player parsin
 					updated := player
 					updated.HP = result.AttackerHP
 					fyne.Do(func() {
-						refreshCharacter(updated)
 						enemyBar.Value = float64(result.TargetHP)
 						enemyBar.Refresh()
 						enemyHPText.Text = fmt.Sprintf("%d / %d", result.TargetHP, enemyMaxHP)
 						enemyHPText.Refresh()
 						if result.Status == "victory" {
+							refreshCharacter(updated)
 							showMessage("Combat", "VICTOIRE")
 							return
 						}
+						if result.Status == "defeat" {
+							updated.HP = player.Respawn.HP
+							refreshCharacter(updated)
+							if respawnLoc, ok := world.World.Locations[player.Respawn.Location]; ok {
+								changeRoom(respawnLoc)
+							}
+							showMessage("Combat", "Vous êtes mort... Retour à "+player.Respawn.Location)
+							return
+						}
+						refreshCharacter(updated)
 						showMessage("Combat", fmt.Sprintf(
 							"Dégâts infligés : %d\nPV de %s : %d / %d (%s)",
 							result.Damage, enemy, result.TargetHP, enemyMaxHP, result.Status,
