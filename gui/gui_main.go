@@ -11,7 +11,6 @@ import (
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/dialog"
 	"fyne.io/fyne/v2/layout"
-	"fyne.io/fyne/v2/widget"
 
 	"the_answer_protocol/parsing"
 )
@@ -422,29 +421,6 @@ func buildCharacterPanel(player parsing.Player, sess *Session, w fyne.Window, re
 	)
 }
 
-// ---- Chat (droite, bas) : onglets Global/Salle/Groupe séparés des logs ----
-
-func buildChatPanel() fyne.CanvasObject {
-
-	makeScope := func(sample string) fyne.CanvasObject {
-		messages := widget.NewLabel(sample)
-		messages.Wrapping = fyne.TextWrapWord
-		input := widget.NewEntry()
-		input.SetPlaceHolder("Écrire un message...")
-		send := NewButton("Envoyer", func() {
-			println("CHAT:", input.Text)
-			input.SetText("")
-		})
-		return container.NewBorder(nil, container.NewBorder(nil, nil, nil, send, input), nil, nil, messages)
-	}
-
-	return container.NewAppTabs(
-		container.NewTabItem("Global", makeScope("Alice: ...")),
-		container.NewTabItem("Salle", makeScope("Venus: Parle mieux on comprend rien")),
-		container.NewTabItem("Groupe", makeScope("")),
-	)
-}
-
 // ---- CHAT / MAP (droite, bas) : boutons pour ouvrir les panneaux dans des fenêtres séparées ----
 
 const chatMapIconSize = 100
@@ -454,16 +430,36 @@ var (
 	mapIconPath  = "assets/icons/icon_map.png"
 )
 
-func buildChatMapNav(w fyne.Window, getCurrentRoom func() parsing.Location) fyne.CanvasObject {
+// openChatEntryDialog propose Chat et Groupe : deux fonctionnalités
+// distinctes côté serveur (cf. gui/chat_gui.go), regroupées ici derrière
+// l'icône Chat plutôt que d'avoir chacune leur bouton dans les actions.
+func openChatEntryDialog(w fyne.Window, sess *Session, player parsing.Player, showMessage func(title, msg string)) {
+	var d dialog.Dialog
+	body := container.NewVBox(
+		container.NewCenter(NewTitleText("Chat", 24)),
+		Fix(0, 10),
+		NewButton("Chat", func() {
+			d.Hide()
+			openChatDialog(w, sess, player, showMessage)
+		}),
+		NewButton("Groupe", func() {
+			d.Hide()
+			openGroupDialog(w, sess, showMessage)
+		}),
+	)
+	d = dialog.NewCustom("", "Fermer", body, w)
+	d.Resize(fyne.NewSize(320, 220))
+	d.Show()
+}
+
+func buildChatMapNav(w fyne.Window, sess *Session, player parsing.Player, showMessage func(title, msg string), getCurrentRoom func() parsing.Location) fyne.CanvasObject {
 	titlesRow := container.NewGridWithColumns(2,
 		container.NewCenter(NewTitleText("Chat", 25)),
 		container.NewCenter(NewTitleText("Carte", 25)),
 	)
 
 	chatIcon := NewBigIconButton(chatIconPath, chatMapIconSize, func() {
-		d := dialog.NewCustom("Chat", "Fermer", buildChatPanel(), w)
-		d.Resize(fyne.NewSize(900, 650))
-		d.Show()
+		openChatEntryDialog(w, sess, player, showMessage)
 	})
 	mapIcon := NewBigIconButton(mapIconPath, chatMapIconSize, func() {
 		room := getCurrentRoom()
@@ -562,6 +558,7 @@ func Run(playerName string, world parsing.WorldFile, sess *Session) {
 
 	quitBtn := NewSemiTransparentButton("Quit", 140, func() {
 		sess.Quit()
+		w.Close()
 	})
 
 	// Boutons Who et Quit à droite de la fenêtre (même taille que les autres : 180x40)
@@ -602,7 +599,7 @@ func Run(playerName string, world parsing.WorldFile, sess *Session) {
 	rightPanel := WithMinWidth(container.NewVBox(
 		characterContainer,
 		Fix(0, 15),
-		buildChatMapNav(w, func() parsing.Location { return currentRoom }),
+		buildChatMapNav(w, sess, player, showMessage, func() parsing.Location { return currentRoom }),
 	), 420)
 
 	body := container.NewBorder(nil, nil, WithMinWidth(roomContainer, 420), rightPanel, nil)

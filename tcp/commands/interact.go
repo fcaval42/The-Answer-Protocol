@@ -66,15 +66,12 @@ func Status(room Location, player Player) (string, error) {
 	return fmt.Sprintf("OK %s", data), nil
 }
 
-func Attack(player Player, enemy Enemy) (string, string, string, Player, Enemy) {
+func Attack(player Player, enemy Enemy) (string, string, Player, Enemy) {
 	var status string
-	var critMsg string
 	damage := player.Attack - enemy.Defense
 
 	if rand.Float64() < (player.Weapon.Critical) {
-		dam_base := damage
 		damage += int(float64(damage) * player.Weapon.Critical)
-		critMsg = fmt.Sprintf("COUP CRITIQUE: Vous infligez %d au lieu de %d", damage, dam_base)
 	}
 
 	if damage < 1 {
@@ -110,8 +107,8 @@ func Attack(player Player, enemy Enemy) (string, string, string, Player, Enemy) 
 		Status:     status,
 	})
 	if err != nil {
-		return "", critMsg, status, player, enemy
+		return "", status, player, enemy
 	}
 
-	return fmt.Sprintf("OK %s", data), critMsg, status, player, enemy
+	return fmt.Sprintf("OK %s", data), status, player, enemy
 }
