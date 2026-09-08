@@ -116,8 +116,6 @@ func takeItem(conn net.Conn, player Player, loc Location, message string) Locati
 	return loc
 }
 
-// Dispatch des commandes du client après la connexion,
-// en fonction de la commande reçue.
 func Dispatch(conn net.Conn, player Player, loc Location) {
 	var previous string
 	for {
