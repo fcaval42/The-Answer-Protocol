@@ -1,12 +1,13 @@
 package main
 
 import (
-	. "the_answer_protocol/tcp/commands"
-	. "the_answer_protocol/tcp/common"
-	. "the_answer_protocol/tcp"
-	. "the_answer_protocol/parsing"
+	"fmt"
 	"net"
 	"strings"
+	. "the_answer_protocol/parsing"
+	. "the_answer_protocol/tcp"
+	. "the_answer_protocol/tcp/commands"
+	. "the_answer_protocol/tcp/common"
 )
 
 func dropItem(conn net.Conn, player Player, loc Location, message string) Location {
@@ -41,20 +42,29 @@ func Move(conn net.Conn, player Player, loc string, message string) (newloc Loca
 	direction := strings.TrimSpace(strings.TrimPrefix(message, "MOVE"))
 	locate := maps[loc]
 
-	if locate.Exits[direction] != ""{  // ajout
-		current := player  // ajout
-		for _, p := range locate.Players {  // ajout
-			if p.Name == player.Name {  // ajout
-				current = p  // ajout
-				break  // ajout
-			}  // ajout
+	if locate.Exits[direction] != "" {
+		current := player
+		for _, p := range locate.Players {
+			if p.Name == player.Name {
+				current = p
+				break
+			}
 		}
 		mapsLock.Unlock()
 		deletePlayerInMap(player.Name)
 		mapsLock.Lock()
 		direction = locate.Exits[direction]
 		locate = maps[direction]
-		locate.Players = append(locate.Players, current) // ajout
+		locate.Players = append(locate.Players, current)
+		var playerInLoc []net.Conn
+		for _, play := range locate.Players {
+			for n, conn := range ConnectedClients {
+				if play.Name == n {
+					playerInLoc = append(playerInLoc, conn)
+				}
+			}
+		}
+		BroadcastEVT(playerInLoc, fmt.Sprintf("[EVT] %s a rejoint l'endroit.\n", current.Name))
 		maps[direction] = locate
 		LogAndFprintf(conn, "%s\n", ToString(locate))
 		LogAndFprintf(conn, "%s | Vous êtes maintenant dans %s\n", conn.RemoteAddr().String(), locate.Name)
@@ -80,19 +90,16 @@ func takeItem(conn net.Conn, player Player, loc Location, message string) Locati
 							worldLock.Unlock()
 							return loc
 						}
-						if it.Name == itemName{
-						// Ajoute l'objet à l'inventaire du joueur. La quête de type
-						// "fetch" associee (s'il y en a une) ne se termine pas ici :
-						// le joueur doit retourner voir le donneur de quete pour
-						// recevoir sa recompense (cf. ReturnQuest / commande QUEST).
-						loc.Players[i].Inventory = append(loc.Players[i].Inventory, it)
-						// Supprime l'objet de la liste des objets de la location
-						loc.Items = append(loc.Items[:j], loc.Items[j+1:]...)
-						maps[loc.ID] = loc
-						worldLock.Unlock()
-						LogAndFprintf(conn, "[SERVER] Vous avez pris l'objet: %s\n", itemName)
-						LogAndFprintf(conn, "%s\n", ToString(loc))
-						return loc
+						if it.Name == itemName {
+							// Ajoute l'objet à l'inventaire du joueur
+							loc.Players[i].Inventory = append(loc.Players[i].Inventory, it)
+							// Supprime l'objet de la liste des objets de la location
+							loc.Items = append(loc.Items[:j], loc.Items[j+1:]...)
+							maps[loc.ID] = loc
+							worldLock.Unlock()
+							LogAndFprintf(conn, "[SERVER] Vous avez pris l'objet: %s\n", itemName)
+							LogAndFprintf(conn, "%s\n", ToString(loc))
+							return loc
 						}
 					}
 				}
@@ -115,7 +122,7 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 		ch, hasPendingInvite := pendingInvites[player.Name]
 		pendingInvitesLock.Unlock()
 
-		if message == previous {
+		if message == previous && strings.HasPrefix(message, "ATTACK") == false {
 			LogAndPrintf(conn, "%s| [WARN] %s", conn.RemoteAddr(), message)
 			LogAndFprintf(conn, "[SERVER][WARN] Attention à ne pas envoyer la même commande: %s\n", message)
 		} else {
@@ -234,7 +241,22 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 					break chat
 				}
 			}
-
+		case strings.HasPrefix(message, "CHAT "):
+			chatMessage := strings.TrimPrefix(message, "CHAT ")
+			switch {
+			case strings.HasPrefix(chatMessage, "GLOBAL "):
+				messages := strings.TrimPrefix(chatMessage, "GLOBAL ")
+				messages = fmt.Sprintf("[%s]: %s", player.Name, messages)
+				GlobalChatBroadcast(messages)
+			case strings.HasPrefix(chatMessage, "ROOM "):
+				messages := strings.TrimPrefix(chatMessage, "ROOM ")
+				RoomChatBroadcast(conn, loc.Name, player.Name, messages)
+			case strings.HasPrefix(chatMessage, "GROUP "):
+				messages := strings.TrimPrefix(chatMessage, "GROUP ")
+				GroupChatBroadcast(conn, messages, player.Name)
+			default:
+				LogAndFprintf(conn, "[SERVER] ERR 400 INVALID_CHAT_COMMAND: Commande de chat invalide.\n")
+			}
 		case message == "GROUP CREATE\n":
 			GroupCreate(conn, player.Name)
 
@@ -279,12 +301,34 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 				LogAndFprintf(conn, "ERR 404 PLAYER_NOT_FOUND\n")
 				continue
 			}
+			var hasNpc bool
+			if len(maps[roomID].NPCs) > 0 {
+				hasNpc = true
+			}
 			room := maps[roomID]
 			mapsLock.Unlock()
 			worldLock.Lock()
 			enemy, enemyI, ok := FindEnemyInRoom(enemyName, room, world)
 			worldLock.Unlock()
-			if !ok {
+			if !ok && !hasNpc {
+				LogAndFprintf(conn, "ERR 404 NPC_NOT_FOUND\n")
+				continue
+			}
+			if !ok && hasNpc {
+				LogAndFprintf(conn, "ERR 405 NPC_NOT_HOSTILE\n")
+				continue
+			}
+			mapsLock.Lock()
+			room = maps[roomID]
+			playerI = -1
+			for i, p := range room.Players {
+				if p.Name == player.Name {
+					playerI = i
+					break
+				}
+			}
+			if playerI == -1 {
+				mapsLock.Unlock()
 				LogAndFprintf(conn, "ERR 404 NPC_NOT_FOUND\n")
 				continue
 			}
