@@ -282,8 +282,14 @@ func openChatDialog(w fyne.Window, sess *Session, player parsing.Player, showMes
 	var renderActive func()
 	var chooseScope func(cmd, label string)
 
+	// N'active pas inChatLoop ici : tant qu'aucun canal n'a été choisi, le
+	// serveur est dans sa boucle d'attente GLOBAL/ROOM/GROUP et la toute
+	// première ligne reçue est juste ce prompt ("À qui souhaitez vous
+	// envoyer un message...") — inChatLoop=false fait que le handler de
+	// lignes plus bas l'ignore et laisse nos propres boutons affichés
+	// (cf. case !inChatLoop). chooseScope met inChatLoop à true une fois
+	// un canal réellement choisi.
 	enterChatPrompt := func() {
-		inChatLoop = true
 		sess.SendRaw("CHAT\n")
 	}
 
@@ -367,6 +373,8 @@ func openChatDialog(w fyne.Window, sess *Session, player parsing.Player, showMes
 				fyne.Do(func() {
 					switch {
 					case !inChatLoop:
+						// prompt initial ("GLOBAL, ROOM, GROUP ?") : on
+						// affiche déjà nos propres boutons, on l'ignore.
 					case !active && strings.Contains(text, "Vous n'êtes pas dans un groupe"):
 						inChatLoop = false
 						showMessage("Chat", text)

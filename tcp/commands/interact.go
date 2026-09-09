@@ -5,11 +5,11 @@ package commands
 import (
 	"encoding/json"
 	"fmt"
-	. "the_answer_protocol/parsing"
 	"math/rand/v2"
+	. "the_answer_protocol/parsing"
 )
 
-func Talk(room Location, world WorldFile, npcName string) (string) {
+func Talk(room Location, world WorldFile, npcName string) string {
 	npcid, ok := findNPCInRoom(room, npcName)
 	if !ok {
 		return "ERR 404 NPC_NOT_FOUND"
@@ -18,7 +18,7 @@ func Talk(room Location, world WorldFile, npcName string) (string) {
 	npcChar := world.NPCs[npc]
 	var response string
 	response += fmt.Sprintf("[%s]: ", npcName)
-	for _, speech := range npcChar.Dialogue{
+	for _, speech := range npcChar.Dialogue {
 		response += fmt.Sprintf("%s ", speech)
 	}
 	// prefixe "OK " : c'est la seule ligne "OK .../ERR .../{..." de cette
@@ -49,15 +49,15 @@ func Status(room Location, player Player) (string, error) {
 	maxHP := player.MaxHP
 
 	data, err := json.Marshal(struct {
-		HP     int    `json:"hp"`
-		MaxHP  int    `json:"max_hp"`
+		HP       int     `json:"hp"`
+		MaxHP    int     `json:"max_hp"`
 		Critical float64 `json:"critical"`
-		Status string `json:"status"`
+		Status   string  `json:"status"`
 	}{
-		HP:     player.HP,
-		MaxHP:  maxHP,
+		HP:       player.HP,
+		MaxHP:    maxHP,
 		Critical: player.Weapon.Critical,
-		Status: statusLabel(player.HP, maxHP),
+		Status:   statusLabel(player.HP, maxHP),
 	})
 	if err != nil {
 		return "", err
@@ -66,14 +66,16 @@ func Status(room Location, player Player) (string, error) {
 	return fmt.Sprintf("OK %s", data), nil
 }
 
-func Attack(player Player, enemy Enemy) (string, string, string, Player, Enemy) {
+func Attack(player Player, enemy Enemy) (string, string, Player, Enemy) {
 	var status string
 	var critMsg string
 	damage := player.Attack - enemy.Defense
+	critical := false
 
 	if rand.Float64() < (player.Weapon.Critical) {
 		dam_base := damage
 		damage += int(float64(damage) * player.Weapon.Critical)
+		critical = true
 		critMsg = fmt.Sprintf("COUP CRITIQUE: Vous infligez %d au lieu de %d", damage, dam_base)
 	}
 
@@ -98,20 +100,31 @@ func Attack(player Player, enemy Enemy) (string, string, string, Player, Enemy) 
 		}
 	}
 
+	// Le message de coup critique est inclus DANS le JSON (au lieu d'être
+	// concaténé devant via un "\" littéral comme avant) : Session.Deliver
+	// (côté GUI) ne reconnaît une réponse que si sa toute première ligne
+	// commence par "OK "/"ERR"/"{". Le concaténer cassait ce préfixe une
+	// fois sur deux (coup critique aléatoire) et faisait retomber le GUI
+	// sur la ligne suivante, l'état de la salle, mal interprétée comme
+	// résultat de combat : d'où des PV à 0 affichés sans raison.
 	data, err := json.Marshal(struct {
-		AttackerHP int    `json:"attacker_hp"`
-		TargetHP   int    `json:"target_hp"`
-		Damage     int    `json:"damage"`
-		Status     string `json:"status"`
+		AttackerHP  int    `json:"attacker_hp"`
+		TargetHP    int    `json:"target_hp"`
+		Damage      int    `json:"damage"`
+		Status      string `json:"status"`
+		Critical    bool   `json:"critical"`
+		CritMessage string `json:"crit_message,omitempty"`
 	}{
-		AttackerHP: player.HP,
-		TargetHP:   enemy.HP,
-		Damage:     damage,
-		Status:     status,
+		AttackerHP:  player.HP,
+		TargetHP:    enemy.HP,
+		Damage:      damage,
+		Status:      status,
+		Critical:    critical,
+		CritMessage: critMsg,
 	})
 	if err != nil {
-		return "", critMsg, status, player, enemy
+		return "", status, player, enemy
 	}
 
-	return fmt.Sprintf("OK %s", data), critMsg, status, player, enemy
+	return fmt.Sprintf("OK %s", data), status, player, enemy
 }

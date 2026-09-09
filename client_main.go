@@ -35,6 +35,9 @@ func readServerMessages(conn net.Conn, rl *readline.Instance, world parsing.Worl
 				continue
 			}
 			log.Println("[ERROR] Erreur de lecture :", err)
+			if sess != nil {
+				sess.NotifyDisconnect()
+			}
 			return
 		}
 		if strings.Contains(response, "\\") {

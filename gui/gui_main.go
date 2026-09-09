@@ -2,6 +2,8 @@ package gui
 
 import (
 	"fmt"
+	"os"
+	"time"
 
 	"encoding/json"
 	"strings"
@@ -163,12 +165,22 @@ func buildRoomPanel(loc parsing.Location, world parsing.WorldFile, player parsin
 			enemyMaxHP = e.HP
 		}
 
+		// PV courants envoyés par le serveur (loc.EnemyHP) : sans ça, on
+		// n'a que enemyMaxHP (données statiques du monde local) et la barre
+		// repart à fond à chaque reconstruction du panneau salle (à chaque
+		// changeRoom, y compris sur un broadcast suite à l'attaque d'un
+		// autre joueur), masquant les dégâts déjà subis par l'ennemi.
+		enemyHP := enemyMaxHP
+		if hp, ok := loc.EnemyHP[id]; ok {
+			enemyHP = hp
+		}
+
 		enemyBar, enemyBarThemed := NewColoredProgressBar(HPColor)
 		enemyBar.Min = 0
 		enemyBar.Max = float64(enemyMaxHP)
-		enemyBar.Value = float64(enemyMaxHP)
+		enemyBar.Value = float64(enemyHP)
 		enemyBar.TextFormatter = func() string { return "" }
-		enemyHPText := NewTitleText(fmt.Sprintf("%d / %d", enemyMaxHP, enemyMaxHP), 14)
+		enemyHPText := NewTitleText(fmt.Sprintf("%d / %d", enemyHP, enemyMaxHP), 14)
 		enemyHPStack := container.NewStack(enemyBarThemed, container.NewCenter(enemyHPText))
 		enemyHPFixed := container.New(layout.NewGridWrapLayout(fyne.NewSize(160, 22)), enemyHPStack)
 
@@ -193,10 +205,12 @@ func buildRoomPanel(loc parsing.Location, world parsing.WorldFile, player parsin
 						return
 					}
 					var result struct {
-						AttackerHP int    `json:"attacker_hp"`
-						TargetHP   int    `json:"target_hp"`
-						Damage     int    `json:"damage"`
-						Status     string `json:"status"`
+						AttackerHP  int    `json:"attacker_hp"`
+						TargetHP    int    `json:"target_hp"`
+						Damage      int    `json:"damage"`
+						Status      string `json:"status"`
+						Critical    bool   `json:"critical"`
+						CritMessage string `json:"crit_message"`
 					}
 					json.Unmarshal([]byte(strings.TrimPrefix(resp, "OK ")), &result)
 					updated := player
@@ -221,10 +235,14 @@ func buildRoomPanel(loc parsing.Location, world parsing.WorldFile, player parsin
 							return
 						}
 						refreshCharacter(updated)
-						showMessage("Combat", fmt.Sprintf(
+						msg := fmt.Sprintf(
 							"Dégâts infligés : %d\nPV de %s : %d / %d (%s)",
 							result.Damage, enemy, result.TargetHP, enemyMaxHP, result.Status,
-						))
+						)
+						if result.Critical {
+							msg = result.CritMessage + "\n\n" + msg
+						}
+						showMessage("Combat", msg)
 					})
 				}()
 			}),
@@ -548,6 +566,20 @@ func Run(playerName string, world parsing.WorldFile, sess *Session) {
 		})
 	})
 
+	// Détection de déconnexion du serveur
+	sess.OnDisconnect(func() {
+		fyne.Do(func() {
+			showMessage("Serveur déconnecté", "Server déconnecté")
+		})
+		go func() {
+			time.Sleep(3 * time.Second)
+			fyne.Do(func() {
+				w.Close()
+				os.Exit(0)
+			})
+		}()
+	})
+
 	var changeRoom func(newRoom parsing.Location)
 	var refreshCharacter func(p parsing.Player)
 
@@ -567,9 +599,21 @@ func Run(playerName string, world parsing.WorldFile, sess *Session) {
 	}
 	changeRoom(startLoc) // affichage initial
 
+	// Rafraîchissement de la salle quand un broadcast est reçu (ex: autre joueur attaque)
+	sess.OnRoomBroadcast(func(roomJSON string) {
+		var newRoom parsing.Location
+		if err := json.Unmarshal([]byte(roomJSON), &newRoom); err == nil {
+			fyne.Do(func() {
+				changeRoom(newRoom)
+			})
+		}
+	})
+
 	quitBtn := NewSemiTransparentButton("Quit", 140, func() {
-		sess.Quit()
-		w.Close()
+		go func() {
+			sess.Quit()
+			os.Exit(0)
+		}()
 	})
 
 	// Boutons Who et Quit à droite de la fenêtre (même taille que les autres : 180x40)

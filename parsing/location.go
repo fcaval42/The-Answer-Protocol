@@ -21,6 +21,7 @@ type Location struct {
 	Spawns      []Spawn           `yaml:"spawns"`
 	Background  string            `yaml:"background"`
 	Players     []Player
+	EnemyHP     map[string]int `yaml:"-" json:"enemy_hp,omitempty"`
 }
 
 const defaultBackground = "assets/default_background.png"
