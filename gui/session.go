@@ -38,6 +38,9 @@ type Session struct {
 
 	questMu     sync.Mutex
 	onQuestComplete func(questName, completer string) // cf. OnQuestComplete
+
+	disconnectMu   sync.Mutex
+	onDisconnect func() // cf. OnDisconnect
 }
 
 
@@ -86,6 +89,21 @@ func (s *Session) OnQuestComplete(f func(questName, completer string)) {
 	s.questMu.Lock()
 	s.onQuestComplete = f
 	s.questMu.Unlock()
+}
+
+func (s *Session) OnDisconnect(f func()) {
+	s.disconnectMu.Lock()
+	s.onDisconnect = f
+	s.disconnectMu.Unlock()
+}
+
+func (s *Session) NotifyDisconnect() {
+	s.disconnectMu.Lock()
+	h := s.onDisconnect
+	s.disconnectMu.Unlock()
+	if h != nil {
+		h()
+	}
 }
 
 

@@ -3,6 +3,7 @@ package gui
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"encoding/json"
 	"strings"
@@ -547,6 +548,20 @@ func Run(playerName string, world parsing.WorldFile, sess *Session) {
 		fyne.Do(func() {
 			showMessage("Quête terminée", fmt.Sprintf("%s a terminé la quête : %s\n\nCette quête est maintenant marquée comme terminée pour vous.", completer, questName))
 		})
+	})
+
+	// Détection de déconnexion du serveur
+	sess.OnDisconnect(func() {
+		fyne.Do(func() {
+			showMessage("Serveur déconnecté", "Server déconnecté")
+		})
+		go func() {
+			time.Sleep(3 * time.Second)
+			fyne.Do(func() {
+				w.Close()
+				os.Exit(0)
+			})
+		}()
 	})
 
 	var changeRoom func(newRoom parsing.Location)
