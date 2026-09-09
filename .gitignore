@@ -1,7 +1,6 @@
 *.log
 doc/*
 /tap-gui
-server
 test.go
 main
 server
