@@ -1,0 +1,125 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 940" font-family="Consolas, 'Courier New', monospace">
+  <defs>
+    <marker id="seqArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#111827"/>
+    </marker>
+    <marker id="seqArrowDash" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7.5" markerHeight="7.5" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#6b7280"/>
+    </marker>
+  </defs>
+  <rect x="0" y="0" width="1080" height="940" fill="#ffffff"/>
+  <text x="540" y="26" text-anchor="middle" font-size="17" font-weight="bold" fill="#111827">Wire-level exchange (as actually implemented, not the raw RFC wording)</text>
+
+  <!-- lifeline headers -->
+  <g text-anchor="middle">
+    <rect x="60" y="40" width="180" height="30" rx="6" fill="#eef4ff" stroke="#2563eb" stroke-width="1.6"/>
+    <text x="150" y="60" font-size="13" font-weight="bold" fill="#1e3a8a">Client (CLI or GUI)</text>
+
+    <rect x="560" y="40" width="180" height="30" rx="6" fill="#fff7ed" stroke="#c2410c" stroke-width="1.6"/>
+    <text x="650" y="60" font-size="13" font-weight="bold" fill="#7c2d12">Server (tcp/server)</text>
+
+    <rect x="860" y="40" width="180" height="30" rx="6" fill="#f8fafc" stroke="#64748b" stroke-width="1.6"/>
+    <text x="950" y="60" font-size="13" font-weight="bold" fill="#334155">Other clients</text>
+  </g>
+
+  <!-- lifelines -->
+  <line x1="150" y1="70" x2="150" y2="890" stroke="#94a3b8" stroke-width="1.4" stroke-dasharray="3,4"/>
+  <line x1="650" y1="70" x2="650" y2="890" stroke="#94a3b8" stroke-width="1.4" stroke-dasharray="3,4"/>
+  <line x1="950" y1="70" x2="950" y2="890" stroke="#94a3b8" stroke-width="1.4" stroke-dasharray="3,4"/>
+
+  <!-- rows -->
+  <g font-size="12" fill="#111827">
+    <!-- 1 -->
+    <line x1="150" y1="100" x2="650" y2="100" stroke="#111827" stroke-width="1.6" marker-end="url(#seqArrow)"/>
+    <rect x="220" y="82" width="360" height="16" fill="#ffffff"/>
+    <text x="400" y="94" text-anchor="middle">TCP connect (three-way handshake)</text>
+
+    <!-- 2 -->
+    <line x1="150" y1="144" x2="650" y2="144" stroke="#111827" stroke-width="1.6" marker-end="url(#seqArrow)"/>
+    <rect x="330" y="126" width="140" height="16" fill="#ffffff"/>
+    <text x="400" y="138" text-anchor="middle">"CONNECT\n"</text>
+
+    <!-- 3 -->
+    <line x1="650" y1="188" x2="150" y2="188" stroke="#111827" stroke-width="1.6" marker-end="url(#seqArrow)"/>
+    <rect x="155" y="170" width="640" height="16" fill="#ffffff"/>
+    <text x="400" y="182" text-anchor="middle">"[INFO] Choisissez votre joueur : 1. Gustave, 2. Maëlle, 3. Lune, 4. Sciel, 5. Verso"</text>
+
+    <!-- 4 -->
+    <line x1="150" y1="232" x2="650" y2="232" stroke="#111827" stroke-width="1.6" marker-end="url(#seqArrow)"/>
+    <rect x="360" y="214" width="80" height="16" fill="#ffffff"/>
+    <text x="400" y="226" text-anchor="middle">"2\n"</text>
+
+    <!-- 5 -->
+    <line x1="650" y1="276" x2="150" y2="276" stroke="#111827" stroke-width="1.6" marker-end="url(#seqArrow)"/>
+    <rect x="230" y="258" width="340" height="16" fill="#ffffff"/>
+    <text x="400" y="270" text-anchor="middle">"Connexion réussie ! Bienvenue Maëlle !"</text>
+
+    <!-- 6 -->
+    <line x1="650" y1="320" x2="150" y2="320" stroke="#111827" stroke-width="1.6" marker-end="url(#seqArrow)"/>
+    <rect x="180" y="302" width="440" height="16" fill="#ffffff"/>
+    <text x="400" y="314" text-anchor="middle">{"World":{...}}  — full world, escaped to one line</text>
+
+    <!-- 7 -->
+    <line x1="650" y1="364" x2="150" y2="364" stroke="#111827" stroke-width="1.6" marker-end="url(#seqArrow)"/>
+    <rect x="170" y="346" width="460" height="16" fill="#ffffff"/>
+    <text x="400" y="358" text-anchor="middle">{"id":"Lumière", ...}  — starting room (respawn point)</text>
+
+    <!-- 8 -->
+    <line x1="150" y1="408" x2="650" y2="408" stroke="#111827" stroke-width="1.6" marker-end="url(#seqArrow)"/>
+    <rect x="340" y="390" width="120" height="16" fill="#ffffff"/>
+    <text x="400" y="402" text-anchor="middle">"LOOK\n"</text>
+
+    <!-- 9 -->
+    <line x1="650" y1="452" x2="150" y2="452" stroke="#111827" stroke-width="1.6" marker-end="url(#seqArrow)"/>
+    <rect x="160" y="434" width="640" height="16" fill="#ffffff"/>
+    <text x="400" y="446" text-anchor="middle">OK {"room":{...},"players":["Maëlle"],"npcs":["Sophie"]}</text>
+
+    <!-- 10 -->
+    <line x1="150" y1="496" x2="650" y2="496" stroke="#111827" stroke-width="1.6" marker-end="url(#seqArrow)"/>
+    <rect x="310" y="478" width="180" height="16" fill="#ffffff"/>
+    <text x="400" y="490" text-anchor="middle">"MOVE east\n"</text>
+
+    <!-- 11 -->
+    <line x1="650" y1="540" x2="150" y2="540" stroke="#111827" stroke-width="1.6" marker-end="url(#seqArrow)"/>
+    <rect x="160" y="522" width="640" height="16" fill="#ffffff"/>
+    <text x="400" y="534" text-anchor="middle">{...new room JSON...} then "Vous êtes maintenant dans Vallées fleuries"</text>
+
+    <!-- 12 broadcast -->
+    <line x1="650" y1="584" x2="950" y2="584" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="6,4" marker-end="url(#seqArrowDash)"/>
+    <rect x="655" y="566" width="290" height="16" fill="#ffffff"/>
+    <text x="800" y="578" text-anchor="middle" fill="#4b5563">"[EVT] Maëlle a rejoint l'endroit."</text>
+
+    <!-- 13 -->
+    <line x1="150" y1="628" x2="650" y2="628" stroke="#111827" stroke-width="1.6" marker-end="url(#seqArrow)"/>
+    <rect x="240" y="610" width="320" height="16" fill="#ffffff"/>
+    <text x="400" y="622" text-anchor="middle">"CHAT GLOBAL Bonjour !\n"</text>
+
+    <!-- 14 broadcast -->
+    <line x1="650" y1="672" x2="950" y2="672" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="6,4" marker-end="url(#seqArrowDash)"/>
+    <rect x="655" y="654" width="290" height="16" fill="#ffffff"/>
+    <text x="800" y="666" text-anchor="middle" fill="#4b5563">"[EVT GLOBAL] [Maëlle]: Bonjour !"</text>
+
+    <!-- 15 -->
+    <line x1="150" y1="716" x2="650" y2="716" stroke="#111827" stroke-width="1.6" marker-end="url(#seqArrow)"/>
+    <rect x="290" y="698" width="240" height="16" fill="#ffffff"/>
+    <text x="400" y="710" text-anchor="middle">"ATTACK Névron\n"</text>
+
+    <!-- 16 -->
+    <line x1="650" y1="760" x2="150" y2="760" stroke="#111827" stroke-width="1.6" marker-end="url(#seqArrow)"/>
+    <rect x="150" y="742" width="650" height="16" fill="#ffffff"/>
+    <text x="400" y="754" text-anchor="middle">OK {"attacker_hp":100,"target_hp":45,"damage":15,"status":"combat"}</text>
+
+    <!-- 17 -->
+    <line x1="150" y1="804" x2="650" y2="804" stroke="#111827" stroke-width="1.6" marker-end="url(#seqArrow)"/>
+    <rect x="290" y="786" width="240" height="16" fill="#ffffff"/>
+    <text x="400" y="798" text-anchor="middle">"QUIT\n"  (connection closes)</text>
+
+    <!-- 18 broadcast -->
+    <line x1="650" y1="848" x2="950" y2="848" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="6,4" marker-end="url(#seqArrowDash)"/>
+    <rect x="655" y="830" width="290" height="16" fill="#ffffff"/>
+    <text x="800" y="842" text-anchor="middle" fill="#4b5563">"[EVT] Maëlle a quitté le jeu (N joueurs)."</text>
+  </g>
+
+  <text x="60" y="912" font-size="11" font-style="italic" fill="#374151">Solid arrows: request/response on the client's own connection. Dashed arrows: asynchronous EVT broadcast to other connected clients.</text>
+  <text x="60" y="928" font-size="11" font-style="italic" fill="#374151">Every line ends with \n; a response spanning several logical lines is joined with a literal "\" and split back into real newlines on receipt.</text>
+</svg>

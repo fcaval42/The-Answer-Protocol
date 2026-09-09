@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1140 760" font-family="Consolas, 'Courier New', monospace">
+  <defs>
+    <marker id="arrowSolid" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#1f2937"/>
+    </marker>
+    <marker id="arrowCall" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#2563eb"/>
+    </marker>
+    <marker id="arrowDash" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#6b7280"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1140" height="760" fill="#ffffff"/>
+  <text x="570" y="28" text-anchor="middle" font-size="18" font-weight="bold" fill="#111827">TAP — component architecture</text>
+
+  <!-- Client A -->
+  <rect x="40" y="46" width="320" height="106" rx="10" fill="#eef4ff" stroke="#2563eb" stroke-width="1.6"/>
+  <text x="200" y="72" text-anchor="middle" font-size="15" font-weight="bold" fill="#1e3a8a">CLI-only client</text>
+  <text x="200" y="96" text-anchor="middle" font-size="12" fill="#1e3a8a">tcp/client/client.go</text>
+  <text x="200" y="114" text-anchor="middle" font-size="12" fill="#1e3a8a">make client</text>
+  <text x="200" y="138" text-anchor="middle" font-size="10.5" font-style="italic" fill="#3b5bb0">also parses yaml/world.yaml at startup</text>
+
+  <!-- Client B -->
+  <rect x="780" y="46" width="320" height="106" rx="10" fill="#eef4ff" stroke="#2563eb" stroke-width="1.6"/>
+  <text x="940" y="72" text-anchor="middle" font-size="15" font-weight="bold" fill="#1e3a8a">Root client (CLI + GUI)</text>
+  <text x="940" y="96" text-anchor="middle" font-size="12" fill="#1e3a8a">client_main.go  +  gui/ (Fyne)</text>
+  <text x="940" y="114" text-anchor="middle" font-size="12" fill="#1e3a8a">go run .  /  make gui</text>
+  <text x="940" y="138" text-anchor="middle" font-size="10.5" font-style="italic" fill="#3b5bb0">also parses yaml/world.yaml at startup</text>
+
+  <!-- TCP arrows -->
+  <line x1="200" y1="152" x2="380" y2="232" stroke="#1f2937" stroke-width="1.8" marker-end="url(#arrowSolid)" marker-start="url(#arrowSolid)"/>
+  <line x1="940" y1="152" x2="760" y2="232" stroke="#1f2937" stroke-width="1.8" marker-end="url(#arrowSolid)" marker-start="url(#arrowSolid)"/>
+  <rect x="230" y="178" width="200" height="20" fill="#ffffff"/>
+  <text x="330" y="193" text-anchor="middle" font-size="11.5" fill="#111827">TCP :8080, line-based (\n)</text>
+  <rect x="700" y="178" width="210" height="20" fill="#ffffff"/>
+  <text x="805" y="193" text-anchor="middle" font-size="11.5" fill="#111827">TCP :8080, line-based (\n)</text>
+
+  <!-- Server box (wide enough that the longest info line below never crosses the rounded corners) -->
+  <rect x="230" y="232" width="680" height="222" rx="10" fill="#fff7ed" stroke="#c2410c" stroke-width="1.8"/>
+  <text x="570" y="258" text-anchor="middle" font-size="15" font-weight="bold" fill="#7c2d12">TCP Server — tcp/server (package main)</text>
+  <text x="570" y="277" text-anchor="middle" font-size="11.5" fill="#7c2d12">server.go: net.Listen → one goroutine per connection (handleConnection)</text>
+  <text x="570" y="293" text-anchor="middle" font-size="11.5" fill="#7c2d12">dispatch.go: Dispatch() — big switch on the raw command line</text>
+
+  <rect x="340" y="312" width="220" height="66" rx="8" fill="#ffffff" stroke="#c2410c" stroke-width="1.3"/>
+  <text x="450" y="334" text-anchor="middle" font-size="12" font-weight="bold" fill="#7c2d12">maps</text>
+  <text x="450" y="350" text-anchor="middle" font-size="11" fill="#7c2d12">map[string]Location</text>
+  <text x="450" y="366" text-anchor="middle" font-size="11" fill="#7c2d12">guarded by mapsLock</text>
+
+  <rect x="580" y="312" width="220" height="66" rx="8" fill="#ffffff" stroke="#c2410c" stroke-width="1.3"/>
+  <text x="690" y="334" text-anchor="middle" font-size="12" font-weight="bold" fill="#7c2d12">world</text>
+  <text x="690" y="350" text-anchor="middle" font-size="11" fill="#7c2d12">parsing.WorldFile</text>
+  <text x="690" y="366" text-anchor="middle" font-size="11" fill="#7c2d12">guarded by worldLock</text>
+
+  <text x="570" y="402" text-anchor="middle" font-size="11" fill="#7c2d12">chat.go / group.go: GLOBAL · ROOM · GROUP chat, invites — own maps + mutexes (var.go)</text>
+  <text x="570" y="420" text-anchor="middle" font-size="11" fill="#7c2d12">close_session.go / utils.go: disconnect cleanup · Recept() · Broadcast() helpers</text>
+  <text x="570" y="440" text-anchor="middle" font-size="11" fill="#7c2d12">connexion.go / select_player.go: CONNECT handshake + fixed character roster</text>
+
+  <!-- Server -> Commands / Common / Parsing -->
+  <line x1="420" y1="454" x2="270" y2="524" stroke="#2563eb" stroke-width="1.8" marker-end="url(#arrowCall)"/>
+  <line x1="570" y1="454" x2="570" y2="524" stroke="#2563eb" stroke-width="1.8" marker-end="url(#arrowCall)"/>
+  <line x1="740" y1="454" x2="880" y2="524" stroke="#2563eb" stroke-width="1.8" marker-end="url(#arrowCall)"/>
+  <text x="300" y="492" text-anchor="middle" font-size="11" fill="#2563eb">calls</text>
+  <text x="590" y="492" text-anchor="middle" font-size="11" fill="#2563eb">logs / reads lines</text>
+  <text x="850" y="492" text-anchor="middle" font-size="11" fill="#2563eb">Rally() at startup</text>
+
+  <!-- Commands box -->
+  <rect x="90" y="526" width="290" height="86" rx="10" fill="#f0fdf4" stroke="#15803d" stroke-width="1.6"/>
+  <text x="235" y="552" text-anchor="middle" font-size="14" font-weight="bold" fill="#14532d">tcp/commands</text>
+  <text x="235" y="572" text-anchor="middle" font-size="11.5" fill="#14532d">interact · items · quests</text>
+  <text x="235" y="589" text-anchor="middle" font-size="11.5" fill="#14532d">rooms · session</text>
+
+  <!-- Common box -->
+  <rect x="430" y="526" width="280" height="86" rx="10" fill="#f0fdf4" stroke="#15803d" stroke-width="1.6"/>
+  <text x="570" y="552" text-anchor="middle" font-size="14" font-weight="bold" fill="#14532d">tcp/common</text>
+  <text x="570" y="572" text-anchor="middle" font-size="11.5" fill="#14532d">Recept · LogAndFprintf</text>
+  <text x="570" y="589" text-anchor="middle" font-size="11.5" fill="#14532d">Broadcast · ClearScreen</text>
+
+  <!-- Parsing box -->
+  <rect x="760" y="526" width="300" height="86" rx="10" fill="#faf5ff" stroke="#7c3aed" stroke-width="1.6"/>
+  <text x="910" y="552" text-anchor="middle" font-size="14" font-weight="bold" fill="#4c1d95">parsing</text>
+  <text x="910" y="572" text-anchor="middle" font-size="11.5" fill="#4c1d95">ParseWorld / Rally</text>
+  <text x="910" y="589" text-anchor="middle" font-size="11.5" fill="#4c1d95">per-domain validation</text>
+
+  <!-- Commands -> Parsing (uses types) : routed below the box row so it never crosses tcp/common -->
+  <path d="M235,612 L235,630 L850,630 L850,614" fill="none" stroke="#6b7280" stroke-width="1.4" stroke-dasharray="5,4" marker-end="url(#arrowDash)"/>
+  <rect x="410" y="634" width="240" height="16" fill="#ffffff"/>
+  <text x="530" y="646" text-anchor="middle" font-size="10.5" fill="#6b7280">uses Location / Player / Quest ... types</text>
+
+  <!-- Parsing -> world.yaml -->
+  <line x1="910" y1="612" x2="910" y2="656" stroke="#7c3aed" stroke-width="1.8" marker-end="url(#arrowCall)"/>
+  <rect x="760" y="658" width="300" height="66" rx="10" fill="#faf5ff" stroke="#7c3aed" stroke-width="1.6"/>
+  <text x="910" y="682" text-anchor="middle" font-size="14" font-weight="bold" fill="#4c1d95">yaml/world.yaml</text>
+  <text x="910" y="700" text-anchor="middle" font-size="11.5" fill="#4c1d95">rooms · items · npcs · enemies</text>
+  <text x="910" y="716" text-anchor="middle" font-size="11.5" fill="#4c1d95">players · quests</text>
+
+  <text x="40" y="700" font-size="11" fill="#374151">protocol.log ← every server/client instance appends here (see "Server Logging")</text>
+</svg>
