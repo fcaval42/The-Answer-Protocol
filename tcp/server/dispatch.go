@@ -572,6 +572,19 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 
 		case strings.HasPrefix(message, "DROP"):
 			loc = dropItem(conn, player, loc, message)
+
+		default:
+			aide := strings.Join([]string{
+				"ERR 400 UNKNOWN_COMMAND: Commande inconnue.",
+				"[SERVER] --- Commandes disponibles ---",
+				"[SERVER] Général       : LOOK, WHO, STATUS, QUIT",
+				"[SERVER] Communication : CHAT <GLOBAL|ROOM|GROUP> <message>",
+				"[SERVER] Groupe        : GROUP CREATE, GROUP INVITE, GROUP JOIN, GROUP LEAVE",
+				"[SERVER] Objets        : INVENTORY, TAKE <item>, DROP <item>, EQUIP <item>, UNEQUIP",
+				"[SERVER] Interaction   : TALK <npc>, ATTACK <npc>, QUEST <npc>, QUESTS",
+				"[SERVER] Déplacement   : MOVE <direction>",
+			}, "\\")
+			LogAndFprintf(player.Name, conn, "%s\n", aide)
 		}
 	}
 }
