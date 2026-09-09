@@ -123,9 +123,9 @@ func main() {
 	// (cf. tcp/server/server.go, qui attend "CONNECT\n" avant d'afficher quoi
 	// que ce soit) : sans ça, le joueur se retrouve devant un prompt vide sans
 	// savoir qu'il doit taper CONNECT lui-même.
-	fmt.Fprint(conn, "CONNECT\n")
+	fmt.Fprint(conn, "Ecrivez CONNECT pour vous connecter et choisir votre joueur\n")
 
-	playerChosen := make(chan string, 1)
+	playerChosen := make(chan string, 1)+
 
 	// Goroutine qui va chercher en continue ce qu'envoie le serveur
 	go readServerMessages(conn, rl, world, withGUI, playerChosen, sess)
