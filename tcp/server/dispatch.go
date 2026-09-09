@@ -584,7 +584,7 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 				"[SERVER] Interaction   : TALK <npc>, ATTACK <npc>, QUEST <npc>, QUESTS",
 				"[SERVER] Déplacement   : MOVE <direction>",
 			}, "\\")
-			LogAndFprintf(conn, "%s\n", aide)
+			LogAndFprintf(player.Name, conn, "%s\n", aide)
 		}
 	}
 }
