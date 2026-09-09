@@ -29,14 +29,14 @@ func dropItem(conn net.Conn, player Player, loc Location, message string) Locati
 					// Ajoute l'objet à la liste des objets de la location
 					loc.Items = append(loc.Items, itemName)
 					maps[loc.ID] = loc
-					LogAndFprintf(conn, "[SERVER] Vous avez déposé l'objet: %s\n", itemName)
-					LogAndFprintf(conn, "%s\n", ToString(loc))
+					LogAndFprintf(player.Name, conn, "[SERVER] Vous avez déposé l'objet: %s\n", itemName)
+					LogAndFprintf(player.Name, conn, "%s\n", ToString(loc))
 					return loc
 				}
 			}
 		}
 	}
-	LogAndFprintf(conn, "ERR 404 ITEM_NOT_OWNED: Vous ne possédez pas l'objet %s.\n", itemName)
+	LogAndFprintf(player.Name, conn, "ERR 404 ITEM_NOT_OWNED: Vous ne possédez pas l'objet %s.\n", itemName)
 	return loc
 }
 
@@ -71,11 +71,11 @@ func Move(conn net.Conn, player Player, loc string, message string) (newloc Loca
 		}
 		BroadcastEVT(playerInLoc, fmt.Sprintf("[EVT] %s a rejoint l'endroit.", current.Name))
 		maps[direction] = locate
-		LogAndFprintf(conn, "%s\n", ToString(locate))
-		LogAndFprintf(conn, "%s | Vous êtes maintenant dans %s\n", conn.RemoteAddr().String(), locate.Name)
+		LogAndFprintf(player.Name, conn, "%s\n", ToString(locate))
+		LogAndFprintf(player.Name, conn, "%s | Vous êtes maintenant dans %s\n", conn.RemoteAddr().String(), locate.Name)
 		return locate, true
 	}
-	LogAndFprintf(conn, "ERR 301 NO_EXIT: Vous ne pouvez pas vous déplacer dans cette direction.\n")
+	LogAndFprintf(player.Name, conn, "ERR 301 NO_EXIT: Vous ne pouvez pas vous déplacer dans cette direction.\n")
 	return locate, false
 }
 
@@ -86,7 +86,7 @@ func takeItem(conn net.Conn, player Player, loc Location, message string) Locati
 	itemName := strings.TrimSpace(strings.TrimPrefix(message, "TAKE"))
 	loc, _, ok := FindPlayerByName(player.Name, maps)
 	if !ok{
-		LogAndFprintf(conn, "ERR 404 ITEM_NOT_FOUND: L'objet %s n'est pas disponible dans cet endroit.\n", itemName)
+		LogAndFprintf(player.Name, conn, "ERR 404 ITEM_NOT_FOUND: L'objet %s n'est pas disponible dans cet endroit.\n", itemName)
 		return loc
 	}
 	for i, p := range loc.Players {
@@ -96,7 +96,7 @@ func takeItem(conn net.Conn, player Player, loc Location, message string) Locati
 				if item == itemName {
 					for _, it := range world.Items {
 						if it.Name == itemName && !it.Obtainable {
-							LogAndFprintf(conn, "ERR 406 ITEM_NOT_OBTAINABLE: L'objet %s n'est pas obtenable.\n", itemName)
+							LogAndFprintf(player.Name, conn, "ERR 406 ITEM_NOT_OBTAINABLE: L'objet %s n'est pas obtenable.\n", itemName)
 							worldLock.Unlock()
 							return loc
 						}
@@ -107,8 +107,8 @@ func takeItem(conn net.Conn, player Player, loc Location, message string) Locati
 							loc.Items = append(loc.Items[:j], loc.Items[j+1:]...)
 							maps[loc.ID] = loc
 							worldLock.Unlock()
-							LogAndFprintf(conn, "[SERVER] Vous avez pris l'objet: %s\n", itemName)
-							LogAndFprintf(conn, "%s\n", ToString(loc))
+							LogAndFprintf(player.Name, conn, "[SERVER] Vous avez pris l'objet: %s\n", itemName)
+							LogAndFprintf(player.Name, conn, "%s\n", ToString(loc))
 							return loc
 						}
 					}
@@ -117,7 +117,7 @@ func takeItem(conn net.Conn, player Player, loc Location, message string) Locati
 			}
 		}
 	}
-	LogAndFprintf(conn, "ERR 404 ITEM_NOT_FOUND: L'objet %s n'est pas disponible dans cet endroit.\n", itemName)
+	LogAndFprintf(player.Name, conn, "ERR 404 ITEM_NOT_FOUND: L'objet %s n'est pas disponible dans cet endroit.\n", itemName)
 	return loc
 }
 
@@ -135,7 +135,7 @@ func broadcastRoomExcept(room Location, exclude string, format string, args ...i
 	}                                                    // modif
 	ConnectedLock.Unlock()                               // modif
 	for _, c := range receivers {                        // modif
-		LogAndFprintf(c, format, args...)                // modif
+		LogServFprintf(c, format, args...)                // modif
 	}                                                    // modif
 }
 
@@ -143,16 +143,16 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 	var previous string
 	for {
 		message := Recept(conn)
-		LogAndPrintf(conn, "%s", message)
+		LogAndPrintf(player.Name, conn, "%s", message)
 		pendingInvitesLock.Lock()
 		ch, hasPendingInvite := pendingInvites[player.Name]
 		pendingInvitesLock.Unlock()
 
 		if message == previous && strings.HasPrefix(message, "ATTACK") == false {
-			LogAndPrintf(conn, "%s| [WARN] %s", conn.RemoteAddr(), message)
-			LogAndFprintf(conn, "[SERVER][WARN] Attention à ne pas envoyer la même commande: %s", message)
+			LogAndPrintf(player.Name, conn, "%s| [WARN] %s", conn.RemoteAddr(), message)
+			LogAndFprintf(player.Name, conn, "[SERVER][WARN] Attention à ne pas envoyer la même commande: %s", message)
 		} else {
-			LogAndPrintf(conn, "%s| %s", conn.RemoteAddr().String(), message)
+			LogAndPrintf(player.Name, conn, "%s| %s", conn.RemoteAddr().String(), message)
 		}
 		previous = message
 
@@ -166,7 +166,7 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 		case message == "WHO\n":
 			room, _, ok := FindPlayerByName(player.Name, maps)
 			if !ok {
-				LogAndFprintf(conn, "ERR 404 PLAYER_NOT_FOUND\n")
+				LogAndFprintf(player.Name, conn, "ERR 404 PLAYER_NOT_FOUND\n")
 				continue
 			}
 			ConnectedLock.Lock()
@@ -174,34 +174,34 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 			ConnectedLock.Unlock()
 			resp, err := Who(room, serverCount)
 			if err != nil {
-				LogAndFprintf(conn, "ERR 900 CONNECTION_FAILED\n")
+				LogAndFprintf(player.Name, conn, "ERR 900 CONNECTION_FAILED\n")
 				continue
 			}
-			LogAndFprintf(conn, "%s\n", resp)
+			LogAndFprintf(player.Name, conn, "%s\n", resp)
 
 		case message == "INVENTORY\n":
 			room, index, ok := FindPlayerByName(player.Name, maps)
 			if !ok {
-				LogAndFprintf(conn, "ERR 404 PLAYER_NOT_FOUND\n")
+				LogAndFprintf(player.Name, conn, "ERR 404 PLAYER_NOT_FOUND\n")
 				continue
 			}
 			resp, err := Inventory(room.Players[index])
 			if err != nil {
-				LogAndFprintf(conn, "ERR COMMAND FAILED\n")
+				LogAndFprintf(player.Name, conn, "ERR COMMAND FAILED\n")
 				continue
 			} else {
 				// resp ("OK [...]") doit arriver avant l'etat de la salle : le
 				// GUI ne recupere que la toute premiere ligne OK/ERR/{ d'une
 				// reponse (cf. Session.Deliver), sinon il recupere l'etat de
 				// la salle a la place de l'inventaire.
-				LogAndFprintf(conn, "%s\n", resp)
-				LogAndFprintf(conn, "%s\n", ToString(room))
+				LogAndFprintf(player.Name, conn, "%s\n", resp)
+				LogAndFprintf(player.Name, conn, "%s\n", ToString(room))
 			}
 
 		case message == "QUESTS\n":
 			room, index, ok := FindPlayerByName(player.Name, maps)
 			if !ok {
-				LogAndFprintf(conn, "ERR 404 PLAYER_NOT_FOUND\n")
+				LogAndFprintf(player.Name, conn, "ERR 404 PLAYER_NOT_FOUND\n")
 				continue
 			}
 			// Vérifier si des quêtes ont été terminées globalement et marquer celles du joueur comme completed
@@ -219,55 +219,55 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 
 			resp, err := Quests(room, room.Players[index], world)
 			if err != nil {
-				LogAndFprintf(conn, "ERR 900 CONNECTION_FAILED\n")
+				LogAndFprintf(player.Name, conn, "ERR 900 CONNECTION_FAILED\n")
 				continue
 			} else {
-				LogAndFprintf(conn, "%s\n", resp)
+				LogAndFprintf(player.Name, conn, "%s\n", resp)
 			}
 
 		case message == "STATUS\n":
 			room, index, ok := FindPlayerByName(player.Name, maps)
 			if !ok {
-				LogAndFprintf(conn, "ERR 404 PLAYER_NOT_FOUND\n")
+				LogAndFprintf(player.Name, conn, "ERR 404 PLAYER_NOT_FOUND\n")
 				return
 			}
 			resp, err := Status(room, room.Players[index])
 			if err != nil {
-				LogAndFprintf(conn, "ERR 900 CONNECTION_FAILED\n")
+				LogAndFprintf(player.Name, conn, "ERR 900 CONNECTION_FAILED\n")
 				continue
 			} else {
-				LogAndFprintf(conn, "%s\n", resp)
+				LogAndFprintf(player.Name, conn, "%s\n", resp)
 			}
 
 		case message == "ACCEPT\n", message == "DECLINE\n":
 			if hasPendingInvite {
 				ch <- message
-				LogAndFprintf(conn, "[SERVER] Vous avez répondu à l'invitation avec: %s\n", strings.TrimSpace(message))
+				LogAndFprintf(player.Name, conn, "[SERVER] Vous avez répondu à l'invitation avec: %s\n", strings.TrimSpace(message))
 				continue
 			}
 
 		case message == "LOOK\n":
 			room, _, ok := FindPlayerByName(player.Name, maps)
 			if !ok {
-				LogAndFprintf(conn, "ERR 404 PLAYER_NOT_FOUND\n")
+				LogAndFprintf(player.Name, conn, "ERR 404 PLAYER_NOT_FOUND\n")
 				continue
 			}
 			resp, err := Look(room)
 			if err != nil {
-				LogAndFprintf(conn, "ERR 900 CONNECTION_FAILED\n")
+				LogAndFprintf(player.Name, conn, "ERR 900 CONNECTION_FAILED\n")
 				continue
 			}
-			LogAndFprintf(conn, "%s\n", resp)
+			LogAndFprintf(player.Name, conn, "%s\n", resp)
 
 		case message == "CHAT\n":
 		chat:
 			for {
-				LogAndFprintf(conn, "[SERVER] À qui souhaitez vous envoyer un message (GLOBAL, ROOM, GROUP)?\n")
+				LogAndFprintf(player.Name, conn, "[SERVER] À qui souhaitez vous envoyer un message (GLOBAL, ROOM, GROUP)?\n")
 				message := Recept(conn)
 				if message == "" {
 					continue
 				}
-				LogAndPrintf(conn, "%s| %s", conn.RemoteAddr().String(), message)
+				LogAndPrintf(player.Name, conn, "%s| %s", conn.RemoteAddr().String(), message)
 				switch message {
 				case "GLOBAL\n":
 					GlobalChat(conn, player.Name)
@@ -296,7 +296,7 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 				messages := strings.TrimPrefix(chatMessage, "GROUP ")
 				GroupChatBroadcast(conn, messages, player.Name)
 			default:
-				LogAndFprintf(conn, "[SERVER] ERR 400 INVALID_CHAT_COMMAND: Commande de chat invalide.\n")
+				LogAndFprintf(player.Name, conn, "[SERVER] ERR 400 INVALID_CHAT_COMMAND: Commande de chat invalide.\n")
 			}
 		case message == "GROUP CREATE\n":
 			GroupCreate(conn, player.Name)
@@ -313,9 +313,9 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 
 		case message == "GROUP LEAVE\n":
 			if GroupLeave(player.Name) {
-				LogAndFprintf(conn, "[SERVER] Vous avez quitté le groupe.\n")
+				LogAndFprintf(player.Name, conn, "[SERVER] Vous avez quitté le groupe.\n")
 			} else {
-				LogAndFprintf(conn, "[SERVER] Vous n'êtes pas dans un groupe.\n")
+				LogAndFprintf(player.Name, conn, "[SERVER] Vous n'êtes pas dans un groupe.\n")
 			}
 
 		case strings.HasPrefix(message, "ATTACK"):
@@ -339,7 +339,7 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 			}
 			if !ok {
 				mapsLock.Unlock()
-				LogAndFprintf(conn, "ERR 404 PLAYER_NOT_FOUND\n")
+				LogAndFprintf(player.Name, conn, "ERR 404 PLAYER_NOT_FOUND\n")
 				continue
 			}
 			var hasNpc bool
@@ -352,11 +352,11 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 			enemy, enemyI, ok := FindEnemyInRoom(enemyName, room, world)
 			worldLock.Unlock()
 			if !ok && !hasNpc {
-				LogAndFprintf(conn, "ERR 404 NPC_NOT_FOUND\n")
+				LogAndFprintf(player.Name, conn, "ERR 404 NPC_NOT_FOUND\n")
 				continue
 			}
 			if !ok && hasNpc {
-				LogAndFprintf(conn, "ERR 405 NPC_NOT_HOSTILE\n")
+				LogAndFprintf(player.Name, conn, "ERR 405 NPC_NOT_HOSTILE\n")
 				continue
 			}
 			mapsLock.Lock()
@@ -370,13 +370,13 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 			}
 			if playerI == -1 {
 				mapsLock.Unlock()
-				LogAndFprintf(conn, "ERR 404 PLAYER_NOT_FOUND\n")
+				LogAndFprintf(player.Name, conn, "ERR 404 PLAYER_NOT_FOUND\n")
 				continue
 			}
 			resp, critMsg, status, majplayer, majEnemy := Attack(room.Players[playerI], enemy)
 			if resp == "" {
 				mapsLock.Unlock()
-				LogAndFprintf(conn, "ERR 900 CONNECTION_FAILED\n")
+				LogAndFprintf(player.Name, conn, "ERR 900 CONNECTION_FAILED\n")
 				continue
 			}
 			if critMsg != "" {
@@ -404,10 +404,10 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 				// donc la ligne entiere commencait par "[SERVER]" et n'etait
 				// jamais reconnue : c'est l'etat de la salle (qui commence par
 				// "{") qui etait capte a la place du resultat du combat.
-				LogAndFprintf(conn, "%s\n", resp)
-				LogAndFprintf(conn, "[SERVER] Vous êtes mort. Vous allez être téléporté à votre point de respawn.\n")
-				LogAndFprintf(conn, "%s\n", ToString(respawnLoc))
-				LogAndFprintf(conn, "[SERVER] Vous êtes mort. Vous allez être téléporté à votre point de respawn.\\%s\n", resp)
+				LogAndFprintf(player.Name, conn, "%s\n", resp)
+				LogAndFprintf(player.Name, conn, "[SERVER] Vous êtes mort. Vous allez être téléporté à votre point de respawn.\n")
+				LogAndFprintf(player.Name, conn, "%s\n", ToString(respawnLoc))
+				LogAndFprintf(player.Name, conn, "[SERVER] Vous êtes mort. Vous allez être téléporté à votre point de respawn.\\%s\n", resp)
 				broadcastRoomExcept(room, player.Name, "%s\n", ToString(room))                                                          // modif
 				broadcastRoomExcept(room, player.Name, "[SERVER] %s a été vaincu par %s et respawn ailleurs.\n", player.Name, enemyName) // modif
 			case "victory":
@@ -422,15 +422,15 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 
 				// resp doit etre sa propre ligne "OK ...", meme raison que
 				// pour le cas "defeat" ci-dessus.
-				LogAndFprintf(conn, "%s\n", resp)
+				LogAndFprintf(player.Name, conn, "%s\n", resp)
 				if questMsg != "" { // ajout
-					LogAndFprintf(conn, "%s\n[SERVER] Vous avez vaincu l'ennemi %s.\n", questMsg, enemyName) // ajout
+					LogAndFprintf(player.Name, conn, "%s\n[SERVER] Vous avez vaincu l'ennemi %s.\n", questMsg, enemyName) // ajout
 				} else { // ajout
-					LogAndFprintf(conn, "[SERVER] Vous avez vaincu l'ennemi %s.\n", enemyName) // ajout
+					LogAndFprintf(player.Name, conn, "[SERVER] Vous avez vaincu l'ennemi %s.\n", enemyName) // ajout
 				} // ajout
 				broadcastRoomExcept(room, player.Name, "%s\n", ToString(room))                                        // modif
 				broadcastRoomExcept(room, player.Name, "[SERVER] %s a vaincu l'ennemi %s.\n", player.Name, enemyName) // modif
-				LogAndFprintf(conn, "%s\n", ToString(room))
+				LogAndFprintf(player.Name, conn, "%s\n", ToString(room))
 			case "combat":
 				room.Players[playerI] = majplayer
 				room.Enemies[enemyI] = majEnemy.ID
@@ -442,10 +442,10 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 
 				// resp doit etre sa propre ligne "OK ...", meme raison que
 				// pour le cas "defeat" ci-dessus.
-				LogAndFprintf(conn, "%s\n", resp)
-				LogAndFprintf(conn, "[SERVER] Vous êtes en combat avec %s.\n", enemyName)
-				LogAndFprintf(conn, "%s\n", ToString(room))
-				LogAndFprintf(conn, "[SERVER] Vous êtes en combat avec %s.\\%s\n", enemyName, resp)
+				LogAndFprintf(player.Name, conn, "%s\n", resp)
+				LogAndFprintf(player.Name, conn, "[SERVER] Vous êtes en combat avec %s.\n", enemyName)
+				LogAndFprintf(player.Name, conn, "%s\n", ToString(room))
+				LogAndFprintf(player.Name, conn, "[SERVER] Vous êtes en combat avec %s.\\%s\n", enemyName, resp)
 				broadcastRoomExcept(room, player.Name, "%s\n", ToString(room))                             // modif
 				broadcastRoomExcept(room, player.Name, "[SERVER] %s combat %s.\n", player.Name, enemyName) // modif
 			}
@@ -453,25 +453,25 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 		case strings.HasPrefix(message, "TALK"):
 			room, _, ok := FindPlayerByName(player.Name, maps)
 			if !ok {
-				LogAndFprintf(conn, "ERR 404 PLAYER_NOT_FOUND\n")
+				LogAndFprintf(player.Name, conn, "ERR 404 PLAYER_NOT_FOUND\n")
 				continue
 			}
 			resp := Talk(room, world, strings.TrimSpace(strings.TrimPrefix(message, "TALK")))
 			// resp ("OK [npc]: ...") doit arriver avant l'etat de la salle,
 			// meme raison que pour INVENTORY/QUEST : sinon le GUI recupere
 			// l'etat de la salle au lieu du dialogue.
-			LogAndFprintf(conn, "%s\n", resp)
-			LogAndFprintf(conn, "%s\n", ToString(room))
+			LogAndFprintf(player.Name, conn, "%s\n", resp)
+			LogAndFprintf(player.Name, conn, "%s\n", ToString(room))
 
 		case strings.HasPrefix(message, "QUEST"):
 			room, index, ok := FindPlayerByName(player.Name, maps)
 			if !ok {
-				LogAndFprintf(conn, "ERR 404 PLAYER_NOT_FOUND\n")
+				LogAndFprintf(player.Name, conn, "ERR 404 PLAYER_NOT_FOUND\n")
 				continue
 			}
 			resp, updatedPlayer, completedQuestID, err := ReturnQuest(world, room, room.Players[index], strings.TrimSpace(strings.TrimPrefix(message, "QUEST")))
 			if err != nil {
-				LogAndFprintf(conn, "ERR 900 CONNECTION_FAILED\n")
+				LogAndFprintf(player.Name, conn, "ERR 900 CONNECTION_FAILED\n")
 				continue
 			} else {
 				room.Players[index] = updatedPlayer
@@ -506,7 +506,7 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 								// Envoyer une notification
 								if questName != "" {
 									msg := fmt.Sprintf("[EVT] %s a terminé la quête %s.\n", player.Name, questName)
-									LogAndFprintf(otherConn, "%s" ,msg)
+									LogServFprintf(otherConn, "%s" ,msg)
 								}
 								break
 							}
@@ -522,43 +522,43 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 				// toute premiere ligne OK/ERR/{ d'une reponse, cf. Session.Deliver)
 				// recoive bien le resultat de la commande QUEST et pas l'etat de
 				// la salle.
-				LogAndFprintf(conn, "%s\n", resp)
-				LogAndFprintf(conn, "%s\n", ToString(room))
+				LogAndFprintf(player.Name, conn, "%s\n", resp)
+				LogAndFprintf(player.Name, conn, "%s\n", ToString(room))
 			}
 
 		case strings.HasPrefix(message, "EQUIP"):
 			room, index, ok := FindPlayerByName(player.Name, maps)
 			if !ok {
-				LogAndFprintf(conn, "ERR 404 PLAYER_NOT_FOUND\n")
+				LogAndFprintf(player.Name, conn, "ERR 404 PLAYER_NOT_FOUND\n")
 				continue
 			}
 			resp, updatedPlayer, err := Equip(room.Players[index], strings.TrimSpace(strings.TrimPrefix(message, "EQUIP")))
 			if err != nil {
-				LogAndFprintf(conn, "ERR 900 CONNECTION_FAILED\n")
+				LogAndFprintf(player.Name, conn, "ERR 900 CONNECTION_FAILED\n")
 				continue
 			}
 			room.Players[index] = updatedPlayer
 			mapsLock.Lock()
 			maps[room.ID] = room
 			mapsLock.Unlock()
-			LogAndFprintf(conn, "%s\n", resp)
+			LogAndFprintf(player.Name, conn, "%s\n", resp)
 
 		case message == "UNEQUIP\n":
 			room, index, ok := FindPlayerByName(player.Name, maps)
 			if !ok {
-				LogAndFprintf(conn, "ERR 404 PLAYER_NOT_FOUND\n")
+				LogAndFprintf(player.Name, conn, "ERR 404 PLAYER_NOT_FOUND\n")
 				continue
 			}
 			resp, updatedPlayer, err := Unequip(room.Players[index])
 			if err != nil {
-				LogAndFprintf(conn, "ERR 900 CONNECTION_FAILED\n")
+				LogAndFprintf(player.Name, conn, "ERR 900 CONNECTION_FAILED\n")
 				continue
 			}
 			room.Players[index] = updatedPlayer
 			mapsLock.Lock()
 			maps[room.ID] = room
 			mapsLock.Unlock()
-			LogAndFprintf(conn, "%s\n", resp)
+			LogAndFprintf(player.Name, conn, "%s\n", resp)
 
 		case strings.HasPrefix(message, "MOVE"):
 			var tempLoc Location

@@ -17,7 +17,7 @@ func DisplayGroup(conn net.Conn) bool{
 	defer groupsLock.Unlock()
 	var result string
 	if len(groups) == 0 {
-		LogAndFprintf(conn, "[SERVER] Aucun groupe n'existe actuellement.\n")
+		LogServFprintf(conn, "[SERVER] Aucun groupe n'existe actuellement.\n")
 		return false
 	}
 	for _, group := range groups {
@@ -25,7 +25,7 @@ func DisplayGroup(conn net.Conn) bool{
 		result += fmt.Sprintf("Groupe %s :\\", group.ID)
 		for player, connect := range group.Members {
 			if conn == connect {
-				LogAndFprintf(conn, "[SERVER] Vous êtes déjà dans le groupe %s.\n", group.ID)
+				LogServFprintf(conn, "[SERVER] Vous êtes déjà dans le groupe %s.\n", group.ID)
 				group.Mu.Unlock()
 				return false
 			}

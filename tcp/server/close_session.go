@@ -24,9 +24,9 @@ func CloseSession(conn net.Conn, player string) {
 			delete(ConnectedClients, player)
 			ConnectedLock.Unlock()
 		}
-			LogAndPrintf(conn, "%s| [INFO] [%s]: \"Pour ceux qui viendront après\"\n", conn.RemoteAddr().String(), player)
+			LogAndPrintf(player, conn, "%s| [INFO] [%s]: \"Pour ceux qui viendront après\"\n", conn.RemoteAddr().String(), player)
 		
 		// Fermeture de la connexion
 		conn.Close()
-		LogAndPrintf(conn, "%s| [INFO] Client déconnecté\n", conn.RemoteAddr())
+		LogAndPrintf(player, conn, "%s| [INFO] Client déconnecté\n", conn.RemoteAddr())
 	}
