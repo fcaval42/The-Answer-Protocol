@@ -12,16 +12,16 @@ all:
 install:
 	go mod tidy
 
-server:
+run-server:
 	go run ./tcp/server
 
 stop-server:
 	fuser -k 8080/tcp
 
-client:
+run-client:
 	go run ./tcp/client
 
-gui:
+run-client-gui:
 	go run . gui
 
 lint:
