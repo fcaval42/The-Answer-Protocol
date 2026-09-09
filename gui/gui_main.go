@@ -2,6 +2,7 @@ package gui
 
 import (
 	"fmt"
+	"os"
 
 	"encoding/json"
 	"strings"
@@ -568,8 +569,10 @@ func Run(playerName string, world parsing.WorldFile, sess *Session) {
 	changeRoom(startLoc) // affichage initial
 
 	quitBtn := NewSemiTransparentButton("Quit", 140, func() {
-		sess.Quit()
-		w.Close()
+		go func() {
+			sess.Quit()
+			os.Exit(0)
+		}()
 	})
 
 	// Boutons Who et Quit à droite de la fenêtre (même taille que les autres : 180x40)

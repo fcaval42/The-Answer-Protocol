@@ -238,5 +238,12 @@ func (s *Session) Send(cmd string) (string, error) {
 
 
 func (s *Session) Quit() {
-	fmt.Fprint(s.conn, "QUIT\n")
+	// Envoyer QUIT exactement comme le CLI le fait
+	fmt.Fprintf(s.conn, "%s", "QUIT")
+	fmt.Fprint(s.conn, "[INFO] Fermeture de la connexion...\n")
+	// Ne pas fermer la connexion ici - laisser le defer de client_main.go le faire
+}
+
+func (s *Session) Close() {
+	s.conn.Close()
 }
