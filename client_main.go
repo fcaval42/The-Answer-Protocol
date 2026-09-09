@@ -119,13 +119,9 @@ func main() {
 	// se la faire voler par la boucle de lecture ci-dessous (cf. gui.Session).
 	sess := gui.NewSession(conn)
 
-	// Déclenche immédiatement le menu de sélection de personnage côté serveur
-	// (cf. tcp/server/server.go, qui attend "CONNECT\n" avant d'afficher quoi
-	// que ce soit) : sans ça, le joueur se retrouve devant un prompt vide sans
-	// savoir qu'il doit taper CONNECT lui-même.
-	fmt.Fprint(conn, "Ecrivez CONNECT pour vous connecter et choisir votre joueur\n")
+	fmt.Fprint(rl.Stdout(), "Tapez CONNECT pour vous connecter au serveur.\n")
 
-	playerChosen := make(chan string, 1)+
+	playerChosen := make(chan string, 1)
 
 	// Goroutine qui va chercher en continue ce qu'envoie le serveur
 	go readServerMessages(conn, rl, world, withGUI, playerChosen, sess)
