@@ -30,7 +30,7 @@ func dropItem(conn net.Conn, player Player, loc Location, message string) Locati
 					loc.Items = append(loc.Items, itemName)
 					maps[loc.ID] = loc
 					LogAndFprintf(player.Name, conn, "[SERVER] Vous avez déposé l'objet: %s\n", itemName)
-					LogAndFprintf(player.Name, conn, "%s\n", ToString(loc))
+					LogAndFprintf(player.Name, conn, "%s\n", ToString(withEnemyHP(loc)))
 					return loc
 				}
 			}
@@ -71,7 +71,7 @@ func Move(conn net.Conn, player Player, loc string, message string) (newloc Loca
 		}
 		BroadcastEVT(playerInLoc, fmt.Sprintf("[EVT] %s a rejoint l'endroit.", current.Name))
 		maps[direction] = locate
-		LogAndFprintf(player.Name, conn, "%s\n", ToString(locate))
+		LogAndFprintf(player.Name, conn, "%s\n", ToString(withEnemyHP(locate)))
 		LogAndFprintf(player.Name, conn, "%s | Vous êtes maintenant dans %s\n", conn.RemoteAddr().String(), locate.Name)
 		return locate, true
 	}
@@ -85,7 +85,7 @@ func takeItem(conn net.Conn, player Player, loc Location, message string) Locati
 	defer mapsLock.Unlock()
 	itemName := strings.TrimSpace(strings.TrimPrefix(message, "TAKE"))
 	loc, _, ok := FindPlayerByName(player.Name, maps)
-	if !ok{
+	if !ok {
 		LogAndFprintf(player.Name, conn, "ERR 404 ITEM_NOT_FOUND: L'objet %s n'est pas disponible dans cet endroit.\n", itemName)
 		return loc
 	}
@@ -108,7 +108,7 @@ func takeItem(conn net.Conn, player Player, loc Location, message string) Locati
 							maps[loc.ID] = loc
 							worldLock.Unlock()
 							LogAndFprintf(player.Name, conn, "[SERVER] Vous avez pris l'objet: %s\n", itemName)
-							LogAndFprintf(player.Name, conn, "%s\n", ToString(loc))
+							LogAndFprintf(player.Name, conn, "%s\n", ToString(withEnemyHP(loc)))
 							return loc
 						}
 					}
@@ -121,22 +121,38 @@ func takeItem(conn net.Conn, player Player, loc Location, message string) Locati
 	return loc
 }
 
+func withEnemyHP(room Location) Location {
+	if len(room.Enemies) == 0 {
+		return room
+	}
+	worldLock.Lock()
+	defer worldLock.Unlock()
+	hp := make(map[string]int, len(room.Enemies))
+	for _, id := range room.Enemies {
+		if e, ok := world.Enemies[id]; ok {
+			hp[id] = e.HP
+		}
+	}
+	room.EnemyHP = hp
+	return room
+}
+
 // broadcastRoomExcept envoie un message a tous les joueurs de la salle demander dans le sujet. // modif
 func broadcastRoomExcept(room Location, exclude string, format string, args ...interface{}) { // modif
 	ConnectedLock.Lock()                                // modif
 	receivers := make([]net.Conn, 0, len(room.Players)) // modif
 	for _, p := range room.Players {                    // modif
-		if p.Name == exclude {                          // modif
-			continue                                    // modif
-		}                                                // modif
-		if c, ok := ConnectedClients[p.Name]; ok {       // modif
-			receivers = append(receivers, c)             // modif
-		}                                                // modif
-	}                                                    // modif
-	ConnectedLock.Unlock()                               // modif
-	for _, c := range receivers {                        // modif
-		LogServFprintf(c, format, args...)                // modif
-	}                                                    // modif
+		if p.Name == exclude { // modif
+			continue // modif
+		} // modif
+		if c, ok := ConnectedClients[p.Name]; ok { // modif
+			receivers = append(receivers, c) // modif
+		} // modif
+	} // modif
+	ConnectedLock.Unlock()        // modif
+	for _, c := range receivers { // modif
+		LogServFprintf(c, format, args...) // modif
+	} // modif
 }
 
 func Dispatch(conn net.Conn, player Player, loc Location) {
@@ -195,7 +211,7 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 				// reponse (cf. Session.Deliver), sinon il recupere l'etat de
 				// la salle a la place de l'inventaire.
 				LogAndFprintf(player.Name, conn, "%s\n", resp)
-				LogAndFprintf(player.Name, conn, "%s\n", ToString(room))
+				LogAndFprintf(player.Name, conn, "%s\n", ToString(withEnemyHP(room)))
 			}
 
 		case message == "QUESTS\n":
@@ -373,14 +389,11 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 				LogAndFprintf(player.Name, conn, "ERR 404 PLAYER_NOT_FOUND\n")
 				continue
 			}
-			resp, critMsg, status, majplayer, majEnemy := Attack(room.Players[playerI], enemy)
+			resp, status, majplayer, majEnemy := Attack(room.Players[playerI], enemy)
 			if resp == "" {
 				mapsLock.Unlock()
 				LogAndFprintf(player.Name, conn, "ERR 900 CONNECTION_FAILED\n")
 				continue
-			}
-			if critMsg != "" {
-				resp = critMsg + "\\" + resp
 			}
 			switch status {
 			case "defeat":
@@ -406,9 +419,9 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 				// "{") qui etait capte a la place du resultat du combat.
 				LogAndFprintf(player.Name, conn, "%s\n", resp)
 				LogAndFprintf(player.Name, conn, "[SERVER] Vous êtes mort. Vous allez être téléporté à votre point de respawn.\n")
-				LogAndFprintf(player.Name, conn, "%s\n", ToString(respawnLoc))
+				LogAndFprintf(player.Name, conn, "%s\n", ToString(withEnemyHP(respawnLoc)))
 				LogAndFprintf(player.Name, conn, "[SERVER] Vous êtes mort. Vous allez être téléporté à votre point de respawn.\\%s\n", resp)
-				broadcastRoomExcept(room, player.Name, "%s\n", ToString(room))                                                          // modif
+				broadcastRoomExcept(room, player.Name, "%s\n", ToString(withEnemyHP(room)))                                              // modif
 				broadcastRoomExcept(room, player.Name, "[SERVER] %s a été vaincu par %s et respawn ailleurs.\n", player.Name, enemyName) // modif
 			case "victory":
 				room.Enemies = append(room.Enemies[:enemyI], room.Enemies[enemyI+1:]...)
@@ -428,9 +441,9 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 				} else { // ajout
 					LogAndFprintf(player.Name, conn, "[SERVER] Vous avez vaincu l'ennemi %s.\n", enemyName) // ajout
 				} // ajout
-				broadcastRoomExcept(room, player.Name, "%s\n", ToString(room))                                        // modif
+				broadcastRoomExcept(room, player.Name, "%s\n", ToString(withEnemyHP(room)))                           // modif
 				broadcastRoomExcept(room, player.Name, "[SERVER] %s a vaincu l'ennemi %s.\n", player.Name, enemyName) // modif
-				LogAndFprintf(player.Name, conn, "%s\n", ToString(room))
+				LogAndFprintf(player.Name, conn, "%s\n", ToString(withEnemyHP(room)))
 			case "combat":
 				room.Players[playerI] = majplayer
 				room.Enemies[enemyI] = majEnemy.ID
@@ -444,9 +457,9 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 				// pour le cas "defeat" ci-dessus.
 				LogAndFprintf(player.Name, conn, "%s\n", resp)
 				LogAndFprintf(player.Name, conn, "[SERVER] Vous êtes en combat avec %s.\n", enemyName)
-				LogAndFprintf(player.Name, conn, "%s\n", ToString(room))
+				LogAndFprintf(player.Name, conn, "%s\n", ToString(withEnemyHP(room)))
 				LogAndFprintf(player.Name, conn, "[SERVER] Vous êtes en combat avec %s.\\%s\n", enemyName, resp)
-				broadcastRoomExcept(room, player.Name, "%s\n", ToString(room))                             // modif
+				broadcastRoomExcept(room, player.Name, "%s\n", ToString(withEnemyHP(room)))                // modif
 				broadcastRoomExcept(room, player.Name, "[SERVER] %s combat %s.\n", player.Name, enemyName) // modif
 			}
 
@@ -461,7 +474,7 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 			// meme raison que pour INVENTORY/QUEST : sinon le GUI recupere
 			// l'etat de la salle au lieu du dialogue.
 			LogAndFprintf(player.Name, conn, "%s\n", resp)
-			LogAndFprintf(player.Name, conn, "%s\n", ToString(room))
+			LogAndFprintf(player.Name, conn, "%s\n", ToString(withEnemyHP(room)))
 
 		case strings.HasPrefix(message, "QUEST"):
 			room, index, ok := FindPlayerByName(player.Name, maps)
@@ -506,7 +519,7 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 								// Envoyer une notification
 								if questName != "" {
 									msg := fmt.Sprintf("[EVT] %s a terminé la quête %s.\n", player.Name, questName)
-									LogServFprintf(otherConn, "%s" ,msg)
+									LogServFprintf(otherConn, "%s", msg)
 								}
 								break
 							}
@@ -523,7 +536,7 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 				// recoive bien le resultat de la commande QUEST et pas l'etat de
 				// la salle.
 				LogAndFprintf(player.Name, conn, "%s\n", resp)
-				LogAndFprintf(player.Name, conn, "%s\n", ToString(room))
+				LogAndFprintf(player.Name, conn, "%s\n", ToString(withEnemyHP(room)))
 			}
 
 		case strings.HasPrefix(message, "EQUIP"):

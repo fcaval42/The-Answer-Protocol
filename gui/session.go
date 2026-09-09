@@ -41,6 +41,9 @@ type Session struct {
 
 	disconnectMu   sync.Mutex
 	onDisconnect func() // cf. OnDisconnect
+
+	roomBroadcastMu sync.Mutex
+	onRoomBroadcast func(roomJSON string) // cf. OnRoomBroadcast
 }
 
 
@@ -103,6 +106,21 @@ func (s *Session) NotifyDisconnect() {
 	s.disconnectMu.Unlock()
 	if h != nil {
 		h()
+	}
+}
+
+func (s *Session) OnRoomBroadcast(f func(roomJSON string)) {
+	s.roomBroadcastMu.Lock()
+	s.onRoomBroadcast = f
+	s.roomBroadcastMu.Unlock()
+}
+
+func (s *Session) NotifyRoomBroadcast(roomJSON string) {
+	s.roomBroadcastMu.Lock()
+	h := s.onRoomBroadcast
+	s.roomBroadcastMu.Unlock()
+	if h != nil {
+		h(roomJSON)
 	}
 }
 
@@ -173,6 +191,10 @@ func (s *Session) Deliver(line string) bool {
 	}
 
 	if !s.awaiting.Load() {
+		// Si on n'attend pas de réponse mais qu'on reçoit un JSON de salle, c'est un broadcast
+		if strings.HasPrefix(line, "{") {
+			s.NotifyRoomBroadcast(line)
+		}
 		return false
 	}
 	if !strings.HasPrefix(line, "OK ") && !strings.HasPrefix(line, "ERR") && !strings.HasPrefix(line, "{") {

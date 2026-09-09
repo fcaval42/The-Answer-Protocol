@@ -22,14 +22,13 @@ var (
 	worldLock = sync.Mutex{}
 )
 
-
 func deletePlayerInMap(player string) map[string]Location {
 	mapsLock.Lock()
 	var playerInLoc []net.Conn
 	var temp []Player
 	for _, loc := range maps {
 		for _, play := range loc.Players {
-			if play.Name == player{
+			if play.Name == player {
 				temp = loc.Players
 			}
 		}
@@ -37,10 +36,10 @@ func deletePlayerInMap(player string) map[string]Location {
 		maps[loc.ID] = loc
 	}
 	ConnectedLock.Lock()
-	for _, play := range temp{
-		for n, c := range ConnectedClients{
-			if play.Name == n{
-				if !slices.Contains(playerInLoc, c){
+	for _, play := range temp {
+		for n, c := range ConnectedClients {
+			if play.Name == n {
+				if !slices.Contains(playerInLoc, c) {
 					playerInLoc = append(playerInLoc, c)
 				}
 			}
@@ -70,8 +69,6 @@ func DeletePlayer(players []Player, player string) []Player {
 	return players
 }
 
-
-
 // Gestion de la connexion pour un client
 func handleConnection(conn net.Conn) {
 	var player string
@@ -84,7 +81,7 @@ func handleConnection(conn net.Conn) {
 		for _, conn := range ConnectedClients {
 			playerConn = append(playerConn, conn)
 		}
-		nb:= len(playerConn)
+		nb := len(playerConn)
 		ConnectedLock.Unlock()
 		deletePlayerInMap(player)
 		BroadcastEVT(playerConn, fmt.Sprintf("[EVT] %s a quitté le jeu (%d joueurs connectés).", player, nb))
@@ -129,7 +126,7 @@ func handleConnection(conn net.Conn) {
 
 	// Charge le monde et le point de respawn du joueur pour lenvoyer au client
 	fmt.Fprintf(conn, "%s\n", worldChar)
-	fmt.Fprintf(conn, "%s\n", ToString(location))
+	fmt.Fprintf(conn, "%s\n", ToString(withEnemyHP(location)))
 
 	Dispatch(conn, play, location)
 }
