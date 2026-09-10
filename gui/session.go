@@ -257,7 +257,3 @@ func (s *Session) Quit() {
 	fmt.Fprintf(s.conn, "%s", "QUIT")
 	fmt.Fprint(s.conn, "[INFO] Fermeture de la connexion...\n")
 }
-
-func (s *Session) Close() {
-	s.conn.Close()
-}

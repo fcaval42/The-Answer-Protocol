@@ -39,7 +39,3 @@ var (
 	inGlobal     []net.Conn
 	inGlobalLock sync.Mutex
 )
-var (
-	group     [][]net.Conn
-	groupLock sync.Mutex
-)

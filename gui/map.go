@@ -11,7 +11,6 @@ import (
 
 const mapCellSizeH = 220
 const mapCellSizeV = 110
-const rows, cols = 3, 3
 
 var mapCellColor = color.NRGBA{R: 255, G: 255, B: 225, A: 20}
 var mapCurrentCellColor = color.NRGBA{R: 232, G: 216, B: 176, A: 90}
