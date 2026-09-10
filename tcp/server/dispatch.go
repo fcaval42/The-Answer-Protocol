@@ -210,6 +210,11 @@ func Dispatch(conn net.Conn, player Player, loc Location) {
 				// GUI ne recupere que la toute premiere ligne OK/ERR/{ d'une
 				// reponse (cf. Session.Deliver), sinon il recupere l'etat de
 				// la salle a la place de l'inventaire.
+				if (room.Players[index].EquippedItem != "") {
+					resp = fmt.Sprintf("%s - [Weapon equiped: %s]", resp, room.Players[index].EquippedItem)
+				} else {
+					resp = fmt.Sprintf("%s - [Weapon equiped: %s]", resp, room.Players[index].BaseWeapon.Name)
+				}
 				LogAndFprintf(player.Name, conn, "%s\n", resp)
 				LogAndFprintf(player.Name, conn, "%s\n", ToString(withEnemyHP(room)))
 			}
