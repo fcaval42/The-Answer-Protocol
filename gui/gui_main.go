@@ -285,14 +285,25 @@ func buildRoomPanel(loc parsing.Location, world parsing.WorldFile, player parsin
 					fyne.Do(func() { showMessage("Erreur", "réponse du serveur illisible : "+err.Error()) })
 					return
 				}
+
 				names := make([]string, 0, len(itemIDs))
 				for _, id := range itemIDs {
 					if it, ok := world.Items[id]; ok {
-						names = append(names, it.Name)
-					} else {
+						if it.Name != "" {
+							names = append(names, it.Name)
+						}
+					} else if id != "" {
 						names = append(names, id)
 					}
 				}
+
+				filteredNames := make([]string, 0, len(names))
+				for _, name := range names {
+					if name != "" {
+						filteredNames = append(filteredNames, name)
+					}
+				}
+				names = filteredNames
 				msg := "Inventaire vide."
 				if len(names) > 0 {
 					msg = strings.Join(names, ", ")
