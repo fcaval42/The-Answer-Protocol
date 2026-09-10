@@ -141,7 +141,6 @@ items:
     obtainable: true
 
 
-# PNJ non-combattants : dialogue et/ou quêtes, jamais de statistiques de combat.
 npcs:
   Sophie:
     name: "Sophie"

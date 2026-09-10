@@ -17,16 +17,13 @@ func GroupCreate(conn net.Conn, player string) {
 	groupsLock.Lock()
 	groupID := fmt.Sprintf("%d", len(groups)+1)
 
-	// Creer une nouvelle instance de Group
 	newGroup := &Group{
 		ID:      groupID,
 		Members: make(map[string]net.Conn),
 	}
 
-	// Ajouter le createur du groupe à la liste des membres
 	newGroup.Members[player] = conn
 
-	// Ajouter le groupe a la liste de groupes globale
 	groups[groupID] = newGroup
 	groupsLock.Unlock()
 
@@ -64,7 +61,6 @@ func GroupJoin(conn net.Conn, player string, groupID string) {
 }
 
 func GroupInvite(conn net.Conn, player string) {
-	// Trouver le groupe du joueur actuel
 	var currentGroup *Group
 	currentGroup = SearchPlayerGroup(player)
 	if currentGroup == nil {
@@ -72,7 +68,6 @@ func GroupInvite(conn net.Conn, player string) {
 		return
 	}
 
-	// Recupere la liste des joueurs disponibles pour l'invitation
 	availablePlayers := GetAvailablePlayers(player)
 
 	if len(availablePlayers) == 0 {
@@ -84,7 +79,6 @@ func GroupInvite(conn net.Conn, player string) {
 	var inviteeConn net.Conn
 	var exists bool
 	for {
-		// Reponse du joueur pour choisir qui inviter
 		invitee = Recept(conn)
 		invitee = strings.TrimSpace(invitee)
 
@@ -105,7 +99,6 @@ func GroupInvite(conn net.Conn, player string) {
 	pendingInvites[invitee] = replyChan
 	pendingInvitesLock.Unlock()
 
-	// Nettoyage après l'invitation
 	defer func() {
 		pendingInvitesLock.Lock()
 		delete(pendingInvites, invitee)

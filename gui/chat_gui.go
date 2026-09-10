@@ -12,7 +12,6 @@ import (
 	"the_answer_protocol/parsing"
 )
 
-
 func collectQuiet(ch <-chan string, quiet, maxWait time.Duration) []string {
 	var lines []string
 	deadline := time.After(maxWait)
@@ -44,8 +43,6 @@ func collectQuiet(ch <-chan string, quiet, maxWait time.Duration) []string {
 	}
 }
 
-// waitFirst attend jusqu'à maxWait la première ligne reçue sur ch, puis
-// regroupe les éventuelles lignes suivantes rapprochées comme collectQuiet.
 func waitFirst(ch <-chan string, maxWait time.Duration) []string {
 	select {
 	case l, ok := <-ch:
@@ -64,7 +61,6 @@ func waitFirst(ch <-chan string, maxWait time.Duration) []string {
 	}
 }
 
-
 func sendRawCollect(sess *Session, cmd string) ([]string, error) {
 	ch := sess.EnterRaw()
 	defer sess.ExitRaw()
@@ -73,7 +69,6 @@ func sendRawCollect(sess *Session, cmd string) ([]string, error) {
 	}
 	return collectQuiet(ch, 200*time.Millisecond, 2*time.Second), nil
 }
-
 
 func availablePlayersFrom(text string) ([]string, bool) {
 	const marker = "Joueurs disponibles : "
@@ -94,7 +89,6 @@ func availablePlayersFrom(text string) ([]string, bool) {
 	}
 	return names, len(names) > 0
 }
-
 
 func openInvitePicker(w fyne.Window, sess *Session, ch <-chan string, names []string, showMessage func(title, msg string)) {
 	body := container.NewVBox(NewWrappingBodyText("Qui voulez-vous inviter ?"), Fix(0, 8))
@@ -141,8 +135,6 @@ func openInvitePicker(w fyne.Window, sess *Session, ch <-chan string, names []st
 	d.Show()
 }
 
-// showInviteDialog affiche par-dessus tout le reste (parent = fenêtre
-// principale) l'invitation de groupe reçue d'un autre joueur.
 func showInviteDialog(w fyne.Window, sess *Session, from string) {
 	var d dialog.Dialog
 	answered := false
@@ -167,8 +159,6 @@ func showInviteDialog(w fyne.Window, sess *Session, from string) {
 	d.Resize(fyne.NewSize(380, 180))
 	d.Show()
 
-	// Le serveur abandonne l'invitation après 10s sans réponse: la popup se 
-	// referme d'elle-même 
 	go func() {
 		time.Sleep(10 * time.Second)
 		fyne.Do(func() {
@@ -180,7 +170,6 @@ func showInviteDialog(w fyne.Window, sess *Session, from string) {
 	}()
 }
 
-// openGroupDialog propose Créer / Rejoindre / Inviter / Quitter un groupe.
 func openGroupDialog(w fyne.Window, sess *Session, showMessage func(title, msg string)) {
 	body := container.NewVBox(container.NewCenter(NewTitleText("Groupe", 24)), Fix(0, 10))
 
@@ -282,13 +271,6 @@ func openChatDialog(w fyne.Window, sess *Session, player parsing.Player, showMes
 	var renderActive func()
 	var chooseScope func(cmd, label string)
 
-	// N'active pas inChatLoop ici : tant qu'aucun canal n'a été choisi, le
-	// serveur est dans sa boucle d'attente GLOBAL/ROOM/GROUP et la toute
-	// première ligne reçue est juste ce prompt ("À qui souhaitez vous
-	// envoyer un message...") — inChatLoop=false fait que le handler de
-	// lignes plus bas l'ignore et laisse nos propres boutons affichés
-	// (cf. case !inChatLoop). chooseScope met inChatLoop à true une fois
-	// un canal réellement choisi.
 	enterChatPrompt := func() {
 		sess.SendRaw("CHAT\n")
 	}
@@ -346,7 +328,7 @@ func openChatDialog(w fyne.Window, sess *Session, player parsing.Player, showMes
 		}), entry))
 		body.Add(Fix(0, 8))
 		body.Add(NewButton("Retour", func() {
-			d.Hide() // déclenche leave() via SetOnClosed : EXIT + ExitRaw
+			d.Hide()
 			openChatEntryDialog(w, sess, player, showMessage)
 		}))
 		body.Refresh()
@@ -373,8 +355,6 @@ func openChatDialog(w fyne.Window, sess *Session, player parsing.Player, showMes
 				fyne.Do(func() {
 					switch {
 					case !inChatLoop:
-						// prompt initial ("GLOBAL, ROOM, GROUP ?") : on
-						// affiche déjà nos propres boutons, on l'ignore.
 					case !active && strings.Contains(text, "Vous n'êtes pas dans un groupe"):
 						inChatLoop = false
 						showMessage("Chat", text)

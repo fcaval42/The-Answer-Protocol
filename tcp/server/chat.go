@@ -52,9 +52,9 @@ func RoomChat(conn net.Conn, loc string, player string) {
 		mapsLock.Unlock()
 		ConnectedLock.Lock()
 		inRoomChatMu.Lock()
-		for _, play := range locate.Players{
+		for _, play := range locate.Players {
 			c := ConnectedClients[play.Name]
-			if !slices.Contains(inRoomChat[loc], c) && c != conn{
+			if !slices.Contains(inRoomChat[loc], c) && c != conn {
 				otherMembers = append(otherMembers, c)
 			}
 		}
@@ -104,8 +104,8 @@ func GroupChat(conn net.Conn, player string) {
 		}
 		inGroupChatLock.Unlock()
 		var otherMembers []net.Conn
-		for _, c := range currentGroup.Members{
-			if !slices.Contains(receivers, c) && c != conn{
+		for _, c := range currentGroup.Members {
+			if !slices.Contains(receivers, c) && c != conn {
 				otherMembers = append(otherMembers, c)
 			}
 		}
@@ -114,9 +114,9 @@ func GroupChat(conn net.Conn, player string) {
 		if send == "EXIT\n" || send == "" || send == "QUIT\n" {
 			LogAndFprintf(player, conn, "[SERVER] Vous avez quitté le chat de groupe.\n")
 			return
-			} else {
-				send = fmt.Sprintf("[%s]: %s", player, send)
-			}
+		} else {
+			send = fmt.Sprintf("[%s]: %s", player, send)
+		}
 		LogAndPrintf(player, conn, "%s| %s", conn.RemoteAddr().String(), send)
 		currentGroup.Mu.Lock()
 		BroadcastEVT(otherMembers, fmt.Sprintf("[EVT GROUP] %s", send))
@@ -153,8 +153,8 @@ func GlobalChat(conn net.Conn, player string) {
 		}
 		ConnectedLock.Lock()
 		var otherMembers []net.Conn
-		for _, c := range ConnectedClients{
-			if !slices.Contains(inGlobal, c) && c != conn{
+		for _, c := range ConnectedClients {
+			if !slices.Contains(inGlobal, c) && c != conn {
 				otherMembers = append(otherMembers, c)
 			}
 		}
@@ -181,7 +181,7 @@ func GlobalChatBroadcast(conn net.Conn, message string) {
 	ConnectedLock.Lock()
 	var receivers []net.Conn
 	for _, c := range ConnectedClients {
-		if !slices.Contains(inGlobal, c) && c != conn{
+		if !slices.Contains(inGlobal, c) && c != conn {
 			receivers = append(receivers, c)
 		}
 	}

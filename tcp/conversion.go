@@ -1,8 +1,8 @@
 package tcp
 
 import (
-	"fmt"
 	"encoding/json"
+	"fmt"
 )
 
 func ToString[T any](data T) string {
@@ -22,11 +22,3 @@ func FromString[T any](s string) T {
 	}
 	return v
 }
-
-
-//Utilisation example:
-// worldStr := toString(world)
-// w := fromString[parsing.WorldFile](worldStr)
-
-// locStr := toString(location)
-// loc := fromString[parsing.Location](locStr)

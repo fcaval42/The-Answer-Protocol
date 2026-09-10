@@ -17,15 +17,8 @@ import (
 	"github.com/chzyer/readline"
 )
 
-// generer par claude pck je comprend pas ce que hugo faisait sert pour le makefile
-// Capture le nom du personnage dans le message de confirmation envoyé par
-// le serveur une fois la sélection terminée (cf. tcp/commands/session.go).
 var welcomeRe = regexp.MustCompile(`Bienvenue (\S+) !`)
 
-// readServerMessages écoute en continu ce qu'envoie le serveur et l'affiche
-// au client. world est passé en paramètre pour que cette fonction (et celles
-// qui suivront) puisse s'y référer, comme le font déjà les commandes du
-// package tcp/commands.
 func readServerMessages(conn net.Conn, rl *readline.Instance, world parsing.WorldFile, withGUI bool, playerChosen chan<- string, sess *gui.Session) {
 	connRoutine := bufio.NewReader(conn)
 	for {
@@ -43,8 +36,6 @@ func readServerMessages(conn net.Conn, rl *readline.Instance, world parsing.Worl
 		if strings.Contains(response, "\\") {
 			response = strings.ReplaceAll(response, "\\", "\n")
 		}
-		// Une ligne attendue par un Send() du GUI (bouton en cours de
-		// traitement) est detournee vers lui plutot qu'affichee ici.
 		if sess.Deliver(response) {
 			continue
 		}
@@ -63,8 +54,6 @@ func readServerMessages(conn net.Conn, rl *readline.Instance, world parsing.Worl
 	}
 }
 
-// runInputLoop lit les commandes tapées au clavier et les envoie au serveur.
-// world est transmis pour les mêmes raisons que dans readServerMessages.
 func runInputLoop(conn net.Conn, rl *readline.Instance, world parsing.WorldFile) {
 	for {
 		line, err := rl.Readline()
@@ -118,15 +107,12 @@ func main() {
 		conn.Close()
 	}()
 
-	// Permet au GUI d'envoyer une commande et de recuperer sa reponse sans
-	// se la faire voler par la boucle de lecture ci-dessous (cf. gui.Session).
 	sess := gui.NewSession(conn)
 
 	fmt.Fprint(rl.Stdout(), "Tapez CONNECT pour vous connecter au serveur.\n")
 
 	playerChosen := make(chan string, 1)
 
-	// Goroutine qui va chercher en continue ce qu'envoie le serveur
 	go readServerMessages(conn, rl, world, withGUI, playerChosen, sess)
 
 	if !withGUI {
@@ -134,9 +120,6 @@ func main() {
 		return
 	}
 
-	// Le choix du personnage se fait au clavier ; une fois confirmé par le
-	// serveur, on ouvre le GUI (sur la goroutine principale, requis par Fyne)
-	// pendant que le client textuel continue de tourner en tâche de fond.
 	go runInputLoop(conn, rl, world)
 	player := <-playerChosen
 	gui.Run(player, world, sess)

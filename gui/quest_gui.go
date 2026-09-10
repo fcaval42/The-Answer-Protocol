@@ -10,7 +10,6 @@ import (
 	"fyne.io/fyne/v2/dialog"
 )
 
-
 type questEntry struct {
 	QuestID     string `json:"quest_id"`
 	Name        string `json:"name"`
@@ -19,7 +18,6 @@ type questEntry struct {
 	Description string `json:"description"`
 	Progress    string `json:"progress"`
 }
-
 
 func questStatusLabel(q questEntry) string {
 	switch q.Status {
