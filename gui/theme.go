@@ -11,13 +11,11 @@ import (
 	"fyne.io/fyne/v2/widget"
 )
 
-// -------------------- ESPACE FIXE -----------------
 func Fix(largeur float32, hauteur float32) fyne.CanvasObject {
 	rect := canvas.NewRectangle(color.Transparent)
 	return container.New(layout.NewGridWrapLayout(fyne.NewSize(largeur, hauteur)), rect)
 }
 
-// -------------------- POLICES ET COULEURS -----------------
 var TitleColor = color.NRGBA{R: 0xe8, G: 0xd8, B: 0xb0, A: 0xff}
 var BodyColor = color.NRGBA{R: 0xff, G: 0xff, B: 0xff, A: 0xff}
 var HPColor = color.NRGBA{R: 125, G: 84, B: 7, A: 255}
@@ -37,7 +35,6 @@ var (
 	bodyFont  = loadFont("assets/fonts/IMFellDoublePica-Regular.ttf")
 )
 
-// -------------------- TEXTES STATIQUES -----------------
 func newText(text string, size float32, col color.Color, font fyne.Resource, style fyne.TextStyle) *canvas.Text {
 	t := canvas.NewText(text, col)
 	t.TextSize = size
@@ -54,7 +51,6 @@ func NewBodyText(text string, size float32) *canvas.Text {
 	return newText(text, size, BodyColor, bodyFont, fyne.TextStyle{})
 }
 
-// -------------------- WIDGETS THÉMÉS -----------------
 type fontTheme struct {
 	fyne.Theme
 	font    fyne.Resource
@@ -93,7 +89,6 @@ func (t *fontTheme) Size(name fyne.ThemeSizeName) float32 {
 	return t.Theme.Size(name)
 }
 
-// -------------------------- BARRE DE HP -----------------------------
 type primaryColorTheme struct {
 	fyne.Theme
 	color color.Color
@@ -112,7 +107,6 @@ func NewColoredProgressBar(col color.Color) (*widget.ProgressBar, fyne.CanvasObj
 	return bar, themed
 }
 
-// ------------------- BOUTONS ---------------------
 type iconSizeTheme struct {
 	fyne.Theme
 	size float32
@@ -146,7 +140,6 @@ func NewSemiTransparentButton(label string, alpha uint8, tapped func()) fyne.Can
 	return container.NewThemeOverride(btn, th)
 }
 
-// ------------------------- TEXTES WRAPPING ----------------------------
 func NewWrappingBodyText(text string) fyne.CanvasObject {
 	l := widget.NewLabel(text)
 	l.Wrapping = fyne.TextWrapWord
@@ -154,10 +147,6 @@ func NewWrappingBodyText(text string) fyne.CanvasObject {
 	return container.NewThemeOverride(l, newFontTheme(bodyFont, BodyColor, DescSize))
 }
 
-// ---------------- CUSTOM THEME POUR LES POPUPS ----------------
-
-// CustomTheme implémente fyne.Theme avec une palette personnalisée pour les popups
-// On embed fyne.Theme comme base pour hériter toutes les méthodes non redéfinies
 type CustomTheme struct {
 	fyne.Theme
 }
@@ -166,7 +155,6 @@ func NewCustomTheme() *CustomTheme {
 	return &CustomTheme{Theme: theme.DarkTheme()}
 }
 
-// Color retourne la couleur du thème pour le nom donné
 func (t *CustomTheme) Color(name fyne.ThemeColorName, variant fyne.ThemeVariant) color.Color {
 	switch name {
 	case theme.ColorNameBackground:

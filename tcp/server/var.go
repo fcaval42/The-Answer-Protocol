@@ -1,20 +1,20 @@
 package main
 
 import (
-	"sync"
 	"net"
+	"sync"
 )
 
 var (
-    pendingInvites     = make(map[string]chan string)
-    pendingInvitesLock sync.Mutex
+	pendingInvites     = make(map[string]chan string)
+	pendingInvitesLock sync.Mutex
 )
 
 type Group struct {
-	ID      string
-	Members map[string]net.Conn
+	ID       string
+	Members  map[string]net.Conn
 	messages []string
-	Mu      sync.RWMutex
+	Mu       sync.RWMutex
 }
 
 var (
@@ -23,23 +23,19 @@ var (
 )
 
 var (
-	ConnectedClients     = make(map[string]net.Conn)
-	ConnectedLock sync.Mutex
+	ConnectedClients = make(map[string]net.Conn)
+	ConnectedLock    sync.Mutex
 )
 
 var (
 	globaleMessage     []string
 	globaleMessageLock sync.Mutex
 )
-var (inGroupChat	 map[string][]net.Conn
+var (
+	inGroupChat     map[string][]net.Conn
 	inGroupChatLock sync.Mutex
 )
 var (
 	inGlobal     []net.Conn
 	inGlobalLock sync.Mutex
 )
-var (
-	group     [][]net.Conn
-	groupLock sync.Mutex
-)
-

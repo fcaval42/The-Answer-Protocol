@@ -11,10 +11,9 @@ import (
 
 const mapCellSizeH = 220
 const mapCellSizeV = 110
-const rows, cols = 3, 3
 
-var mapCellColor = color.NRGBA{R: 255, G: 255, B: 225, A: 20}        // couleur blanche de base
-var mapCurrentCellColor = color.NRGBA{R: 232, G: 216, B: 176, A: 90} // beige comme le thème de base
+var mapCellColor = color.NRGBA{R: 255, G: 255, B: 225, A: 20}
+var mapCurrentCellColor = color.NRGBA{R: 232, G: 216, B: 176, A: 90}
 var mapBackgroundPath = "assets/mapBackground.png"
 
 type mapNode struct {
@@ -57,8 +56,6 @@ var mapPath = map[mapPathfile]string{
 	{2, 3}: "assets/room/falaise.png",
 }
 
-
-// fonction trouver cellule de la carte correspondant au nom de la salle
 func roomGridPosition(name string) (row int, col int, ok bool) {
 	for node, n := range mapNames {
 		if n == name {
@@ -68,10 +65,8 @@ func roomGridPosition(name string) (row int, col int, ok bool) {
 	return 0, 0, false
 }
 
-
 func mapCell(current bool, name string, img *canvas.Image) fyne.CanvasObject {
 	if name == "" {
-		// case invisible
 		spacer := canvas.NewRectangle(color.Transparent)
 		spacer.SetMinSize(fyne.NewSize(100, 50))
 		return spacer
@@ -86,8 +81,8 @@ func mapCell(current bool, name string, img *canvas.Image) fyne.CanvasObject {
 	background.SetMinSize(fyne.NewSize(mapCellSizeH, mapCellSizeV))
 
 	border := canvas.NewRectangle(color.Transparent)
-	border.StrokeColor = TitleColor // couleur du contour
-	border.StrokeWidth = 1  // épaisseur de la ligne
+	border.StrokeColor = TitleColor
+	border.StrokeWidth = 1
 
 	if current {
 		border.StrokeColor = HPColor
@@ -102,7 +97,6 @@ func mapCell(current bool, name string, img *canvas.Image) fyne.CanvasObject {
 	)
 }
 
-// on construit la carte du monde
 func BuildMapPanel(currentRow, currentCol int) fyne.CanvasObject {
 	rowsCols := []int{4, 5, 4}
 
@@ -110,7 +104,7 @@ func BuildMapPanel(currentRow, currentCol int) fyne.CanvasObject {
 	for r, cols := range rowsCols {
 		row := container.NewHBox()
 		for c := 0; c < cols; c++ {
-			if c > 0 { // ajouter espace que si pas première case
+			if c > 0 {
 				row.Add(Fix(40, 0))
 			}
 			name := mapNames[mapNode{r, c}]

@@ -1,10 +1,3 @@
-// Pb de fond: client main go a une seule connexion (readServerMessages) qui lit en boucle
-// tout ce qui arrive du serveur et imprime au terminal. Si le GUI envoie "ATTACK" et veut
-// connaître la réponse (Ok/ERR) = imprimée dans le terminal comme n'importe quel message
-// et GUI voit pas. On va donc la détourner vers le code GUI.
-// Ici, session est ce mécanisme : une petite boîte aux lettres partagée entre la boucle
-// de lecture (qui reçoit) et le clic du bouton GUI (qui attend).
-
 package gui
 
 import (
@@ -16,36 +9,33 @@ import (
 	"time"
 )
 
-// sendCooldown : apres un Send(), tout nouvel appel dans cette fenetre est
-// ignore silencieusement (double-clic, double-declenchement d'un tap Fyne...).
 const sendCooldown = 400 * time.Millisecond
 
 type Session struct {
-	conn     net.Conn    // connexion avec le serveur
-	busy     atomic.Bool // true tant qu'un Send() est en cours (envoi + attente de sa reponse)
-	awaiting atomic.Bool // Indique si on attend une réponse à une commande envoyée (bool)
-	pending  chan string // canal pour recevoir la réponse du serveur
+	conn     net.Conn
+	busy     atomic.Bool
+	awaiting atomic.Bool
+	pending  chan string
 
 	cooldownMu  sync.Mutex
-	nextAllowed time.Time // prochain instant a partir duquel un nouveau Send() est accepte
+	nextAllowed time.Time
 
-	rawMu    sync.Mutex
-	rawChan  chan string // non-nil pendant une session brute (chat/groupe), cf. EnterRaw
-	rawLock  sync.Mutex  // mutex pour sérialiser EnterRaw (évite chevauchements)
+	rawMu   sync.Mutex
+	rawChan chan string
+	rawLock sync.Mutex
 
 	inviteMu sync.Mutex
-	onInvite func(from string) // cf. OnInvite
+	onInvite func(from string)
 
-	questMu     sync.Mutex
-	onQuestComplete func(questName, completer string) // cf. OnQuestComplete
+	questMu         sync.Mutex
+	onQuestComplete func(questName, completer string)
 
-	disconnectMu   sync.Mutex
-	onDisconnect func() // cf. OnDisconnect
+	disconnectMu sync.Mutex
+	onDisconnect func()
 
 	roomBroadcastMu sync.Mutex
-	onRoomBroadcast func(roomJSON string) // cf. OnRoomBroadcast
+	onRoomBroadcast func(roomJSON string)
 }
-
 
 const inviteMarker = " vous a invité à rejoindre un groupe. ACCEPT/DECLINE"
 
@@ -80,7 +70,6 @@ func parseQuestComplete(line string) (questName, completer string, ok bool) {
 	questName = strings.TrimSpace(questName)
 	return completer, questName, true
 }
-
 
 func (s *Session) OnInvite(f func(from string)) {
 	s.inviteMu.Lock()
@@ -124,19 +113,13 @@ func (s *Session) NotifyRoomBroadcast(roomJSON string) {
 	}
 }
 
-
-// initialiser nouvelle session
 func NewSession(conn net.Conn) *Session {
 	return &Session{
-		conn: conn,
+		conn:    conn,
 		pending: make(chan string, 1),
 	}
 }
 
-
-// à chaque ligne reçue du serveur, readServerMessages demande d'abord à Deliver :
-// "est-ce que quelqu'un attend cette ligne ?" = awaiting = vrai = pousse dans pending
-// qui réveille le Send qui était bloqué dessus.
 func (s *Session) Deliver(line string) bool {
 	s.rawMu.Lock()
 	raw := s.rawChan
@@ -154,7 +137,6 @@ func (s *Session) Deliver(line string) bool {
 					return true
 				}
 			}
-			// Check for quest completion notification
 			if completer, questName, ok := parseQuestComplete(line); ok {
 				s.questMu.Lock()
 				h := s.onQuestComplete
@@ -179,7 +161,6 @@ func (s *Session) Deliver(line string) bool {
 		}
 	}
 
-	// Check for quest completion notification
 	if completer, questName, ok := parseQuestComplete(line); ok {
 		s.questMu.Lock()
 		h := s.onQuestComplete
@@ -191,7 +172,6 @@ func (s *Session) Deliver(line string) bool {
 	}
 
 	if !s.awaiting.Load() {
-		// Si on n'attend pas de réponse mais qu'on reçoit un JSON de salle, c'est un broadcast
 		if strings.HasPrefix(line, "{") {
 			s.NotifyRoomBroadcast(line)
 		}
@@ -222,7 +202,6 @@ func (s *Session) EnterRaw() <-chan string {
 	return ch
 }
 
-
 func (s *Session) ExitRaw() {
 	s.rawMu.Lock()
 	if s.rawChan != nil {
@@ -234,12 +213,10 @@ func (s *Session) ExitRaw() {
 	s.rawLock.Unlock()
 }
 
-
 func (s *Session) SendRaw(line string) error {
 	_, err := s.conn.Write([]byte(line))
 	return err
 }
-
 
 func (s *Session) Send(cmd string) (string, error) {
 	if !s.busy.CompareAndSwap(false, true) {
@@ -276,14 +253,7 @@ func (s *Session) Send(cmd string) (string, error) {
 	}
 }
 
-
 func (s *Session) Quit() {
-	// Envoyer QUIT exactement comme le CLI le fait
 	fmt.Fprintf(s.conn, "%s", "QUIT")
 	fmt.Fprint(s.conn, "[INFO] Fermeture de la connexion...\n")
-	// Ne pas fermer la connexion ici - laisser le defer de client_main.go le faire
-}
-
-func (s *Session) Close() {
-	s.conn.Close()
 }

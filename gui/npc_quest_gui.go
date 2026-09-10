@@ -11,9 +11,6 @@ import (
 	"the_answer_protocol/parsing"
 )
 
-// questForGiver retourne la quête (si elle existe) dont ce PNJ est le
-// donneur — sert uniquement à savoir s'il faut afficher le bouton Quest à
-// côté de lui dans la salle.
 func questForGiver(world parsing.WorldFile, giverID string) (parsing.Quest, bool) {
 	for _, q := range world.Quests {
 		if q.Giver == giverID {
@@ -23,7 +20,6 @@ func questForGiver(world parsing.WorldFile, giverID string) (parsing.Quest, bool
 	return parsing.Quest{}, false
 }
 
-// openNpcQuestDialog affiche la quête proposée par ce PNJ précis.
 func openNpcQuestDialog(w fyne.Window, sess *Session, world parsing.WorldFile, player parsing.Player, npcName, giverID string, refreshCharacter func(parsing.Player), showMessage func(title, msg string)) {
 	body := container.NewVBox()
 	var d dialog.Dialog
@@ -104,7 +100,7 @@ func openNpcQuestDialog(w fyne.Window, sess *Session, world parsing.WorldFile, p
 					if it, ok := world.Items[result.Reward]; ok {
 						updated.Inventory = append(updated.Inventory, it)
 					}
-					refreshCharacter(updated) // affiche la récompense dans le panneau perso
+					refreshCharacter(updated)
 
 					msg := result.Message
 					if msg == "" {
@@ -130,7 +126,7 @@ func openNpcQuestDialog(w fyne.Window, sess *Session, world parsing.WorldFile, p
 		go func() {
 			resp, err := sess.Send("QUESTS")
 			if resp == "" && err == nil {
-				return // ignore silencieusement (cooldown / action deja en cours)
+				return
 			}
 			if err != nil {
 				fyne.Do(func() { showMessage("Erreur", err.Error()) })

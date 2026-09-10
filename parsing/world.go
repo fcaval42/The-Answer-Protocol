@@ -8,20 +8,9 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-/**
-Sert à récupérer les infos world.yaml puis à vérifier la véracité des valeurs
-entre elles puis a les mettre dans des structures.
-
-Le parsing est organisé par domaine : chaque catégorie du YAML (locations,
-items, npcs, enemies, players, quests) a son propre fichier avec son type et
-sa fonction de validation (location.go, item.go, npc.go, enemy.go, player.go,
-quest.go). Ce fichier ne garde que le type racine WorldFile, le point d'entrée
-ParseWorld, et l'orchestration de la validation.
-**/
-
 type Player_t struct {
 	Name         string
-	Hp           float64 // 0-100
+	Hp           float64
 	Localisation string
 	Inventory    []string
 }
@@ -87,6 +76,7 @@ func (wf WorldFile) Validate() []error {
 	errs = append(errs, validateLocations(wf)...)
 	errs = append(errs, validateItems(wf)...)
 	errs = append(errs, validateNPCs(wf)...)
+	errs = append(errs, validatePlayers(wf)...)
 	errs = append(errs, validateEnemies(wf)...)
 	errs = append(errs, validateQuests(wf)...)
 
@@ -98,6 +88,11 @@ func Rally(world_path string) (WorldFile, []error) {
 	var errs []error
 
 	world_yaml, er := os.ReadFile(world_path)
+	if len(world_yaml) == 0{
+		fmt.Println("\n---Errors of world.yaml---")
+		fmt.Println("YAML VIDE")
+		errs = append(errs, fmt.Errorf("YAML VIDE"))
+	}
 	if er != nil {
 		errs = append(errs, er)
 	} else {

@@ -1,7 +1,5 @@
 package commands
 
-// LOOK
-
 import (
 	"encoding/json"
 	"fmt"
@@ -77,7 +75,6 @@ func FindPlayerByName(name string, maps map[string]Location) (room Location, ind
 	}
 	return Location{}, 0, false
 }
-
 
 func FindEnemyInRoom(enemyName string, loc Location, world WorldFile) (Enemy, int, bool) {
 	for _, npc := range loc.NPCs {

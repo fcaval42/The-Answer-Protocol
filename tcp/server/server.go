@@ -69,11 +69,9 @@ func DeletePlayer(players []Player, player string) []Player {
 	return players
 }
 
-// Gestion de la connexion pour un client
 func handleConnection(conn net.Conn) {
 	var player string
 
-	// Gestion de la fin de connexion
 	defer func() {
 		var playerConn []net.Conn
 		CloseSession(conn, player)
@@ -91,13 +89,11 @@ func handleConnection(conn net.Conn) {
 	if player == "" {
 		return
 	}
-	// Charge le joueur et attribue la connexion
 	worldLock.Lock()
 	play := world.Players[player]
 	play.Connected = true
 	worldLock.Unlock()
 
-	// Mets le joueur dans la map a son point de respawn
 	mapsLock.Lock()
 	location := maps[play.Respawn.Location]
 	location.Players = append(location.Players, play)
@@ -124,7 +120,6 @@ func handleConnection(conn net.Conn) {
 	worldChar := ToString(world)
 	worldLock.Unlock()
 
-	// Charge le monde et le point de respawn du joueur pour lenvoyer au client
 	fmt.Fprintf(conn, "%s\n", worldChar)
 	fmt.Fprintf(conn, "%s\n", ToString(withEnemyHP(location)))
 
@@ -135,13 +130,11 @@ func main() {
 	logfile, _ := os.Create("protocol.log")
 	log.SetOutput(logfile)
 	maps = make(map[string]Location)
-	// Ouverture de l'ecoute tcp sur le port 8080 du localhost
 	ln, err := net.Listen("tcp", "localhost:8080")
 	if err != nil {
 		log.Fatalln(err)
 	}
 
-	// Fermeture à la fin du programme
 	defer ln.Close()
 	var errs []error
 	world, errs = Rally("yaml/world.yaml")
@@ -149,7 +142,6 @@ func main() {
 		log.Fatalln(errs)
 	}
 	maps = world.World.Locations
-	// Boucle infinie pour accepter la connexion des clients au serveur
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
@@ -157,14 +149,12 @@ func main() {
 			continue
 		}
 
-		// Ajout du client a la liste des clients
 		ClientsLock.Lock()
 		Clients[conn] = true
 		ClientsLock.Unlock()
 
 		LogServPrintf(conn, "%s| [INFO] Nouveau client connecté\n", conn.RemoteAddr())
 
-		// Gestion individuelle (Thread) du client
 		go handleConnection(conn)
 	}
 }

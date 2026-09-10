@@ -1,7 +1,5 @@
 package commands
 
-// TALK, STATUS, ATTACK
-
 import (
 	"encoding/json"
 	"fmt"
@@ -21,9 +19,6 @@ func Talk(room Location, world WorldFile, npcName string) string {
 	for _, speech := range npcChar.Dialogue {
 		response += fmt.Sprintf("%s ", speech)
 	}
-	// prefixe "OK " : c'est la seule ligne "OK .../ERR .../{..." de cette
-	// reponse, elle doit donc pouvoir etre reconnue par le GUI (cf.
-	// Session.Deliver, qui n'accepte que ces prefixes).
 	return fmt.Sprintf("OK %s", response)
 }
 
@@ -100,13 +95,6 @@ func Attack(player Player, enemy Enemy) (string, string, Player, Enemy) {
 		}
 	}
 
-	// Le message de coup critique est inclus DANS le JSON (au lieu d'être
-	// concaténé devant via un "\" littéral comme avant) : Session.Deliver
-	// (côté GUI) ne reconnaît une réponse que si sa toute première ligne
-	// commence par "OK "/"ERR"/"{". Le concaténer cassait ce préfixe une
-	// fois sur deux (coup critique aléatoire) et faisait retomber le GUI
-	// sur la ligne suivante, l'état de la salle, mal interprétée comme
-	// résultat de combat : d'où des PV à 0 affichés sans raison.
 	data, err := json.Marshal(struct {
 		AttackerHP  int    `json:"attacker_hp"`
 		TargetHP    int    `json:"target_hp"`

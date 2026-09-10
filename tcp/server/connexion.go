@@ -5,10 +5,7 @@ import (
 	. "the_answer_protocol/tcp/common"
 )
 
-// Gere la connexion d'un client,
-// en attendant que le client envoie la commande "CONNECT"
-// et en traitant la selection du joueur.
-func Connexion(conn net.Conn, player string) string{
+func Connexion(conn net.Conn, player string) string {
 	var previous string
 	for {
 		message := Recept(conn)
@@ -18,7 +15,7 @@ func Connexion(conn net.Conn, player string) string{
 		if message == previous {
 			LogServPrintf(conn, "%s| [WARN] %s", conn.RemoteAddr().String(), message)
 			LogServFprintf(conn, "[SERVER][WARN] Attention à ne pas envoyer la même commande: %s\n", message)
-			} else {
+		} else {
 			LogServPrintf(conn, "%s| %s", conn.RemoteAddr().String(), message)
 		}
 		previous = message

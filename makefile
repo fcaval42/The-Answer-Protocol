@@ -1,11 +1,11 @@
-.PHONY: install server stop-server client gui lint clean
+.PHONY: install run-server stop-server run-client run-client-gui lint clean
 
 all:
 	@echo "Use the following commands"
-	@echo "make server"
+	@echo "make run-server"
 	@echo "make stop-server"
-	@echo "make client"
-	@echo "make gui"
+	@echo "make run-client"
+	@echo "make run-client-gui"
 	@echo "make lint"
 	@echo "make clean"
 

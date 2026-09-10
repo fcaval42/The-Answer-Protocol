@@ -11,9 +11,6 @@ import (
 	"the_answer_protocol/parsing"
 )
 
-// openItemDialog affiche la description d'un objet de l'inventaire, avec la
-// possibilité de le déposer (Drop) et, s'il est équipable, de l'équiper /
-// déséquiper + Un seul objet peut être équipé à la fois
 func openItemDialog(w fyne.Window, sess *Session, item parsing.Item, player parsing.Player, refreshCharacter func(parsing.Player), changeRoom func(parsing.Location), showMessage func(title, msg string)) {
 	body := container.NewVBox()
 	var d dialog.Dialog
@@ -146,7 +143,7 @@ func openItemDialog(w fyne.Window, sess *Session, item parsing.Item, player pars
 					updated.Weapon = parsing.Weapon{Name: weapon, Critical: critical}
 					updated.EquippedItem = ""
 					player = updated
-					refreshCharacter(updated) // met a jour les stats affichees (chances de critique)
+					refreshCharacter(updated)
 					d.Hide()
 					showMessage("Équipement", item.Name+" a été retiré.")
 				})
@@ -158,7 +155,7 @@ func openItemDialog(w fyne.Window, sess *Session, item parsing.Item, player pars
 					updated.Weapon = parsing.Weapon{Name: weapon, Critical: critical}
 					updated.EquippedItem = item.ID
 					player = updated
-					refreshCharacter(updated) // met a jour les stats affichees (chances de critique)
+					refreshCharacter(updated)
 					d.Hide()
 					showMessage("Équipement", item.Name+" est maintenant équipé.")
 				})
