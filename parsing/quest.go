@@ -56,6 +56,7 @@ func validateQuests(wf WorldFile) []error {
 		if isBlank(id) {
 			errs = append(errs, fmt.Errorf("a quest has an empty id"))
 		}
+
 		if isBlank(q.Name) {
 			errs = append(errs, fmt.Errorf("quest %q: name is empty", id))
 		} else if otherID, ok := seenQuestNames[q.Name]; ok {
@@ -63,6 +64,7 @@ func validateQuests(wf WorldFile) []error {
 		} else {
 			seenQuestNames[q.Name] = id
 		}
+
 		if isBlank(q.Description) {
 			errs = append(errs, fmt.Errorf("quest %q: description is empty", id))
 		}
