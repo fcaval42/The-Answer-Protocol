@@ -9,11 +9,9 @@ import (
 	"os"
 	"regexp"
 	"strings"
-
 	"the_answer_protocol/gui"
 	"the_answer_protocol/parsing"
 	. "the_answer_protocol/tcp/common"
-
 	"github.com/chzyer/readline"
 )
 
@@ -21,6 +19,7 @@ var welcomeRe = regexp.MustCompile(`Bienvenue (\S+) !`)
 
 func readServerMessages(conn net.Conn, rl *readline.Instance, world parsing.WorldFile, withGUI bool, playerChosen chan<- string, sess *gui.Session) {
 	connRoutine := bufio.NewReader(conn)
+
 	for {
 		response, err := connRoutine.ReadString('\n')
 		if err != nil {
@@ -57,6 +56,7 @@ func readServerMessages(conn net.Conn, rl *readline.Instance, world parsing.Worl
 func runInputLoop(conn net.Conn, rl *readline.Instance, world parsing.WorldFile) {
 	for {
 		line, err := rl.Readline()
+
 		if err != nil {
 			log.Println("[ERROR] Erreur de lecture :", err)
 			return
@@ -110,17 +110,16 @@ func main() {
 	sess := gui.NewSession(conn)
 
 	fmt.Fprint(rl.Stdout(), "Tapez CONNECT pour vous connecter au serveur.\n")
-
 	playerChosen := make(chan string, 1)
 
 	go readServerMessages(conn, rl, world, withGUI, playerChosen, sess)
-
 	if !withGUI {
 		runInputLoop(conn, rl, world)
 		return
 	}
 
 	go runInputLoop(conn, rl, world)
+
 	player := <-playerChosen
 	gui.Run(player, world, sess)
 }

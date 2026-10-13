@@ -29,6 +29,7 @@ type Player struct {
 
 func validatePlayers(wf WorldFile) []error {
 	var errs []error
+
 	for id, player := range wf.Players {
 		if (id != player.Name) {
 			errs = append(errs, fmt.Errorf("The ID and Name are different for %s - %s", id, player.Name))
@@ -51,12 +52,15 @@ func validatePlayers(wf WorldFile) []error {
 		if (player.Respawn.HP > player.HP) {
 			errs = append(errs, fmt.Errorf("Respawn HP %d of %s is higher than %d max HP", player.Respawn.HP, id, player.HP))
 		}
+
 		loc_ok := false
+
 		for l, _ := range wf.World.Locations {
 			if (l == player.Respawn.Location){
 				loc_ok = true
 			}
 		}
+
 		if (loc_ok == false) {
 			errs = append(errs, fmt.Errorf("Respawn rental for %s doesn't exist %s", id, player.Respawn.Location))
 		}

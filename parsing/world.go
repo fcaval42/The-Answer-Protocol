@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-
 	"gopkg.in/yaml.v3"
 )
 
@@ -40,22 +39,27 @@ func ParseWorld(worldYAML []byte) (WorldFile, []error) {
 		loc.Background = resolveBackground(loc.Background)
 		wf.World.Locations[id] = loc
 	}
+
 	for id, item := range wf.Items {
 		item.ID = id
 		wf.Items[id] = item
 	}
+
 	for id, npc := range wf.NPCs {
 		npc.ID = id
 		wf.NPCs[id] = npc
 	}
+
 	for id, enemy := range wf.Enemies {
 		enemy.ID = id
 		wf.Enemies[id] = enemy
 	}
+
 	for id, quest := range wf.Quests {
 		quest.ID = id
 		wf.Quests[id] = quest
 	}
+
 	for id, player := range wf.Players {
 		player.MaxHP = player.HP
 		player.BaseWeapon = player.Weapon
@@ -93,6 +97,7 @@ func Rally(world_path string) (WorldFile, []error) {
 		fmt.Println("YAML VIDE")
 		errs = append(errs, fmt.Errorf("YAML VIDE"))
 	}
+
 	if er != nil {
 		errs = append(errs, er)
 	} else {
